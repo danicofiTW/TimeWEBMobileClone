@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".activitys.ShowLocationActivity">
+
+    <fragment
+        android:id="@+id/mapLocation"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:name="com.google.android.gms.maps.SupportMapFragment"
+        />
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="50dp"
+            android:background="@color/black"
+            android:alpha="0.4"/>
+
+        <ImageView
+            android:id="@+id/imageViewBackShowLocation"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:src="@drawable/ic_arrow_back_white"
+            android:layout_gravity="left|center"
+            app:civ_circle_background_color="@color/colorPrimaryDark"
+            android:layout_marginLeft="8dp"/>
+
+    </FrameLayout>
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="300dp"
+        android:layout_gravity="bottom">
+
+    <com.github.florent37.shapeofview.shapes.RoundRectView
+        android:layout_width="300dp"
+        android:layout_height="110dp"
+        android:layout_gravity="bottom|center"
+        android:layout_marginBottom="40dp"
+
+        android:elevation="4dp"
+        app:shape_roundRect_bottomLeftRadius="10dp"
+        app:shape_roundRect_bottomRightRadius="10dp"
+        app:shape_roundRect_topLeftRadius="10dp"
+        app:shape_roundRect_topRightRadius="10dp"
+
+        app:shape_roundRect_borderColor="@color/colorDark"
+        app:shape_roundRect_borderWidth="2dp"
+
+        >
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="110dp"
+            android:background="@color/colorGrisLigth"/>
+
+        <LinearLayout
+            android:layout_width="290dp"
+            android:layout_height="90dp"
+            android:orientation="vertical"
+            android:layout_gravity="center"
+            android:layout_marginTop="4dp">
+
+
+            <TextView
+                android:id="@+id/textViewShowName"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="NOMBRE"
+                android:textColor="@color/colorOrangeTimeBlackLight"
+                android:textSize="20sp"
+                android:layout_gravity="center"
+                android:maxLines="1"
+                android:textAlignment="center"/>
+
+            <TextView
+                android:id="@+id/textViewShowLocation"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Sin geocerca asignada"
+                android:textColor="@color/white"
+                android:textSize="20sp"
+                android:layout_marginTop="2dp"
+                android:layout_gravity="center"
+                android:textAlignment="center"
+                android:maxLines="1"/>
+
+            <TextView
+                android:id="@+id/textViewShowDate"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="FECHA"
+                android:textColor="@color/colorBlueLigth"
+                android:textSize="20sp"
+                android:layout_marginTop="2dp"
+                android:layout_gravity="center"
+                android:maxLines="1"
+                android:textAlignment="center"/>
+
+        </LinearLayout>
+
+    </com.github.florent37.shapeofview.shapes.RoundRectView>
+
+
+    </FrameLayout>
+
+    <de.hdodenhof.circleimageview.CircleImageView
+        android:id="@+id/circleImageViewShowCheck"
+        android:layout_width="120dp"
+        android:layout_height="120dp"
+        android:src="@drawable/ic_image_white"
+        android:padding="5dp"
+        android:background="@drawable/circle_background"
+        app:civ_circle_background_color="@color/colorGrisLigth"
+        android:layout_gravity="bottom|center"
+        android:layout_marginBottom="134dp"/>
+
+    <de.hdodenhof.circleimageview.CircleImageView
+        android:id="@+id/circleImageViewTipeShowCheck"
+        android:layout_width="30dp"
+        android:layout_height="30dp"
+        android:src="@drawable/icon_check_green"
+        app:civ_circle_background_color="@color/colorGrisLigth"
+        android:layout_gravity="bottom|center"
+        android:layout_marginLeft="90dp"
+        android:layout_marginBottom="144dp"/>
+
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

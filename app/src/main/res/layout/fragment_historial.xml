@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/colorChecks"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    tools:context=".fragments.HistoryChecksSendOkFragment">
+
+
+<LinearLayout
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/colorRV"
+    android:layout_marginTop="10dp">
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rvChecks"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_marginTop="66dp"
+        android:layout_marginBottom="2dp"
+        android:background="@color/colorRV"/>
+</LinearLayout>
+
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="90dp">
+
+
+            <com.github.florent37.shapeofview.shapes.BubbleView
+                android:layout_width="match_parent"
+                android:layout_height="90dp"
+                app:shape_bubble_arrowHeight="10dp"
+                app:shape_bubble_arrowWidth="30dp"
+                app:shape_bubble_arrowPosition="bottom"
+                app:shape_bubble_borderRadius="30dp"
+                android:layout_gravity="top|center"
+                >
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="90dp"
+                    android:background="@color/colorChecks"/>
+
+                <com.airbnb.lottie.LottieAnimationView
+                    android:id="@+id/animation"
+                    android:layout_width="80dp"
+                    android:layout_height="80dp"
+                    app:lottie_imageAssetsFolder="assets"
+                    app:lottie_fileName="check-orange.json"
+                    android:layout_gravity="top"
+                    android:layout_marginLeft="10dp"
+                    app:lottie_loop="true"
+                    app:lottie_autoPlay="true"/>
+
+                <ImageView
+                    android:id="@+id/imageViewDeleteChecks"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:layout_gravity="center|left"
+                    android:layout_marginLeft="40dp"
+                    android:src="@drawable/ic_delete_white"
+                    android:visibility="gone"/>
+
+                <CheckBox
+                    android:id="@+id/checkboxDeleteAll"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="left|center"
+                    android:layout_marginLeft="2dp"
+                    android:button="@drawable/custom_checkbox"
+                    android:scaleX="0.8"
+                    android:scaleY="0.8"
+                    android:checked="false"
+                    android:onClick="onCheckboxClicked"
+                    android:visibility="gone"/>
+
+                <com.google.android.material.floatingactionbutton.FloatingActionButton
+                    android:id="@+id/btnUpdateHistory"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:src="@drawable/ic_refresh_white"
+                    app:backgroundTint="@color/colorOrangeTimeBlackLight"
+                    android:layout_gravity="top|right"
+                    android:layout_marginTop="35dp"
+                    android:layout_marginRight="20dp"
+                    android:visibility="gone"/>
+
+                <TextView
+                    android:layout_width="300dp"
+                    android:layout_height="wrap_content"
+                    android:text="REGISTROS ENVIADOS CORRECTAMENTE"
+                    android:textColor="@color/whiteLigth"
+                    android:textStyle="bold"
+                    android:textSize="18sp"
+                    android:textAlignment="center"
+                    android:layout_gravity="center|top"
+                    android:layout_marginTop="16dp"
+                    android:layout_marginLeft="40dp"
+                    />
+
+
+
+
+
+
+            </com.github.florent37.shapeofview.shapes.BubbleView>
+
+
+
+    </FrameLayout>
+
+
+
+</FrameLayout>

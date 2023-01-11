@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="purple_200">#FFBB86FC</color>
+    <color name="purple_500">#FF6200EE</color>
+    <color name="purple_700">#FF3700B3</color>
+    <color name="teal_200">#FF03DAC5</color>
+    <color name="teal_700">#FF018786</color>
+    <color name="colorPrimary">#065E52</color>
+    <color name="colorPrimaryDark">#054E43</color>
+    <color name="colorAccent">#96BCB7</color>
+    <color name="colorGris">#7A000000</color>
+    <color name="colorGrisLigth">#D9010413</color>
+    <color name="colorGray">#494949</color>
+    <color name="colorCheck">#EEEEEE</color>
+    <color name="black">#FF000000</color>
+    <color name="black2">#202020</color>
+    <color name="colorRed">#AC1E1E</color>
+    <color name="colorOrange">#FF7D0C</color>
+    <color name="colorOrangeTime">#EA8125</color>
+    <color name="colorOrangeTimeBlackLight">#CD5D00</color>
+    <color name="colorOrangeTimeNotification">#b53d00</color>
+    <color name="colorOrangeDark">#8C2F00</color>
+    <color name="colorOrangeTimeAccent">#ff9d3f</color>
+    <color name="colorOrangeLite">#F7B975</color>
+    <color name="colorOrangeSuperLite">#72F6EA84</color>
+    <color name="colorPurple">#673AB7</color>
+    <color name="white">#FFFFFFFF</color>
+    <color name="whiteLigth">#EDEDED</color>
+    <color name="colorGreen">#117015</color>
+    <color name="colorChecks">#006DA8</color>
+    <color name="colorNotificationToolbarHome">#133849</color>
+    <color name="colorNotificationToolbarMain">#A55104</color>
+    <color name="colorYellow">#B88401</color>
+    <color name="colorBlue">#3F51B5</color>
+    <color name="colorBlueLigth">#33A7F4</color>
+    <color name="colorRedLigth">#CD4444</color>
+    <color name="colorGreenLigth">#47AC4B</color>
+    <color name="colorYellowLigth">#E6BD52</color>
+    <color name="colorDark">#F3002B29</color>
+    <color name="colorHomeTw">#010620</color>
+    <color name="colorRV">#070A1B</color>
+    <color name="colorGrayLigth">#28405A</color>
+    <color name="colorGrayLigthPluse">#BABABA</color>
+
+</resources>

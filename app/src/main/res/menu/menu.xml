@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <item android:id="@+id/action_search"
+        android:title="Search"
+        android:icon="@drawable/ic_search"
+        app:showAsAction="ifRoom|collapseActionView"
+        app:actionViewClass="androidx.appcompat.widget.SearchView"
+        android:visible="true" />
+
+    <item android:id="@+id/itemProfile"
+        android:title="Perfil"
+        app:showAsAction="never"
+        android:visible="true"/>
+
+    <item android:id="@+id/itemChangePassword"
+        android:title="Cambiar contraseña"
+        app:showAsAction="never"
+        android:visible="true"/>
+
+    <item android:id="@+id/itemSignOut"
+        android:title="Cerrar sesion"
+        app:showAsAction="never"
+        android:visible="true"/>
+
+</menu>

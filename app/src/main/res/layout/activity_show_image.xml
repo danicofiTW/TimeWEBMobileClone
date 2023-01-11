@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.cardview.widget.CardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    tools:context=".activitys.ShowImageActivity"
+    app:cardBackgroundColor="@color/black">
+
+    <LinearLayout
+        android:id="@+id/linearLayoutViewPagerShow"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical">
+
+        <ImageView
+            android:id="@+id/imageViewPictureShow"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:src="@drawable/chatwats"
+            android:background="@color/white"
+            android:layout_weight="1"
+            android:layout_gravity="center"
+            />
+
+    </LinearLayout>
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="50dp"
+            android:background="@color/black"
+            android:alpha="0.4"/>
+
+
+        <ImageView
+            android:id="@+id/imageViewBackShow1"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:src="@drawable/ic_arrow_back_white"
+            android:layout_gravity="left|center"
+            app:civ_circle_background_color="@color/colorPrimaryDark"
+            android:layout_marginLeft="8dp"/>
+
+    </FrameLayout>
+
+
+</androidx.cardview.widget.CardView>

@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "1060091246626",
+    "project_id": "timewebclone",
+    "storage_bucket": "timewebclone.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1060091246626:android:f0bb2da1402a8c32c0f27b",
+        "android_client_info": {
+          "package_name": "com.dan.timewebclone"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1060091246626-abfrekl277akvtgj4sgl0ffqujpvmksc.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.dan.timewebclone",
+            "certificate_hash": "2230e4822e34fbeb86a7abdd67cdadaeee43b473"
+          }
+        },
+        {
+          "client_id": "1060091246626-dlhivnql6qoq2tsju3bea7bgdkj7a9h9.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDBurGnJ-QkqeRxfWt0zw9zH_8mGnngayo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1060091246626-dlhivnql6qoq2tsju3bea7bgdkj7a9h9.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
