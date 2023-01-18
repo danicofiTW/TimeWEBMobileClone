@@ -77,7 +77,7 @@
             android:id="@+id/viewDelete"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:background="@color/colorGrayLigth"
+            android:background="@color/colorGray"
             android:visibility="gone"/>
 
         <LinearLayout
@@ -109,7 +109,10 @@
                 android:layout_width="wrap_content"
                 android:layout_height="70dp"
                 android:orientation="vertical"
-                android:layout_marginLeft="7dp">
+                android:layout_marginLeft="7dp"
+                android:layout_marginBottom="1dp"
+                android:layout_marginTop="1dp"
+                android:gravity="center|left">
 
                 <TextView
                     android:id="@+id/textViewGeocerca"
@@ -118,8 +121,7 @@
                     android:text="Sin geocerca asignada"
                     android:textColor="@color/whiteLigth"
                     android:textSize="16sp"
-                    android:maxLines="1"
-                    android:layout_marginTop="2dp" />
+                    android:maxLines="1" />
 
                 <TextView
                     android:id="@+id/textViewTipeCheck"
@@ -127,7 +129,7 @@
                     android:layout_height="wrap_content"
                     android:text="Registro"
                     android:textSize="15sp"
-                    android:layout_marginTop="2dp"
+                    android:layout_marginTop="1dp"
                     android:maxLines="1"/>
 
                 <TextView
@@ -137,7 +139,7 @@
                     android:text="Fecha"
                     android:textColor="@color/whiteLigth"
                     android:textSize="14sp"
-                    android:layout_marginTop="2dp"/>
+                    android:layout_marginTop="1dp"/>
 
 
 

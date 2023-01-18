@@ -186,6 +186,22 @@ public class DbEmployees extends DbHelper{
         return save;
     }
 
+    public boolean deleteAllEmployees() {
+        DbHelper dbEmployee = new DbHelper(myContext);
+        SQLiteDatabase db = dbEmployee.getWritableDatabase();
+        boolean delete = false;
+        try{
+            db.execSQL("DELETE FROM " +TABLE_EMPLOYEES+ "");
+            delete = true;
+        } catch (Exception ex){
+            ex.toString();
+            delete = false;
+        } finally {
+            dbEmployee.close();
+        }
+        return delete;
+    }
+
     public boolean saveImage(String idUser, String image){
         boolean save = false;
         DbHelper dbEmployee = new DbHelper(myContext);

@@ -18,6 +18,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
+import android.widget.LinearLayout;
 import android.widget.Toast;
 
 import com.dan.timewebclone.activitys.HomeTW;
@@ -42,28 +43,24 @@ import de.hdodenhof.circleimageview.CircleImageView;
 
 public class LoginFragment extends Fragment {
 
-    TextInputEditText textInputEmailLogin, textInputPasswordLogin;
+    private TextInputEditText textInputEmailLogin, textInputPasswordLogin;
+    private LinearLayout linearLayoutLogin;
     private CircleImageView mCircleImageBack;
-    Button buttonLogin;
-    EmployeeProvider employeeProvider;
+    private Button buttonLogin;
 
-    AuthProvider authProvider;
+    private EmployeeProvider employeeProvider;
+    private AuthProvider authProvider;
     //DatabaseReference mDatabase;
-    AlertDialog dialog;
-    ProgressDialog mDialog;
-
+    private ProgressDialog mDialog;
     private MainActivity myContext;
-
 
     Employee employee;
 
-
     String eName, eIdUser, eRFCEmpresa, eCompany, ePhone, eEmail, eURL;
-
-
 
     FragmentTransaction fragmentTransaction;
     FragmentManager fragmentManager;
+    RegisterFragment registerFragment;
 
     public LoginFragment() {
     }
@@ -82,7 +79,11 @@ public class LoginFragment extends Fragment {
         textInputPasswordLogin = view.findViewById(R.id.textInputPasswordLogin);
         buttonLogin = view.findViewById(R.id.btnLogin);
         mCircleImageBack = view.findViewById(R.id.circleImageBack);
+        linearLayoutLogin = view.findViewById(R.id.linearLayoutLogin);
         authProvider = new AuthProvider();
+        //registerFragment = new RegisterFragment();
+        //registerFragment.setViewRegisterFragment(false);
+        //setViewLoginFragment(true);
         //mDatabase = FirebaseDatabase.getInstance().getReference();
 
         employeeProvider = new EmployeeProvider();
@@ -106,11 +107,21 @@ public class LoginFragment extends Fragment {
 
     }
 
+    public void setViewLoginFragment(boolean viewFragment){
+        if(viewFragment){
+            linearLayoutLogin.setVisibility(View.VISIBLE);
+
+        } else {
+            linearLayoutLogin.setVisibility(View.GONE);
+        }
+    }
+
     private void fragmentBack() {
         //OCULTAR EL TECLADO
         InputMethodManager imm = (InputMethodManager) myContext.getSystemService(Context.INPUT_METHOD_SERVICE);
         imm.hideSoftInputFromWindow(getView().getWindowToken(), 0);
 
+        myContext.setBtns(true);
         fragmentManager = myContext.getSupportFragmentManager();
         fragmentTransaction = fragmentManager.beginTransaction();
         fragmentTransaction.hide(this).commit();
@@ -133,6 +144,7 @@ public class LoginFragment extends Fragment {
     }
 
     private void login(String mEmail, String mPassword) {
+        if(isOnlineNet()){
         authProvider.loginEmail(mEmail,mPassword).addOnCompleteListener(new OnCompleteListener<AuthResult>() {
             @Override
             public void onComplete(@NonNull Task<AuthResult> task) {
@@ -145,6 +157,22 @@ public class LoginFragment extends Fragment {
                 }
             }
         });
+        } else {
+            mDialog.dismiss();
+            Toast.makeText(myContext, "No cuentas con internet", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    public boolean isOnlineNet() {
+        try {
+            Process p = java.lang.Runtime.getRuntime().exec("ping -c 1 www.google.es");
+            int val = p.waitFor();
+            boolean reachable = (val == 0);
+            return reachable;
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return false;
     }
 
     @Override
@@ -154,7 +182,6 @@ public class LoginFragment extends Fragment {
     }
 
     private void goToHome() {
-        getUserInfo();
         Intent intent = new Intent(myContext, HomeTW.class);
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
         startActivity(intent);
@@ -164,21 +191,6 @@ public class LoginFragment extends Fragment {
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         return inflater.inflate(R.layout.fragment_login, container, false);
-    }
-
-    private void getUserInfo() {
-        employeeProvider.getUserInfo(authProvider.getId()).addSnapshotListener(new EventListener<DocumentSnapshot>() {
-            @Override
-            public void onEvent(@Nullable DocumentSnapshot documentSnapshot, @Nullable FirebaseFirestoreException error) {
-                if(documentSnapshot!= null){
-                    if(documentSnapshot.exists()){
-                        employee = documentSnapshot.toObject(Employee.class);
-                        myContext.saveInfoUser(employee);
-                    }
-                }
-            }
-        });
-
     }
 
 }

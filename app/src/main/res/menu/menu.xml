@@ -14,13 +14,18 @@
         app:showAsAction="never"
         android:visible="true"/>
 
+    <item android:id="@+id/itemSettings"
+        android:title="Configuración"
+        app:showAsAction="never"
+        android:visible="true"/>
+
     <item android:id="@+id/itemChangePassword"
         android:title="Cambiar contraseña"
         app:showAsAction="never"
         android:visible="true"/>
 
     <item android:id="@+id/itemSignOut"
-        android:title="Cerrar sesion"
+        android:title="Cerrar sesión"
         app:showAsAction="never"
         android:visible="true"/>
 

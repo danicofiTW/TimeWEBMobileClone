@@ -8,6 +8,7 @@ import androidx.fragment.app.FragmentTransaction;
 
 import android.app.ProgressDialog;
 import android.content.Context;
+import android.content.Intent;
 import android.os.Build;
 import android.os.Bundle;
 import android.view.View;
@@ -53,7 +54,6 @@ public class ChangePasswordActivity extends AppCompatActivity {
     private FragmentTransaction fragmentTransaction;
     private FragmentManager fragmentManager;
 
-
     private String password, newPassword, confirmNewPassword, email;
     //public String email;
 
@@ -64,9 +64,6 @@ public class ChangePasswordActivity extends AppCompatActivity {
         setStatusBarColor();
 
         tietEmail = findViewById(R.id.textInputEmail);
-        //tietPassword = findViewById(R.id.textInputPassword);
-        //tietNewPassword = findViewById(R.id.textInputNewPassword);
-        //tietConfirmNewPassword = findViewById(R.id.textInputConfirmNewPassword);
         btnChangePassword = findViewById(R.id.btnChangePassword);
         imageViewBack = findViewById(R.id.imageViewBackCP);
         textViewChangePassword = findViewById(R.id.textViewChangePassword);
@@ -83,111 +80,18 @@ public class ChangePasswordActivity extends AppCompatActivity {
         changePasswordProgress = new ProgressDialog(ChangePasswordActivity.this);
         changePasswordProgress.setTitle("Cambiando");
         changePasswordProgress.setMessage("Por favor espere ...");
-        //changePasswordProgress.setProgressStyle(changePasswordProgress.STYLE_HORIZONTAL);
-        //changePasswordProgress.setProgress(0);
-        //changePasswordProgress.setMax(10);
-        //changePasswordProgress.show();
 
 
         btnChangePassword.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 if(levelFragment == 0){
-                    email = tietEmail.getText().toString();
-                    //password = tietPassword.getText().toString();
-                    //newPassword = tietNewPassword.getText().toString();
-                    //confirmNewPassword = tietConfirmNewPassword.getText().toString();
-                    if(!email.isEmpty()){
-                        if(employee!=null){
-                            if(employee.getEmail().equals(email)){
-                                btnChangePassword.setText("CONFIRMAR CONTRASEÑA");
-                                textViewChangePassword.setText("Ingresa la contraseña actual");
-                                levelFragment = 1;
-                                moveFragment(reviePasswordFragment);
-                            } else {
-                                Toast.makeText(ChangePasswordActivity.this, "El correo no corresponde", Toast.LENGTH_SHORT).show();
-                            }
-                        }
-                    } else{
-                        Toast.makeText(ChangePasswordActivity.this, "Ingresa el correo electronico", Toast.LENGTH_SHORT).show();
-                    }
+                    checkEmail();
                 } else if(levelFragment==1){
-                    if(reviePasswordFragment.tietPassword != null){
-                        password = reviePasswordFragment.tietPassword.getText().toString();
-                        if(!password.isEmpty()){
-                            if(employee.getPassword().equals(password)){
-                                btnChangePassword.setText("ACTUALIZAR CONTRASEÑA");
-                                textViewChangePassword.setText("Nueva contraseña");
-                                levelFragment = 2;
-                                moveFragment(updatePasswordFragment);
-                            } else {
-                                Toast.makeText(ChangePasswordActivity.this, "La contraseña actual no es valida", Toast.LENGTH_SHORT).show();
-                            }
-                        } else {
-                            Toast.makeText(ChangePasswordActivity.this, "Ingresa la contraseña", Toast.LENGTH_SHORT).show();
-                        }
-                    }
+                    checkPassword();
                 } else {
-                   if(updatePasswordFragment.tietNewPassword != null && updatePasswordFragment.tietConfirmNewPassword != null){
-                       newPassword = updatePasswordFragment.tietNewPassword.getText().toString();
-                       confirmNewPassword = updatePasswordFragment.tietConfirmNewPassword.getText().toString();
-                       if(!newPassword.isEmpty() && !confirmNewPassword.isEmpty()){
-                           if(newPassword.equals(confirmNewPassword)){
-                               if(newPassword.length()>=6){
-                                   if(!newPassword.equals(password)){
-                                       if(isOnlineNet()){
-                                           changePasswordProgress.show();
-                                           changePassword(employee, email, password, newPassword);
-                                       } else {
-                                           Toast.makeText(ChangePasswordActivity.this, "No cuentas con internet para actualizar la contraseña", Toast.LENGTH_SHORT).show();
-                                       }
-                                   } else {
-                                       Toast.makeText(ChangePasswordActivity.this, "Ya cuentas con esta contraseña", Toast.LENGTH_SHORT).show();
-                                   }
-                               } else {
-                                   Toast.makeText(ChangePasswordActivity.this, "La contraseña debe contener al menos 6 caracteres", Toast.LENGTH_SHORT).show();
-                               }
-                           } else {
-                               Toast.makeText(ChangePasswordActivity.this, "La contraseña no coincide", Toast.LENGTH_SHORT).show();
-                           }
-                       } else {
-                           Toast.makeText(ChangePasswordActivity.this, "Ingresa todos los campos", Toast.LENGTH_SHORT).show();
-                       }
-                   }
+                   checkNewPassword();
                 }
-
-
-                /*if(!email.isEmpty()){
-                    if(employee != null){
-                        if(employee.getEmail().equals(email)){
-                            if(employee.getPassword().equals(password)){
-                                if(newPassword.equals(confirmNewPassword)){
-                                    if(newPassword.length()>=6){
-                                      if(newPassword.equals(password)){
-                                           Toast.makeText(ChangePasswordActivity.this, "Es la misma contraseña, cambiala!!", Toast.LENGTH_SHORT).show();
-                                        } else {
-                                            changePasswordProgress.show();
-                                            changePassword(employee, email, password, newPassword);
-                                        }
-                                    } else {
-                                        Toast.makeText(ChangePasswordActivity.this, "La contraseña nueva debe tener al menos 6 caracteres", Toast.LENGTH_SHORT).show();
-                                    }
-                                } else {
-                                    Toast.makeText(ChangePasswordActivity.this, "La nueva contraseña no coincide", Toast.LENGTH_SHORT).show();
-                                }
-                            } else {
-                                Toast.makeText(ChangePasswordActivity.this, "La contraseña actual no es valida", Toast.LENGTH_SHORT).show();
-                            }
-                        } else {
-                            Toast.makeText(ChangePasswordActivity.this, "El correo no corresponde", Toast.LENGTH_SHORT).show();
-                        }
-                    }
-                } else {
-                    Toast.makeText(ChangePasswordActivity.this, "Debes llenar todos los campos", Toast.LENGTH_SHORT).show();
-                }
-                /*if(employee!=null){
-                    changePassword(employee, email, password, newPassword);
-                }*/
             }
         });
 
@@ -200,11 +104,82 @@ public class ChangePasswordActivity extends AppCompatActivity {
 
     }
 
+
+    //Revisar el correo electronico
+    private void checkEmail() {
+        email = tietEmail.getText().toString();
+        if(!email.isEmpty()){
+            if(employee!=null){
+                if(employee.getEmail().equals(email)){
+                    btnChangePassword.setText("CONFIRMAR CONTRASEÑA");
+                    textViewChangePassword.setText("Ingresa la contraseña actual");
+                    levelFragment = 1;
+                    moveFragment(reviePasswordFragment);
+                } else {
+                    Toast.makeText(ChangePasswordActivity.this, "El correo no corresponde", Toast.LENGTH_SHORT).show();
+                }
+            }
+        } else{
+            Toast.makeText(ChangePasswordActivity.this, "Ingresa el correo electronico", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    //Revisar la contraseña
+    private void checkPassword() {
+        if(reviePasswordFragment.tietPassword != null){
+            password = reviePasswordFragment.tietPassword.getText().toString();
+            if(!password.isEmpty()){
+                if(employee.getPassword().equals(password)){
+                    btnChangePassword.setText("ACTUALIZAR CONTRASEÑA");
+                    textViewChangePassword.setText("Nueva contraseña");
+                    levelFragment = 2;
+                    moveFragment(updatePasswordFragment);
+                } else {
+                    Toast.makeText(ChangePasswordActivity.this, "La contraseña actual no es valida", Toast.LENGTH_SHORT).show();
+                }
+            } else {
+                Toast.makeText(ChangePasswordActivity.this, "Ingresa la contraseña", Toast.LENGTH_SHORT).show();
+            }
+        }
+    }
+
+    //Revisar nueva contraseña
+    private void checkNewPassword() {
+        if(updatePasswordFragment.tietNewPassword != null && updatePasswordFragment.tietConfirmNewPassword != null){
+            newPassword = updatePasswordFragment.tietNewPassword.getText().toString();
+            confirmNewPassword = updatePasswordFragment.tietConfirmNewPassword.getText().toString();
+            if(!newPassword.isEmpty() && !confirmNewPassword.isEmpty()){
+                if(newPassword.equals(confirmNewPassword)){
+                    if(newPassword.length()>=6){
+                        if(!newPassword.equals(password)){
+                            if(isOnlineNet()){
+                                changePasswordProgress.show();
+                                changePassword(employee, email, password, newPassword);
+                            } else {
+                                Toast.makeText(ChangePasswordActivity.this, "No cuentas con internet para actualizar la contraseña", Toast.LENGTH_SHORT).show();
+                            }
+                        } else {
+                            Toast.makeText(ChangePasswordActivity.this, "Ya cuentas con esta contraseña", Toast.LENGTH_SHORT).show();
+                        }
+                    } else {
+                        Toast.makeText(ChangePasswordActivity.this, "La contraseña debe contener al menos 6 caracteres", Toast.LENGTH_SHORT).show();
+                    }
+                } else {
+                    Toast.makeText(ChangePasswordActivity.this, "La contraseña no coincide", Toast.LENGTH_SHORT).show();
+                }
+            } else {
+                Toast.makeText(ChangePasswordActivity.this, "Ingresa todos los campos", Toast.LENGTH_SHORT).show();
+            }
+        }
+    }
+
+    //Accion hacia atras del dispositivo
     @Override
     public void onBackPressed() {
         back();
     }
 
+    //Accion atras
     private void back(){
         if(levelFragment==0){
             finish();
@@ -230,6 +205,7 @@ public class ChangePasswordActivity extends AppCompatActivity {
         }
     }
 
+    //Cambiar fragment a mostrar
     private void moveFragment(Fragment fragment) {
         if(levelFragment == 1){
             linearLayoutEmail.setVisibility(View.GONE);
@@ -252,18 +228,7 @@ public class ChangePasswordActivity extends AppCompatActivity {
         }
     }
 
-    public boolean isOnlineNet() {
-        try {
-            Process p = java.lang.Runtime.getRuntime().exec("ping -c 1 www.google.es");
-            int val = p.waitFor();
-            boolean reachable = (val == 0);
-            return reachable;
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return false;
-    }
-
+    //Cambiar contraseña
     private void changePassword(Employee employee, String email, String password, String newPassword) {
         authProvider.getCredential(email, password).addOnSuccessListener(new OnSuccessListener<Void>() {
             @Override
@@ -277,27 +242,14 @@ public class ChangePasswordActivity extends AppCompatActivity {
                                 dbEmployees.updatePassword(employee.getIdUser(), newPassword);
                                 employee.setPassword(newPassword);
                                 changePasswordProgress.dismiss();
-                                updatePasswordFragment.tietNewPassword.setText("");
-                                updatePasswordFragment.tietConfirmNewPassword.setText("");
-                                back();
-                                reviePasswordFragment.tietPassword.setText("");
-                                back();
-                                tietEmail.setText("");
                                 Toast.makeText(ChangePasswordActivity.this, "La contraseña se actualizo correctamente", Toast.LENGTH_SHORT).show();
-                            }
-                        }).addOnFailureListener(new OnFailureListener() {
-                            @Override
-                            public void onFailure(@NonNull Exception e) {
-                                changePasswordProgress.dismiss();
-                                Toast.makeText(ChangePasswordActivity.this, "Error al cambiar la contraseña", Toast.LENGTH_SHORT).show();
+                                authProvider.signOut();
+                                Intent in = new Intent(ChangePasswordActivity.this, MainActivity.class);
+                                in.putExtra("ChangePassword", "true");
+                                in.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
+                                startActivity(in);
                             }
                         });
-                    }
-                }).addOnFailureListener(new OnFailureListener() {
-                    @Override
-                    public void onFailure(@NonNull Exception e) {
-                        changePasswordProgress.dismiss();
-                        Toast.makeText(ChangePasswordActivity.this, "Error al cambiar la contraseña", Toast.LENGTH_SHORT).show();
                     }
                 });
             }
@@ -310,6 +262,21 @@ public class ChangePasswordActivity extends AppCompatActivity {
         });
     }
 
+    //Revisar si se cuenta con internet
+    public boolean isOnlineNet() {
+        try {
+            Process p = java.lang.Runtime.getRuntime().exec("ping -c 1 www.google.es");
+            int val = p.waitFor();
+            boolean reachable = (val == 0);
+            return reachable;
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+
+
+    //Cambiar el color de la barra de notificaciones
     private void setStatusBarColor() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             getWindow().setStatusBarColor(getResources().getColor(R.color.black, this.getTheme()));

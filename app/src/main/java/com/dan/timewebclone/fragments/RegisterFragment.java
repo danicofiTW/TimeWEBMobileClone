@@ -20,6 +20,7 @@ import android.view.ViewGroup;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.LinearLayout;
 import android.widget.Toast;
 
 import com.dan.timewebclone.activitys.HomeTW;
@@ -50,9 +51,11 @@ public class RegisterFragment extends Fragment{
     ProgressDialog mDialog;
     CountryCodePicker countryCode;
     CircleImageView imageViewBack;
+    LinearLayout linearLayoutRegister;
 
     FragmentTransaction fragmentTransaction;
     FragmentManager fragmentManager;
+    LoginFragment loginFragment;
     DialogFragment termsAndConditionsFragment;
 
     AuthProvider authProvider;
@@ -86,6 +89,12 @@ public class RegisterFragment extends Fragment{
         textInputConfimPassword =  view.findViewById(R.id.textInputConfirmPassword);
         editTextPhone = view.findViewById(R.id.editTextPhone);
         countryCode = view.findViewById(R.id.ccp);
+        linearLayoutRegister = view.findViewById(R.id.linearLayoutRegister);
+
+        /*loginFragment = new LoginFragment();
+        loginFragment.setViewLoginFragment(false);
+        setViewRegisterFragment(true);*/
+
 
         datosAEnviar = new Bundle();
         authProvider = new AuthProvider();
@@ -95,14 +104,6 @@ public class RegisterFragment extends Fragment{
         mDialog = new ProgressDialog(myContext);
         mDialog.setTitle("ESPERE UN MOMENTO");
         mDialog.setMessage("Guardando informacion");
-
-        SQLiteDatabase db = employeeProvider.createDB(myContext);
-        if(db!=null){
-            Toast.makeText(myContext,"BASE DE DATOS CREADA",Toast.LENGTH_SHORT);
-        } else {
-            Toast.makeText(myContext,"ERROR AL CREAR LA BASE",Toast.LENGTH_SHORT);
-        }
-
 
         btnRegister.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -119,6 +120,7 @@ public class RegisterFragment extends Fragment{
             }
         });
 
+
     }
 
     private void fragmentBack() {
@@ -126,10 +128,13 @@ public class RegisterFragment extends Fragment{
         InputMethodManager imm = (InputMethodManager) myContext.getSystemService(Context.INPUT_METHOD_SERVICE);
         imm.hideSoftInputFromWindow(getView().getWindowToken(), 0);
 
+        myContext.setBtns(true);
+
         fragmentManager = myContext.getSupportFragmentManager();
         fragmentTransaction = fragmentManager.beginTransaction();
         fragmentTransaction.hide(this).commit();
     }
+
 
 
     private void clickRegisterUser() {
@@ -148,6 +153,7 @@ public class RegisterFragment extends Fragment{
             //mAuth.sendCodeVerification(mPhone, mCallbacks);
             if(mPassword.length() >= 6){
                 if(Integer.parseInt(mPassword) == Integer.parseInt(mConfirmPassword)){
+                    mDialog.show();
                         register(mName, mClave, mRFC, mEmail, mPhone, mPassword);
                 } else{
                     Toast.makeText(myContext, "La contraseña debe conincidir", Toast.LENGTH_LONG).show();
@@ -161,21 +167,34 @@ public class RegisterFragment extends Fragment{
         }
     }
 
+    public boolean isOnlineNet() {
+        try {
+            Process p = java.lang.Runtime.getRuntime().exec("ping -c 1 www.google.es");
+            int val = p.waitFor();
+            boolean reachable = (val == 0);
+            return reachable;
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+
 
     private void register(String name, String clave, String rfc, String email, String phone, String password) {
-        authProvider.register(email, password).addOnCompleteListener(new OnCompleteListener<AuthResult>() {
-            @Override
-            public void onComplete(@NonNull Task<AuthResult> task) {
-                mDialog.hide();
-                if(task.isSuccessful()){
+        if(isOnlineNet()){
+            authProvider.register(email, password).addOnCompleteListener(new OnCompleteListener<AuthResult>() {
+                @Override
+                public void onComplete(@NonNull Task<AuthResult> task) {
+                    mDialog.hide();
                     String id = authProvider.getId();
                     Employee employee = new Employee(name,clave,rfc,email,phone,password,id);
                     create(employee);
-                } else {
-                    Toast.makeText(myContext, "No se pudo registrar el usuario", Toast.LENGTH_SHORT).show();
                 }
-            }
-        });
+            });
+        } else {
+            mDialog.hide();
+            Toast.makeText(myContext, "No cuentas con internet", Toast.LENGTH_SHORT).show();
+        }
     }
 
     void create(Employee employee){

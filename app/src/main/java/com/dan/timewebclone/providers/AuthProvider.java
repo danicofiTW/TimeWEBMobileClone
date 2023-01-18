@@ -56,7 +56,6 @@ public class AuthProvider {
 
     public Task<Void> updatePassword(String newPassword){
          return mAuth.getCurrentUser().updatePassword(newPassword);
-        //return mAuth.sendPasswordResetEmail(email);
     }
 
 }

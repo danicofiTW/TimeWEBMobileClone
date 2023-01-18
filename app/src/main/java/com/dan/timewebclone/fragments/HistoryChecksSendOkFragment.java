@@ -1,33 +1,27 @@
 package com.dan.timewebclone.fragments;
 
-import static com.google.firebase.firestore.FieldValue.delete;
-
-import android.Manifest;
 import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
-import android.content.Intent;
-import android.content.SharedPreferences;
 import android.os.Bundle;
 
 import androidx.annotation.NonNull;
-import androidx.core.app.ActivityCompat;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import android.view.LayoutInflater;
-import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.CheckBox;
+import android.widget.FrameLayout;
 import android.widget.ImageView;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.airbnb.lottie.LottieAnimationView;
 import com.dan.timewebclone.R;
 import com.dan.timewebclone.activitys.HomeTW;
-import com.dan.timewebclone.adapters.ChecksAdapter;
 import com.dan.timewebclone.adapters.ChecksDbAdapter;
 import com.dan.timewebclone.db.DbChecks;
 import com.dan.timewebclone.models.Check;
@@ -38,19 +32,20 @@ import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.QuerySnapshot;
 
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Date;
 
 public class HistoryChecksSendOkFragment extends Fragment {
 
+
+    private View mView;
     private RecyclerView mReciclerView;
     private ImageView deleteChecks;
     private LottieAnimationView animation;
     public CheckBox deleteAllChecks;
+    private TextView textViewNumberChecksDelete;
+    private FrameLayout frameLayoutNumberChecksDelete;
 
-    //private ChecksAdapter mAdapter;
     private AuthProvider authProvider;
     private ChecksProvider checksProvider;
     private ChecksDbAdapter checksDbAdapter;
@@ -61,6 +56,7 @@ public class HistoryChecksSendOkFragment extends Fragment {
     //public int numberChecksNotSend;
     Check ch;
     public ArrayList<Check> listChecks;
+    public ArrayList<String> idDeleteChecks;
 
     public HistoryChecksSendOkFragment() {
         // Required empty public constructor
@@ -83,21 +79,14 @@ public class HistoryChecksSendOkFragment extends Fragment {
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         // Inflate the layout for this fragment
-        return inflater.inflate(R.layout.fragment_historial, container, false);
-    }
+        mView = inflater.inflate(R.layout.fragment_historial, container, false);
 
-    @Override
-    public void onViewCreated(View view, Bundle savedInstanceState) {
-        super.onViewCreated(view, savedInstanceState);
-
-        /*numberChecksNotSend = 0;
-        SharedPreferences preferences = myContext.getSharedPreferences("checksNotSend", Context.MODE_PRIVATE);
-        numberChecksNotSend = preferences.getInt("numberChecksNotSend",0);*/
-
-        mReciclerView = view.findViewById(R.id.rvChecks);
-        deleteChecks = view.findViewById(R.id.imageViewDeleteChecks);
-        animation = view.findViewById(R.id.animation);
-        deleteAllChecks = view.findViewById(R.id.checkboxDeleteAll);
+        mReciclerView = mView.findViewById(R.id.rvChecks);
+        deleteChecks = mView.findViewById(R.id.imageViewDeleteChecks);
+        animation = mView.findViewById(R.id.animation);
+        deleteAllChecks = mView.findViewById(R.id.checkboxDeleteAll);
+        textViewNumberChecksDelete = mView.findViewById(R.id.textViewNumberChecksDelete);
+        frameLayoutNumberChecksDelete = mView.findViewById(R.id.frameLayoutNumberChecksDelete);
         linearLayoutManager = new LinearLayoutManager(myContext);
         mReciclerView.setLayoutManager(linearLayoutManager);
         builderDialogUpdateChecks = new AlertDialog.Builder(myContext);
@@ -105,11 +94,14 @@ public class HistoryChecksSendOkFragment extends Fragment {
         checksProvider = new ChecksProvider();
         relativeTime = new RelativeTime();
         listChecks = new ArrayList<>();
+        idDeleteChecks = new ArrayList<>();
         ch=null;
         //deleteChecks.setVisibility(View.VISIBLE);
         getChecksById();
-        //updateStatusChecks();
+
+        return mView;
     }
+
 
     @Override
     public void onAttach(@NonNull Context context) {
@@ -117,23 +109,20 @@ public class HistoryChecksSendOkFragment extends Fragment {
         super.onAttach(context);
     }
 
-    public void notifyInsertCheck() {
-        if(checksDbAdapter!=null){
-            checksDbAdapter.notifyDataSetChanged();
-        }
-    }
-
     public void showImageDelete(boolean visible){
         if(visible){
             animation.setVisibility(View.GONE);
             deleteChecks.setVisibility(View.VISIBLE);
             deleteAllChecks.setVisibility(View.VISIBLE);
+            frameLayoutNumberChecksDelete.setVisibility(View.VISIBLE);
+            textViewNumberChecksDelete.setText(""+myContext.idChecksDelete.size());
             deleteChecks();
             allChecks();
         } else {
             animation.setVisibility(View.VISIBLE);
             deleteChecks.setVisibility(View.GONE);
             deleteAllChecks.setVisibility(View.GONE);
+            frameLayoutNumberChecksDelete.setVisibility(View.GONE);
         }
     }
 
@@ -149,12 +138,12 @@ public class HistoryChecksSendOkFragment extends Fragment {
                         myContext.idChecksDelete.add(checksD.get(i).getIdCheck());
                     }
                     dbChecks.updateChecksDelete(true, authProvider.getId());
-                    getChecksById();
+                    notifyChangeAdapter();
                 } else {
                     myContext.idChecksDelete.clear();
                     dbChecks.updateChecksDelete(false, authProvider.getId());
                     showImageDelete(false);
-                    getChecksById();
+                    notifyChangeAdapter();
                 }
             }
         });
@@ -175,7 +164,7 @@ public class HistoryChecksSendOkFragment extends Fragment {
                                 if(delete){
                                     showImageDelete(false);
                                     myContext.idChecksDelete.clear();
-                                    getChecksById();
+                                    notifyChangeAdapter();
                                     if(myContext.menuItemSearch.isActionViewExpanded()){
                                         myContext.toolbar.collapseActionView();
                                     }
@@ -195,29 +184,13 @@ public class HistoryChecksSendOkFragment extends Fragment {
         });
     }
 
-    @Override
-    public void onStart() {
-        super.onStart();
-        if (checksDbAdapter != null) {
-            mReciclerView.getRecycledViewPool().clear();
-            checksDbAdapter.notifyDataSetChanged();
-            //checksDbAdapter.startListening();
-            mReciclerView.scrollToPosition(0);
-        }
-    }
-
-
-    @Override
-    public void onDestroy() {
-        super.onDestroy();
-        /*sharedPreferences = myContext.getSharedPreferences("checksNotSend", Context.MODE_PRIVATE);
-        SharedPreferences.Editor editor=sharedPreferences.edit();
-        editor.putInt("numberChecksNotSend",numberChecksNotSend);
-        editor.commit();*/
+    public void notifyChangeAdapter() {
+        DbChecks dbChecks = new DbChecks(myContext);
+        checksDbAdapter.updateChecks(dbChecks.getChecksSendSucces());
+        mReciclerView.scrollToPosition(0);
     }
 
     public void getChecksById() {
-
         if(checksProvider!=null){
         if(myContext!=null){
 
@@ -226,27 +199,15 @@ public class HistoryChecksSendOkFragment extends Fragment {
             mReciclerView.setAdapter(checksDbAdapter);
             mReciclerView.scrollToPosition(0);
 
-
-
-            checksDbAdapter.registerAdapterDataObserver(new RecyclerView.AdapterDataObserver() {
-                @Override
-                public void onItemRangeInserted(int positionStart, int itemCount) {
-                    super.onItemRangeInserted(positionStart, itemCount);
-                    if(positionStart==0)
-                        mReciclerView.scrollToPosition(positionStart);
-                }
-            });
-
-
             checksDbAdapter.registerAdapterDataObserver(new RecyclerView.AdapterDataObserver() {
                 @Override
                 public void onChanged() {
-                    super.onChanged();
                     if(myContext.idChecksDelete.size() != 0){
                         showImageDelete(true);
                     } else {
                         showImageDelete(false);
                     }
+                    super.onChanged();
                 }
             });
 
@@ -267,7 +228,6 @@ public class HistoryChecksSendOkFragment extends Fragment {
                         public void onSuccess(QuerySnapshot querySnapshot) {
                             Check check;
                             DbChecks dbChecks = new DbChecks(myContext);
-                            ArrayList<String> idDeleteChecks = new ArrayList<>();
                             for (DocumentSnapshot document: querySnapshot.getDocuments()) {
                                 check = document.toObject(Check.class);
                                 int dias = 31;
@@ -281,19 +241,16 @@ public class HistoryChecksSendOkFragment extends Fragment {
                                     listChecks.add(check);
                                 }
                             }
-                            if(idDeleteChecks.size() != 0){
-                                if(dbChecks.delete(idDeleteChecks)){
-                                    Toast.makeText(myContext, "Se eliminaron algunos checks con más de 30 días", Toast.LENGTH_SHORT).show();
-                                }
-                            }
                             Collections.reverse(listChecks);
-                            getChecksById();
+
                             }
                         });
                     }
                 }
             }
         }
+
+
 
 
 
@@ -306,28 +263,6 @@ public class HistoryChecksSendOkFragment extends Fragment {
     }*/
 
 
-    public void updateStatusChecks(int tipeCheck) {
-                getChecksById();
-                //checksDbAdapter.notifyDataSetChanged();
-                mReciclerView.scrollToPosition(0);
-    }
-
-    public void updateChecks(int tipeCheck) {
-        ChecksProvider checksProvider = new ChecksProvider();
-        if(authProvider!=null){
-        checksProvider.getChecksNotSend(authProvider.getId()).get().addOnSuccessListener(new OnSuccessListener<QuerySnapshot>() {
-            @Override
-            public void onSuccess(QuerySnapshot queryDocumentSnapshots) {
-                Check check;
-                for (DocumentSnapshot document: queryDocumentSnapshots.getDocuments()) {
-                    check = document.toObject(Check.class);
-                   // check.setCheckLat(document.getData().g);
-                    checksProvider.updateStatus(check.getIdCheck(), tipeCheck);
-                }
-            }
-        });
-        }
-    }
 
 
 }

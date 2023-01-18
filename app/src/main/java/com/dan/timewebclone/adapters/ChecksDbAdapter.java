@@ -23,6 +23,7 @@ import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.cardview.widget.CardView;
@@ -74,6 +75,10 @@ public class ChecksDbAdapter extends RecyclerView.Adapter<ChecksDbAdapter.CheckV
     public ArrayList<ChecksDbAdapter.  CheckViewHolder> viewHolders;
     public ArrayList<Check> checks;
     public ArrayList<String> idChecksDelete;
+    private SimpleDateFormat sdfLongDate;
+
+    private SimpleDateFormat sdfDate;
+    private DbChecks dbChecks;
 
     HistoryChecksSendOkFragment historyChecksSendOkFragment;
 
@@ -89,6 +94,9 @@ public class ChecksDbAdapter extends RecyclerView.Adapter<ChecksDbAdapter.CheckV
         employee = new Employee();
         viewHolders = new ArrayList<>();
         relativeTime = new RelativeTime();
+        sdfLongDate = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
+        sdfDate = new SimpleDateFormat("dd/MM/yyyy");
+        dbChecks = new DbChecks(context);
         //historyChecksSendOkFragment = new HistoryChecksSendOkFragment();
 
         checks = listChecks;
@@ -105,36 +113,52 @@ public class ChecksDbAdapter extends RecyclerView.Adapter<ChecksDbAdapter.CheckV
     @Override
     public void onBindViewHolder(@NonNull CheckViewHolder holder, int position) {
 
-        int post = position;
-
         Date aux = new Date(checks.get(position).getTime());
-        SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
-        String date = sdf.format(aux);
+        String date = sdfLongDate.format(aux);
         holder.textViewFecha.setText(date);
 
         if(checks.get(position).getStatusSend() == 1){
             holder.imageViewSendCheck.setImageResource(R.drawable.icon_double_check);
-        } else if(checks.get(position).getStatusSend() == 2){
-            holder.imageViewSendCheck.setImageResource(R.drawable.ic_check_gray);
-        } else if(checks.get(position).getStatusSend() == 0){
-            holder.imageViewSendCheck.setImageResource(R.drawable.ic_cancel_red);
         }
 
+        /*else if(checks.get(position).getStatusSend() == 2){
+            holder.imageViewSendCheck.setImageResource(R.drawable.double_check_gray);
+        } else if(checks.get(position).getStatusSend() == 0){
+            holder.imageViewSendCheck.setImageResource(R.drawable.ic_check_gray);
+        }*/
+
+        /*if(check.getTipeCheck().equals("startWork")){
+            holder.imageViewHistoryCheck.setImageResource(R.drawable.icon_int);
+        } else if(check.getTipeCheck().equals("startEating")){
+            holder.imageViewHistoryCheck.setImageResource(R.drawable.icon_comer);
+        } else if(check.getTipeCheck().equals("finishEating")){
+            holder.imageViewHistoryCheck.setImageResource(R.drawable.icon_termincomer);
+        } else if(check.getTipeCheck().equals("finishWork")){
+            holder.imageViewHistoryCheck.setImageResource(R.drawable.icon_out);
+        }*/
 
         if(checks.get(position).getTipeCheck().equals("startWork")){
             //holder.imageViewHistoryCheck.setImageResource(R.drawable.icon_entrar);
+
+            holder.imageViewHistoryCheck.setImageResource(R.drawable.icon_int);
             holder.textViewTipeCheck.setText("Registro de Entrada");
             holder.textViewTipeCheck.setTextColor(context.getColor(R.color.colorGreenLigth));
         } else if(checks.get(position).getTipeCheck().equals("startEating")){
             //holder.imageViewHistoryCheck.setImageResource(R.drawable.icon_entrarcomer);
+
+            holder.imageViewHistoryCheck.setImageResource(R.drawable.icon_comer);
             holder.textViewTipeCheck.setText("Registro de Comida");
             holder.textViewTipeCheck.setTextColor(context.getColor(R.color.colorBlueLigth));
         } else if(checks.get(position).getTipeCheck().equals("finishEating")){
             //holder.imageViewHistoryCheck.setImageResource(R.drawable.icon_terminarcomer);
+
+            holder.imageViewHistoryCheck.setImageResource(R.drawable.icon_termincomer);
             holder.textViewTipeCheck.setText("Registro de Fin Comida");
             holder.textViewTipeCheck.setTextColor(context.getColor(R.color.colorYellowLigth));
         } else if(checks.get(position).getTipeCheck().equals("finishWork")){
             //holder.imageViewHistoryCheck.setImageResource(R.drawable.icon_salir);
+
+            holder.imageViewHistoryCheck.setImageResource(R.drawable.icon_out);
             holder.textViewTipeCheck.setText("Registro de Salida");
             holder.textViewTipeCheck.setTextColor(context.getColor(R.color.colorRedLigth));
         }
@@ -154,7 +178,7 @@ public class ChecksDbAdapter extends RecyclerView.Adapter<ChecksDbAdapter.CheckV
 
         setImage(holder, position);
 
-        if(checks.get(post).isDelete()){
+        if(checks.get(position).isDelete()){
             holder.viewDelete.setVisibility(View.VISIBLE);
             holder.imageViewDelete.setVisibility(View.VISIBLE);
             //isDelete=true;
@@ -173,43 +197,6 @@ public class ChecksDbAdapter extends RecyclerView.Adapter<ChecksDbAdapter.CheckV
     }
 
     private void setImage(CheckViewHolder holder, int position){
-        /*if(checks.get(position).getUrlImage() != null){
-            Uri uri;
-            uri = Uri.parse(checks.get(position).getUrlImage());
-            ContentResolver contentResolver = context.getContentResolver();
-            Bitmap bitmap = null;
-            try {
-                bitmap = MediaStore.Images.Media.getBitmap(contentResolver, uri);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-            if(uri != null && bitmap != null){
-                Glide.with(context).load(uri)
-                        .thumbnail(0.5f)
-                        .transition(withCrossFade())
-                        .diskCacheStrategy(DiskCacheStrategy.ALL)
-                        .into(holder.imageViewHistoryCheck);
-                //Picasso.with(context).load(uri).fit().into(holder.imageViewHistoryCheck);
-            } else {
-                if(checks.get(position).getImage() != null){
-                    try{
-                        byte[] decodedString = Base64.decode(checks.get(position).getImage(), Base64.DEFAULT);
-                        Bitmap decodedByte = BitmapFactory.decodeByteArray(decodedString, 0, decodedString.length);
-                        //RoundedBitmapDrawable roundedDrawable = RoundedBitmapDrawableFactory.create(context.getResources(), decodedByte);
-                        if(decodedByte != null){
-                            holder.imageViewHistoryCheck.setImageBitmap(decodedByte);
-                        } else {
-                            holder.imageViewHistoryCheck.setImageResource(R.drawable.ic_broken_image_white);
-                        }
-                    }
-                    catch(Exception e){
-                        e.getMessage();
-                    }
-                } else {
-                    defaultImage(holder, checks.get(position));
-                }
-            }
-        } else {*/
             if(checks.get(position).getImage() != null){
                 try{
                     byte[] decodedString = Base64.decode(checks.get(position).getImage(), Base64.DEFAULT);
@@ -224,17 +211,16 @@ public class ChecksDbAdapter extends RecyclerView.Adapter<ChecksDbAdapter.CheckV
                 catch(Exception e){
                     e.getMessage();
                 }
-            } else {
-                defaultImage(holder, checks.get(position));
             }
-        //}
+            /*else {
+                defaultImage(holder, checks.get(position));
+            }*/
     }
 
     private void longCLickCheck(CheckViewHolder holder, int post){
         holder.myView.setOnLongClickListener(new View.OnLongClickListener() {
             @Override
             public boolean onLongClick(View view) {
-                DbChecks dbChecks = new DbChecks(context);
                 if(!checks.get(post).isDelete()){
                     holder.viewDelete.setVisibility(View.VISIBLE);
                     holder.imageViewDelete.setVisibility(View.VISIBLE);
@@ -255,11 +241,11 @@ public class ChecksDbAdapter extends RecyclerView.Adapter<ChecksDbAdapter.CheckV
                         for(int i = 0; i<context.idChecksDelete.size(); i++){
                             if (context.idChecksDelete.get(i).equals(checks.get(post).getIdCheck())) {
                                 context.idChecksDelete.remove(i);
+                                break;
                             }
                         }
-                    } else {
-                        notifyDataSetChanged();
                     }
+                    notifyDataSetChanged();
                 }
                 return false;
             }
@@ -270,15 +256,14 @@ public class ChecksDbAdapter extends RecyclerView.Adapter<ChecksDbAdapter.CheckV
         holder.myView.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                DbChecks dbChecks = new DbChecks(context);
                 if(context.idChecksDelete.size()==0){
-                    Intent i = new Intent(context, ShowLocationActivity.class);
-                    i.putExtra("lat", check.getCheckLat());
-                    i.putExtra("lng", check.getCheckLong());
-                    i.putExtra("date", check.getTime());
-                    i.putExtra("tipe", check.getTipeCheck());
-                    i.putExtra("idCheck", check.getIdCheck());
-                    context.startActivity(i);
+                        Intent i = new Intent(context, ShowLocationActivity.class);
+                        i.putExtra("lat", check.getCheckLat());
+                        i.putExtra("lng", check.getCheckLong());
+                        i.putExtra("date", check.getTime());
+                        i.putExtra("tipe", check.getTipeCheck());
+                        i.putExtra("idCheck", check.getIdCheck());
+                        context.startActivity(i);
                 } else {
                    // if(!longClick){
                     if(!check.isDelete()) {
@@ -301,12 +286,11 @@ public class ChecksDbAdapter extends RecyclerView.Adapter<ChecksDbAdapter.CheckV
                         for (int i = 0; i < context.idChecksDelete.size(); i++) {
                             if (context.idChecksDelete.get(i).equals(check.getIdCheck())) {
                                 context.idChecksDelete.remove(i);
+                                break;
                             }
                         }
-                        if(context.idChecksDelete.size()==0){
-                            notifyDataSetChanged();
-                        }
-                        //notifyDataSetChanged();
+
+                        notifyDataSetChanged();
 
                     }
                     }
@@ -318,31 +302,32 @@ public class ChecksDbAdapter extends RecyclerView.Adapter<ChecksDbAdapter.CheckV
 
     private void reviewDate(CheckViewHolder holder, ArrayList<Check> checks, int position) {
         Date aux = new Date(checks.get(position).getTime());
-        SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy");
-        String date1S = sdf.format(aux);
+        String date1S = sdfDate.format(aux);
         Date date1 = null;
         try {
-            date1 = sdf.parse(date1S);
+            date1 = sdfDate.parse(date1S);
         } catch (ParseException e) {
             e.printStackTrace();
         }
+
         if(position!=0){
             Date aux2 = new Date(checks.get(position-1).getTime());
-            SimpleDateFormat sdf2 = new SimpleDateFormat("dd/MM/yyyy");
-            String date2S = sdf.format(aux2);
+            //SimpleDateFormat sdf2 = new SimpleDateFormat("dd/MM/yyyy");
+            String date2S = sdfDate.format(aux2);
             Date date2 = null;
             try {
-                date2 = sdf2.parse(date2S);
+                date2 = sdfDate.parse(date2S);
             } catch (ParseException e) {
                 e.printStackTrace();
             }
+
             if(date2.after(date1)) {
                 holder.linearLayoutLineDate.setVisibility(View.VISIBLE);
                 holder.textViewLineDate.setText(relativeTime.timeFormatDay(checks.get(position).getTime()));
                 holder.linearLayoutCheck.setPadding(0,35,0,0);
-                if(relativeTime.timeFormatDay(checks.get(position).getTime()).equals("Ayer")){
+                /*if(relativeTime.timeFormatDay(checks.get(position).getTime()).equals("Ayer")){
                     holder.linearLayoutCheck.setPadding(0,40,0,0);
-                }
+                }*/
             } else {
                 holder.linearLayoutLineDate.setVisibility(View.GONE);
                 holder.linearLayoutCheck.setPadding(0,0,0,0);

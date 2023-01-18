@@ -13,6 +13,8 @@ import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Matrix;
+import android.media.ExifInterface;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -50,6 +52,8 @@ import com.squareup.picasso.Picasso;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 
 import de.hdodenhof.circleimageview.CircleImageView;
@@ -65,18 +69,18 @@ public class ProfileActivity extends AppCompatActivity {
     private CircleImageView circleImageProfile;
     private ImageView imageViewEditUserName, imageViewEditCompany,imageViewEditPhone, mImageBack;
 
-    EmployeeProvider employeeProvider;
-    AuthProvider authProvider;
-    ImageProvider mImageProvider;
-    Employee employee;
+    private EmployeeProvider employeeProvider;
+    private AuthProvider authProvider;
+    private ImageProvider mImageProvider;
+    private Employee employee;
+    private DbEmployees dbEmployees;
 
-    String eName, eCompany, ePhone, eEmail, eImage, idUser;
-    String imagetoBase64;
+    private String imagetoBase64;
 
-    Options mOptions;
-    ArrayList<String> returnValues = new ArrayList<>();
-    File mImageFile;
-    ListenerRegistration listenerRegistration;
+    private Options mOptions;
+    private ArrayList<String> returnValues = new ArrayList<>();
+    private File mImageFile;
+    private ListenerRegistration listenerRegistration;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -84,11 +88,10 @@ public class ProfileActivity extends AppCompatActivity {
         setContentView(R.layout.activity_profile);
         setStatusBarColor();
 
-        //MyToolBar.sho0 w(this,"Perfil", true);
         mImageProvider = new ImageProvider();
         employeeProvider = new EmployeeProvider();
-        //authP = FirebaseAuth.getInstance();
         authProvider = new AuthProvider();
+        dbEmployees = new DbEmployees(ProfileActivity.this);
 
         StrictMode.VmPolicy.Builder builder = new StrictMode.VmPolicy.Builder();
         StrictMode.setVmPolicy(builder.build());
@@ -105,7 +108,6 @@ public class ProfileActivity extends AppCompatActivity {
         mEmail = findViewById(R.id.textViewEmail);
         circleImageProfile = findViewById(R.id.circleImageProfile);
         mFabSelectImage = findViewById(R.id.fabSelectImage);
-
         mImageBack = findViewById(R.id.circleImageBack);
 
         mOptions = Options.init()
@@ -133,13 +135,6 @@ public class ProfileActivity extends AppCompatActivity {
             }
         });
 
-        /*imageViewEditCompany.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                openBottonSheetEditCompany();
-            }
-        });*/
-
         imageViewEditPhone.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -154,21 +149,11 @@ public class ProfileActivity extends AppCompatActivity {
             }
         });
 
-
         getUserInfo();
-
     }
 
-
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        if(listenerRegistration != null)
-            listenerRegistration.remove();
-    }
-
+    //Obtener informacion del usuario
     public void getUserInfo() {
-        DbEmployees dbEmployees = new DbEmployees(ProfileActivity.this);
         employee = dbEmployees.getEmployee(authProvider.getId());
         if(employee!=null){
             mUserName.setText(employee.getName());
@@ -194,44 +179,19 @@ public class ProfileActivity extends AppCompatActivity {
                 setImageDefault();
             }
         }
-
-/*
-        listenerRegistration = employeeProvider.getUserInfo(authProvider.getId()).addSnapshotListener(new EventListener<DocumentSnapshot>() {
-            @Override
-            public void onEvent(@Nullable DocumentSnapshot documentSnapshot, @Nullable FirebaseFirestoreException error) {
-                if(documentSnapshot!= null){
-                    if(documentSnapshot.exists()){
-                        employee = documentSnapshot.toObject(Employee.class);
-                        mUserName.setText(employee.getName());
-                        mPhone.setText(employee.getPhone());
-                        mCompany.setText(employee.getCompany());
-                        mEmail.setText(employee.getEmail());
-                        if(employee.getImage() != null){
-                            if(!employee.getImage().equals("")){
-                                Picasso.with(ProfileActivity.this).load(employee.getImage()).into(circleImageProfile);
-                            }
-                            else{
-                                setImageDefault();
-                            }
-                        }
-                        else{
-                            setImageDefault();
-                        }
-                    }
-                }
-            }
-        });*/
     }
 
-    private void openBottonSheetEditCompany() {
+    //Editar compania
+    /*private void openBottonSheetEditCompany() {
         if(employee != null ){
             bottomSheetCompany = BottomSheetCompany.newInstance(employee.getCompany(),ProfileActivity.this);
             bottomSheetCompany.show(getSupportFragmentManager(),bottomSheetCompany.getTag());
         } else {
             Toast.makeText(this, "La informacion no se pudo cargar", Toast.LENGTH_SHORT).show();
         }
-    }
+    }*/
 
+    //Editar telefono
     private void openBottonSheetEditPhone() {
         if(employee != null){
             bottomSheetPhone = BottomSheetPhone.newInstance(employee.getPhone(), this);
@@ -241,15 +201,7 @@ public class ProfileActivity extends AppCompatActivity {
         }
     }
 
-    private void openBottonSheetSelectImage() {
-        if(employee != null){
-           mBottonSelectedImage = BottomSheetSelectImage.newInstance(employee.getImage(), ProfileActivity.this);
-           mBottonSelectedImage.show(getSupportFragmentManager(), mBottonSelectedImage.getTag());
-        } else {
-            Toast.makeText(this, "La informacion no se pudo cargar", Toast.LENGTH_SHORT).show();
-        }
-    }
-
+    //Editar nombre
     private void openBottonSheetUserName() {
         if(employee != null){
             bottomSheetUserName = BottomSheetUserName.newInstance(employee.getName(), this);
@@ -259,41 +211,27 @@ public class ProfileActivity extends AppCompatActivity {
         }
     }
 
+    //Cambiar imagen
+    private void openBottonSheetSelectImage() {
+        if(employee != null){
+            mBottonSelectedImage = BottomSheetSelectImage.newInstance(employee.getImage(), ProfileActivity.this);
+            mBottonSelectedImage.show(getSupportFragmentManager(), mBottonSelectedImage.getTag());
+        } else {
+            Toast.makeText(this, "La informacion no se pudo cargar", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    //Imagen por defecto
     public void setImageDefault(){
         circleImageProfile.setImageResource(R.drawable.icon_user2);
     }
 
+    //Abrir camara y galeria
     public void startPix() {
         Pix.start(ProfileActivity.this, mOptions);
     }
 
-    @Override
-    protected void onSaveInstanceState(Bundle outState) {
-        super.onSaveInstanceState(outState);
-        //Clear the Activity's bundle of the subsidiary fragments' bundles.
-        outState.clear();
-    }
-
-    @Override
-    public void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        if (resultCode == Activity.RESULT_OK && requestCode == 100) {
-            returnValues = data.getStringArrayListExtra(Pix.IMAGE_RESULTS);
-            mImageFile = new File(returnValues.get(0));
-            Bitmap mImage = BitmapFactory.decodeFile(mImageFile.getAbsolutePath());
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            mImage.compress(Bitmap.CompressFormat.JPEG, 70, baos);
-            byte[] image = baos.toByteArray();
-            imagetoBase64 = Base64.encodeToString(image,Base64.DEFAULT);
-            DbEmployees dbEmployees = new DbEmployees(ProfileActivity.this);
-            dbEmployees.saveImage(authProvider.getId(),imagetoBase64);
-            circleImageProfile.setImageBitmap(mImage);
-            saveImage(imagetoBase64);
-        }
-
-
-    }
-
+    //Solicitar permisos de camara y storage
     @Override
     public void onRequestPermissionsResult(int requestCode, String permissions[], int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
@@ -316,9 +254,68 @@ public class ProfileActivity extends AppCompatActivity {
                 return;
             }
         }
-
     }
 
+    //Recibir la imagen
+    @Override
+    public void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (resultCode == Activity.RESULT_OK && requestCode == 100) {
+            returnValues = data.getStringArrayListExtra(Pix.IMAGE_RESULTS);
+            mImageFile = new File(returnValues.get(0));
+            Bitmap mImage = BitmapFactory.decodeFile(mImageFile.getAbsolutePath());
+            Bitmap mImageReview = reviewOrientationImage(mImage);
+
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            mImageReview.compress(Bitmap.CompressFormat.JPEG, 85, baos);
+            byte[] image = baos.toByteArray();
+            imagetoBase64 = Base64.encodeToString(image,Base64.DEFAULT);
+            dbEmployees.saveImage(authProvider.getId(),imagetoBase64);
+            circleImageProfile.setImageBitmap(mImageReview);
+            saveImage(imagetoBase64);
+        }
+    }
+
+    //Revisar orientacion de la imagen o foto
+    private Bitmap reviewOrientationImage(Bitmap compressImage) {
+        ExifInterface ei = null;
+        Bitmap rotatedBitmap = null;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            try {
+                InputStream fi = getContentResolver().openInputStream(Uri.fromFile(mImageFile));
+                ei = new ExifInterface(fi);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            int orientation = ei.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_UNDEFINED);
+
+            switch(orientation) {
+                case ExifInterface.ORIENTATION_ROTATE_90:
+                    rotatedBitmap = rotateImage(compressImage, 90);
+                    break;
+                case ExifInterface.ORIENTATION_ROTATE_180:
+                    rotatedBitmap = rotateImage(compressImage, 180);
+                    break;
+                case ExifInterface.ORIENTATION_ROTATE_270:
+                    rotatedBitmap = rotateImage(compressImage, 270);
+                    break;
+                case ExifInterface.ORIENTATION_NORMAL:
+                default:
+                    rotatedBitmap = compressImage;
+            }
+        }
+        return rotatedBitmap;
+    }
+
+    //Rotar imagen
+    public static Bitmap rotateImage(Bitmap source, float angle) {
+        Matrix matrix = new Matrix();
+        matrix.postRotate(angle);
+        return Bitmap.createBitmap(source, 0, 0, source.getWidth(), source.getHeight(),
+                matrix, true);
+    }
+
+    //Guardar imagen de perfil en firebase y base de datos
     private void saveImage(String mImageFile) {
       employeeProvider.updateImage(authProvider.getId(), mImageFile).addOnCompleteListener(new OnCompleteListener<Void>() {
           @Override
@@ -335,11 +332,22 @@ public class ProfileActivity extends AppCompatActivity {
       });
     }
 
+    //Se utiliza para evitar problemas con los fragment
     @Override
-    protected void onStart() {
-        super.onStart();
+    protected void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        outState.clear();
     }
 
+    //Destruir listener
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if(listenerRegistration != null)
+            listenerRegistration.remove();
+    }
+
+    //Cambiar el color de la barra de notificaciones
     private void setStatusBarColor() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             getWindow().setStatusBarColor(getResources().getColor(R.color.black, this.getTheme()));

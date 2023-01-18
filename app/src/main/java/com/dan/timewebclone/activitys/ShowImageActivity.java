@@ -28,9 +28,9 @@ import java.nio.charset.StandardCharsets;
 
 public class ShowImageActivity extends AppCompatActivity {
 
-    ImageView imageViewBackShow, imageViewPictureShow;
-    String mExtraId;
-    Check check;
+    private ImageView imageViewBackShow, imageViewPictureShow;
+    private String mExtraId;
+    private Check check;
 
     @SuppressLint("WrongThread")
     @Override
@@ -47,7 +47,18 @@ public class ShowImageActivity extends AppCompatActivity {
         DbChecks dbChecks = new DbChecks(ShowImageActivity.this);
         check = dbChecks.getCheck(mExtraId);
 
+        getImage();
 
+        imageViewBackShow.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                finish();
+            }
+        });
+    }
+
+    //Mostrar imagen
+    private void getImage() {
         if(check.getUrlImage() != null){
             Uri uri;
             uri = Uri.parse(check.getUrlImage());
@@ -88,16 +99,9 @@ public class ShowImageActivity extends AppCompatActivity {
                 e.getMessage();
             }
         }
-
-        imageViewBackShow.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                finish();
-            }
-        });
-
     }
 
+    //Cambiar el color de la barra de notificaciones
     private void setStatusBarColor() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             getWindow().setStatusBarColor(getResources().getColor(R.color.black, this.getTheme()));

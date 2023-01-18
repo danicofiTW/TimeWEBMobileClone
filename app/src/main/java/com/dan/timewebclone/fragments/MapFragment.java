@@ -1,11 +1,14 @@
 package com.dan.timewebclone.fragments;
 
+import static androidx.constraintlayout.helper.widget.MotionEffect.TAG;
+
 import android.Manifest;
 import android.app.AlertDialog;
 import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
@@ -29,6 +32,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
+import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -80,10 +84,14 @@ import java.nio.charset.StandardCharsets;
 import java.sql.Time;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 import java.util.TimeZone;
 
 import de.hdodenhof.circleimageview.CircleImageView;
@@ -101,15 +109,16 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
     private View mView;
     private TextView textViewGoodTime, textViewTime, textViewName, textViewState;
     private SupportMapFragment mapFragment;
-
-    public byte[] mImagen;
+    public FrameLayout frameLayoutLoading;
+    private Toast mToast = null;
+    int numberChecksSendLate = 0;
 
     private final static int LOCATION_REQUEST_CODE = 1;
     private final static int SETTINGS_REQUEST_CODE = 2;
 
     private Marker marker;
     private Button buttonConnect;
-    private Boolean isConnect = false ;
+    private Boolean isConnect = false;
     public static CircleImageView circleImageViewMap;
     private ImageView imageViewPhotoMap;
 
@@ -125,58 +134,50 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
     private String zone = "America/Mexico_City";
 
     private FusedLocationProviderClient fusedLocation;
-    private ListenerRegistration listenerRegistration;
-
     private LocationRequest locationRequest;
 
-    String urlImage;
-    double seconds = 0;
+    private DbEmployees dbEmployees;
+    private Employee employee;
+    private Calendar calendar;
+    private String timezoneID;
+    private SimpleDateFormat sdf1;
+
     public boolean secondsIsOver = false;
+    public boolean takePhoto = false;
     Handler handler = new Handler();
 
     Runnable runnable = new Runnable() {
         @Override
         public void run() {
-            DbEmployees dbEmployees = new DbEmployees(myContext);
-            Employee employee = dbEmployees.getEmployee(authProvider.getId());
-            if(employee!=null){
-                if(isTimeAutomaticEnabled(myContext)){
+            if (employee != null) {
+                if (isTimeAutomaticEnabled(myContext)) {
                     secondsIsOver = false;
-                    mDateD = new Date();
-                    updateInfo(mDateD, employee.getName());
-                    if(time1!=null){
-                        if(!evaluarLimite(mDateD, time1)){
-                            if(pdSendCheck.isShowing()){
-                                pdSendCheck.cancel();
-                            }
-                        }
+                    timezoneID = TimeZone.getDefault().getID();
+                    calendar = Calendar.getInstance(TimeZone.getTimeZone(timezoneID), Locale.getDefault());
+                    mDateD = calendar.getTime();
+                    String date1 = sdf1.format(mDateD.getTime());
+                    if (textViewTime != null) {
+                        textViewTime.setText(date1);
                     }
-                    if(myContext.time1 != null){
-                        if(!evaluarLimite(mDateD, myContext.time1)){
-                            if(myContext.pdRevieData.isShowing()){
+                    //updateInfo(mDateD);
+                    /*if (myContext.time1 != null) {
+                        if (!evaluarLimite(mDateD, myContext.time1)) {
+                            if (myContext.pdRevieData.isShowing()) {
                                 myContext.pdRevieData.cancel();
                                 time1 = null;
                             }
                         }
-                    }
+                    }*/
                 } else {
                     disconnect();
                     secondsIsOver = true;
-                    if(textViewName!=null && textViewState != null && textViewTime != null && textViewGoodTime != null){
-                        if(employee!=null){
-                            textViewName.setText(employee.getName());
-                            textViewTime.setText("");
-                            textViewGoodTime.setText("");
-                            if(isConnect){
-                                textViewState.setText("¡Listo para enviar registros!");
-                            } else {
-                                textViewState.setText("!Conectate para enviar¡");
-                            }
-                        }
+                    if (textViewTime != null) {
+                        textViewTime.setText("");
+                        //textViewGoodTime.setText("");
                     }
                 }
             }
-            handler.postDelayed(runnable,1000);
+            handler.postDelayed(runnable, 1000);
         }
     };
 
@@ -185,14 +186,15 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         public void onLocationResult(LocationResult locationResult) {
             for (Location location : locationResult.getLocations()) {
                 mLocation = location;
-                if(isMockLocationOn(location, myContext)){
+                Log.d("UBICACION", "Location: " + mLocation.getLatitude()+ ", " + mLocation.getLongitude());
+                if (isMockLocationOn(location, myContext)) {
                     disconnect();
                     Toast.makeText(myContext, "Se ha detectado ubicacion de prueba, por lo que no se puede enviar registros", Toast.LENGTH_LONG).show();
-                } else{
-                    currentLatLng= new LatLng(location.getLatitude(),location.getLongitude());
-                //date = location.getTime();
+                } else {
+                    currentLatLng = new LatLng(location.getLatitude(), location.getLongitude());
+                    //date = location.getTime();
 
-                    if(marker!=null){
+                    if (marker != null) {
                         marker.remove();
                     }
                     //icono del conductor
@@ -208,57 +210,20 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                     ));
                 }
 
-                if(myContext.pdRevieData.isShowing()){
-                    myContext.pdRevieData.dismiss();
-                }
-                    //updateInfo(date);
-                    //updateLocation();
-                }
-            }
-    };
-
-    private void getTimeZone(){
-        SNTPClient.getDate(TimeZone.getTimeZone(zone), new SNTPClient.Listener() {
-            @Override
-            public void onTimeResponse(String rawDate, Date date, Exception ex) {
-                mDateD = date;
-            }
-        });
-    }
-
-    private void updateInfo(Date Date, String name) {
-        if(Date != null){
-            SimpleDateFormat sdf = new SimpleDateFormat("HH");
-            String dateTime = sdf.format(Date.getTime());
-            SimpleDateFormat sdf1 = new SimpleDateFormat("HH:mm:ss");
-            String date1 = sdf1.format(Date.getTime());
-            SimpleDateFormat sdf2 = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
-            String dateTS = sdf2.format(Date.getTime());
-            String texto = "";
-            mDateL = Date.getTime();
-
-            int hour = Integer.parseInt(dateTime);
-            if(hour>=6 && hour<12){
-                texto="Buenos días";
-            }
-            if(hour>=12 && hour<19){
-                texto="Buenas tardes";
-            }
-            if (hour>=19 || hour<6){
-                texto="Buenas noches";
-            }
-            if(textViewName!=null && textViewState != null && textViewTime != null && textViewGoodTime != null){
-                textViewName.setText(name);
-                textViewTime.setText(date1);
-                textViewGoodTime.setText(texto);
-                if(isConnect){
-                    textViewState.setText("¡Listo para enviar registros!");
+                if (myContext.linearLayoutLoadingHome.getVisibility() == View.VISIBLE) {
+                    //myContext.linearLayoutLoadingHome.setVisibility(View.GONE);
+                    myContext.checkUpdateSend();
                 } else {
-                    textViewState.setText("!Conectate para enviar¡");
+                    loadin(false);
+
                 }
+                //updateInfo(date);
+                //updateLocation();
             }
         }
-    }
+    };
+
+
 
     public MapFragment() {
     }
@@ -275,56 +240,46 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         mView = inflater.inflate(R.layout.fragment_map, container, false);
 
         mapFragment = (SupportMapFragment) getChildFragmentManager().findFragmentById(R.id.map);
-        if(mapFragment != null){
-            mapFragment.getMapAsync(this);}
-        return mView;
-    }
+        if (mapFragment != null) {
+            mapFragment.getMapAsync(this);
+        }
 
-    @Override
-    public void onViewCreated(View view, Bundle savedInstanceState) {
-        super.onViewCreated(view, savedInstanceState);
         authProvider = new AuthProvider();
         checksProvider = new ChecksProvider();
         employeeProvider = new EmployeeProvider();
 
-        fusedLocation = LocationServices.getFusedLocationProviderClient(view.getContext());
+        fusedLocation = LocationServices.getFusedLocationProviderClient(mView.getContext());
 
-        floatingActionsMenu = view.findViewById(R.id.groupButton);
-        buttonConnect = view.findViewById(R.id.btnConectDriver);
-        sendStartWork = view.findViewById(R.id.sendStartWork);
-        sendStartEating = view.findViewById(R.id.sendStartEating);
-        sendFinishEating = view.findViewById(R.id.sendFinishEating);
-        sendFinishWork = view.findViewById(R.id.sendFinishWork);
-        circleImageViewMap = view.findViewById(R.id.circleImageMap);
-        imageViewPhotoMap = view.findViewById(R.id.mapSelectImage);
-        textViewGoodTime = view.findViewById(R.id.textViewGoodTime);
-        textViewTime = view.findViewById(R.id.textViewTime);
-        textViewName = view.findViewById(R.id.textViewName);
-        textViewState = view.findViewById(R.id.textViewStatus);
-
-        pdSendCheck = new ProgressDialog(myContext);
-        pdSendCheck.setTitle("Enviando");
-        pdSendCheck.setMessage("Espere un momento");
-        pdSendCheck.setCancelable(false);
+        floatingActionsMenu = mView.findViewById(R.id.groupButton);
+        buttonConnect = mView.findViewById(R.id.btnConectDriver);
+        sendStartWork = mView.findViewById(R.id.sendStartWork);
+        sendStartEating = mView.findViewById(R.id.sendStartEating);
+        sendFinishEating = mView.findViewById(R.id.sendFinishEating);
+        sendFinishWork = mView.findViewById(R.id.sendFinishWork);
+        circleImageViewMap = mView.findViewById(R.id.circleImageMap);
+        imageViewPhotoMap = mView.findViewById(R.id.mapSelectImage);
+        textViewGoodTime = mView.findViewById(R.id.textViewGoodTime);
+        textViewTime = mView.findViewById(R.id.textViewTime);
+        textViewName = mView.findViewById(R.id.textViewName);
+        textViewState = mView.findViewById(R.id.textViewStatus);
+        frameLayoutLoading = mView.findViewById(R.id.loading);
 
 
-        if(!checkIfLocationOpened()){
-            Toast.makeText(myContext, "Activa tu ubicacion", Toast.LENGTH_SHORT).show();
-        }
-
-        runnable.run();
-        updateLocation();
-
+        dbEmployees = new DbEmployees(myContext);
+        //employee = dbEmployees.getEmployee(authProvider.getId());
+        //textViewName.setText(employee.getName());
+        textViewState.setText("!Conectate para enviar¡");
+        sdf1 = new SimpleDateFormat("HH:mm:ss");
 
         buttonConnect.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                if(isConnect){
+                if (isConnect) {
                     disconnect();
                 } else {
-                    if(map==null) {
+                    if (map == null) {
                         Toast.makeText(myContext, "No se puede conectar", Toast.LENGTH_SHORT).show();
-                    } else if (!secondsIsOver){
+                    } else if (!secondsIsOver) {
                         startLocation();
                     } else {
                         Toast.makeText(myContext, "No se cuenta con la hora correcta para enviar registros", Toast.LENGTH_SHORT).show();
@@ -336,11 +291,17 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         sendStartWork.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                pdSendCheck.show();
-                if(authProvider.existSesion() && currentLatLng!=null && isConnect){
-                    seendCheck("startWork");
+                if (currentLatLng != null && isConnect) {
+                    if(takePhoto){
+                        if(!myContext.imagetoBase64.equals("")){
+                            seendCheck("startWork");
+                        } else {
+                            Toast.makeText(myContext, "La fotografia es necesaria para el registro", Toast.LENGTH_SHORT).show();
+                        }
+                    } else {
+                        seendCheck("startWork");
+                    }
                 } else {
-                    pdSendCheck.dismiss();
                     Toast.makeText(myContext, "Conectate para enviar el registro", Toast.LENGTH_SHORT).show();
                 }
             }
@@ -349,11 +310,17 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         sendStartEating.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                pdSendCheck.show();
-                if(authProvider.existSesion() && currentLatLng!=null && isConnect) {
-                    seendCheck("startEating");
+                if (currentLatLng != null && isConnect) {
+                    if(takePhoto){
+                        if(!myContext.imagetoBase64.equals("")){
+                            seendCheck("startEating");
+                        } else {
+                            Toast.makeText(myContext, "La fotografia es necesaria para el registro", Toast.LENGTH_SHORT).show();
+                        }
+                    } else {
+                        seendCheck("startEating");
+                    }
                 } else {
-                    pdSendCheck.dismiss();
                     Toast.makeText(myContext, "Conectate para enviar el registro", Toast.LENGTH_SHORT).show();
                 }
             }
@@ -362,11 +329,17 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         sendFinishEating.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                pdSendCheck.show();
-                if(authProvider.existSesion() && currentLatLng!=null && isConnect) {
-                    seendCheck("finishEating");
+                if (currentLatLng != null && isConnect) {
+                    if(takePhoto){
+                        if(!myContext.imagetoBase64.equals("")){
+                            seendCheck("finishEating");
+                        } else {
+                            Toast.makeText(myContext, "La fotografia es necesaria para el registro", Toast.LENGTH_SHORT).show();
+                        }
+                    } else {
+                        seendCheck("finishEating");
+                    }
                 } else {
-                    pdSendCheck.dismiss();
                     Toast.makeText(myContext, "Conectate para enviar el registro", Toast.LENGTH_SHORT).show();
                 }
             }
@@ -375,11 +348,17 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         sendFinishWork.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                pdSendCheck.show();
-                if(authProvider.existSesion() && currentLatLng!=null && isConnect ){
-                    seendCheck("finishWork");
-                 } else {
-                    pdSendCheck.dismiss();
+                if (currentLatLng != null && isConnect) {
+                    if(takePhoto){
+                        if(!myContext.imagetoBase64.equals("")){
+                            seendCheck("finishWork");
+                        } else {
+                            Toast.makeText(myContext, "La fotografia es necesaria para el registro", Toast.LENGTH_SHORT).show();
+                        }
+                    } else {
+                        seendCheck("finishWork");
+                    }
+                } else {
                     Toast.makeText(myContext, "Conectate para enviar el registro", Toast.LENGTH_SHORT).show();
                 }
             }
@@ -388,33 +367,99 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         imageViewPhotoMap.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                //((HomeTW)getActivity()).startPix();
                 takePhoto();
             }
         });
+        runnable.run();
 
+
+        return mView;
+    }
+
+    private void reviewTakePhoto() {
+        SharedPreferences prefe = myContext.getSharedPreferences("datos", Context.MODE_PRIVATE);
+        takePhoto = prefe.getBoolean("takePhoto",false);
+        if(takePhoto){
+            imageViewPhotoMap.setVisibility(View.VISIBLE);
+            setImageDefault();
+        } else {
+            imageViewPhotoMap.setVisibility(View.GONE);
+            circleImageViewMap.setImageResource(R.drawable.ic_time_orange);
+        }
+    }
+
+    private void loadin(boolean b) {
+        if (b) {
+            frameLayoutLoading.setVisibility(View.VISIBLE);
+            buttonConnect.setEnabled(false);
+            imageViewPhotoMap.setEnabled(false);
+            floatingActionsMenu.setEnabled(false);
+        } else {
+            if (frameLayoutLoading.getVisibility() == View.VISIBLE) {
+                frameLayoutLoading.setVisibility(View.GONE);
+                buttonConnect.setEnabled(true);
+                imageViewPhotoMap.setEnabled(true);
+                floatingActionsMenu.setEnabled(true);
+            }
+        }
+    }
+
+    private void getTimeZone() {
+        SNTPClient.getDate(TimeZone.getTimeZone(zone), new SNTPClient.Listener() {
+            @Override
+            public void onTimeResponse(String rawDate, Date date, Exception ex) {
+                mDateD = date;
+            }
+        });
+    }
+
+    private void updateInfo(Date Date) {
+        if (Date != null) {
+            SimpleDateFormat sdf = new SimpleDateFormat("HH");
+            String dateTime = sdf.format(Date.getTime());
+            /*SimpleDateFormat sdf1 = new SimpleDateFormat("HH:mm:ss");
+            String date1 = sdf1.format(Date.getTime());*/
+            String texto = "";
+            //mDateL = Date.getTime();
+
+            int hour = Integer.parseInt(dateTime);
+            if (hour >= 6 && hour < 12) {
+                texto = "Buenos días";
+            }
+            if (hour >= 12 && hour < 19) {
+                texto = "Buenas tardes";
+            }
+            if (hour >= 19 || hour < 6) {
+                texto = "Buenas noches";
+            }
+            if (textViewGoodTime != null) {
+                //textViewTime.setText(date1);
+                textViewGoodTime.setText(texto);
+            }
+        }
     }
 
     private boolean checkIfLocationOpened() {
-        //boolean provider =  LocationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
-        //System.out.println("Provider contains=> " + provider);
-        LocationManager lm = (LocationManager)myContext.getSystemService(Context.LOCATION_SERVICE);
+        LocationManager lm = (LocationManager) myContext.getSystemService(Context.LOCATION_SERVICE);
         boolean gps_enabled = false;
         boolean network_enabled = false;
 
         try {
             gps_enabled = lm.isProviderEnabled(LocationManager.GPS_PROVIDER);
-        } catch(Exception ex) {}
+        } catch (Exception ex) {
+        }
 
         try {
             network_enabled = lm.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
-        } catch(Exception ex) {}
+        } catch (Exception ex) {
+        }
 
-        if(gps_enabled && network_enabled) {
-        //if (provider.contains("gps") || provider.contains("network")){
+        if (gps_enabled && network_enabled) {
+            //if (provider.contains("gps") || provider.contains("network")){
             return true;
-        //}
-        } else{
+            //}
+        } else {
+            loadin(false);
             new AlertDialog.Builder(myContext)
                     .setMessage("Activa tu ubicacion para continuar")
                     .setPositiveButton("Ajustes", new DialogInterface.OnClickListener() {
@@ -423,42 +468,50 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                             myContext.startActivity(new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS));
                         }
                     })
-                    .setNegativeButton("Cancelar",null)
+                    .setNegativeButton("Cancelar", null)
                     .show();
         }
         return false;
     }
 
     private void takePhoto() {
-        ((HomeTW)getActivity()).checkPermissionStorage();
+        ((HomeTW) getActivity()).checkPermissionStorage();
     }
 
 
-    public void setImageDefault(){
-        circleImageViewMap.setImageResource(R.drawable.icon_image);
+    public void setImageDefault() {
+        if(takePhoto){
+            circleImageViewMap.setImageResource(R.drawable.icon_image);
+        }
     }
 
     private void seendCheck(String tipe) {
-        if(checkIfLocationOpened()){
+        loadin(true);
+        if (checkIfLocationOpened()) {
+            String timezoneID = TimeZone.getDefault().getID();
+            Calendar calendar = Calendar.getInstance(TimeZone.getTimeZone(timezoneID), Locale.getDefault());
+            time1 = calendar.getTime();
+
             Check check = new Check();
             check.setTipeCheck(tipe);
             check.setIdUser(authProvider.getId());
-            check.setTime(mDateL);
+            check.setTime(time1.getTime());
             check.setCheckLat(currentLatLng.latitude);
             check.setCheckLong(currentLatLng.longitude);
             check.setStatusSend(0);
 
-            time1 = Calendar.getInstance().getTime();
+            numberChecksSendLate++;
 
             if (myContext.imagetoBase64 != null) {
                 if (myContext.imagetoBase64 != "") {
                     check.setImage(myContext.imagetoBase64);
-                    if(myContext.fotoUri != null){
-                        check.setUrlImage(myContext.fotoUri.toString());
-                        myContext.fotoUri = null;
-                    }
                     myContext.imagetoBase64 = "";
                 }
+            }
+
+            if (myContext.fotoUri != null) {
+                check.setUrlImage(myContext.fotoUri.toString());
+                myContext.fotoUri = null;
             }
 
             checksProvider.createCheck(check).addOnSuccessListener(new OnSuccessListener<Void>() {
@@ -466,23 +519,26 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                 public void onSuccess(Void aVoid) {
                     int tipeSend;
                     Date time2 = Calendar.getInstance().getTime();
-                    if(time1!=null){
+                    if (time1 != null) {
                         if (evaluarLimite(time2, time1)) {
                             tipeSend = 1;
                         } else {
                             tipeSend = 2;
                         }
-                    } else{
+                    } else {
                         tipeSend = 2;
                     }
                     time1 = null;
                     check.setStatusSend(tipeSend);
+
                     checksProvider.updateStatus(check.getIdCheck(), tipeSend);
                     myContext.updateChecks(check.getIdCheck(), tipeSend, check.getTime());
-                    if( pdSendCheck.isShowing()){
-                        pdSendCheck.dismiss();
+
+                    loadin(false);
+                    if (numberChecksSendLate != 0) {
+                        enviarToast(true);
+                        numberChecksSendLate = 0;
                     }
-                    Toast.makeText(myContext, "Registro enviado", Toast.LENGTH_SHORT).show();
                 }
             });
 
@@ -492,20 +548,49 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
             if (id > 0) {
                 myContext.updateViewLateCheck();
                 setImageDefault();
-                pdSendCheck.setOnCancelListener(new DialogInterface.OnCancelListener() {
-                    @Override
-                    public void onCancel(DialogInterface dialogInterface) {
-                        Toast.makeText(myContext, "Registros no enviado, conectate a internet !!", Toast.LENGTH_SHORT).show();
-                    }
-                });
-                //myContext.setUrlImage();
+                if (!isOnlineNet()) {
+                    loadin(false);
+                    enviarToast(false);
+                }
             } else {
+                loadin(false);
                 Toast.makeText(myContext, "Error al registrar", Toast.LENGTH_SHORT).show();
             }
         } else {
-            pdSendCheck.dismiss();
+            loadin(false);
+            disconnect();
         }
     }
+
+
+    private void enviarToast(boolean b) {
+        CharSequence text;
+        int duration = Toast.LENGTH_SHORT;
+        if (b) {
+            if (numberChecksSendLate == 1) {
+                text = "Registro enviado";
+            } else {
+                text = "Se enviaron " + numberChecksSendLate + " registros";
+            }
+        } else {
+            text = "Registro demorado, conectate a internet para enviar!!";
+        }
+
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
+            if (mToast == null || !mToast.getView().isShown()) {
+                if (mToast != null) {
+                    mToast.cancel();
+                }
+                mToast = Toast.makeText(myContext, text, duration);
+                mToast.show();
+            }
+        } else {
+            if (mToast != null) mToast.cancel();
+            mToast = Toast.makeText(myContext, text, duration);
+            mToast.show();
+        }
+    }
+
 
     public static boolean evaluarLimite(Date date1, Date date2) {
         boolean correcto = false;
@@ -513,19 +598,20 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         long limit = (5 * 1000) / 1000L;//limite de tiempo
 
         if (diferencia <= limit) {
-            correcto= true;
+            correcto = true;
         }
         return correcto;
     }
 
     private void disconnect() {
-        if(fusedLocation!=null && marker!=null){
+        if (fusedLocation != null && marker != null && locationCallback != null) {
             buttonConnect.setText("Conectarse");
+            textViewState.setText("!Conectate para enviar¡");
             isConnect = false;
             fusedLocation.removeLocationUpdates(locationCallback);
             marker.remove();
         } else {
-           // Toast.makeText(myContext, "No se puede desconectar", Toast.LENGTH_SHORT).show();
+            // Toast.makeText(myContext, "No se puede desconectar", Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -533,28 +619,56 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             if (ContextCompat.checkSelfPermission(myContext, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
                 if (gpsActived()) {
-                    if(!isOnlineNet()){
-                        myContext.pdRevieData.show();
-                        myContext.time1 = Calendar.getInstance().getTime();
+                    //if(!isOnlineNet()){
+                    if (myContext.linearLayoutLoadingHome.getVisibility() == View.GONE) {
+                        loadin(true);
                     }
+
                     buttonConnect.setText("Desconectarse");
+                    textViewState.setText("¡Listo para enviar registros!");
                     isConnect = true;
                     fusedLocation.requestLocationUpdates(locationRequest, locationCallback, Looper.myLooper());
                     map.setMyLocationEnabled(false);
-                }
-                else {
+                    // }
+                } else {
                     showAlertDialogNOGPS();
                 }
-            }
-            else {
+            } else {
                 checkLocationPermissions();
             }
         } else {
             if (gpsActived()) {
                 fusedLocation.requestLocationUpdates(locationRequest, locationCallback, Looper.myLooper());
                 map.setMyLocationEnabled(false);
+            } else {
+                showAlertDialogNOGPS();
             }
-            else {
+        }
+    }
+
+    private void startLocation2() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            if (ContextCompat.checkSelfPermission(myContext, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+                if (gpsActived()) {
+                    //if(!isOnlineNet()){
+
+                    buttonConnect.setText("Desconectarse");
+                    textViewState.setText("¡Listo para enviar registros!");
+                    isConnect = true;
+                    fusedLocation.requestLocationUpdates(locationRequest, locationCallback, Looper.myLooper());
+                    map.setMyLocationEnabled(false);
+                    // }
+                } else {
+                    showAlertDialogNOGPS();
+                }
+            } else {
+                checkLocationPermissions();
+            }
+        } else {
+            if (gpsActived()) {
+                fusedLocation.requestLocationUpdates(locationRequest, locationCallback, Looper.myLooper());
+                map.setMyLocationEnabled(false);
+            } else {
                 showAlertDialogNOGPS();
             }
         }
@@ -571,7 +685,11 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
     }
 
     private void showAlertDialogNOGPS() {
-        myContext.pdRevieData.dismiss();
+        //myContext.pdRevieData.dismiss();
+        if (myContext.linearLayoutLoadingHome.getVisibility() == View.VISIBLE) {
+            myContext.linearLayoutLoadingHome.setVisibility(View.GONE);
+            myContext.checkUpdateSend();
+        }
         AlertDialog.Builder builder = new AlertDialog.Builder(myContext);
         builder.setMessage("Por favor activa tu ubicacion para continuar")
                 .setPositiveButton("Configuraciones", new DialogInterface.OnClickListener() {
@@ -583,10 +701,14 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
 
     }
 
-    private void checkLocationPermissions(){
-        myContext.pdRevieData.dismiss();
-        if(ContextCompat.checkSelfPermission(myContext, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_DENIED){
-            if(ActivityCompat.shouldShowRequestPermissionRationale(myContext,Manifest.permission.ACCESS_FINE_LOCATION)){
+    private void checkLocationPermissions() {
+        //myContext.pdRevieData.dismiss();
+        if (myContext.linearLayoutLoadingHome.getVisibility() == View.VISIBLE) {
+            myContext.linearLayoutLoadingHome.setVisibility(View.GONE);
+            myContext.checkUpdateSend();
+        }
+        if (ContextCompat.checkSelfPermission(myContext, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_DENIED) {
+            if (ActivityCompat.shouldShowRequestPermissionRationale(myContext, Manifest.permission.ACCESS_FINE_LOCATION)) {
                 new AlertDialog.Builder(myContext)
                         .setTitle("Proporciona los permisos para continuar")
                         .setMessage("Requiere de los permisos de ubicacion para poder usarse")
@@ -604,7 +726,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
 
     public static boolean isMockLocationOn(Location location, Context context) {
         if (android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR2) {
-            if(location!=null){
+            if (location != null) {
                 return location.isFromMockProvider();
             } else {
                 return false;
@@ -677,9 +799,8 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
     }
 
 
-
     private void updateLocation() {
-       if(authProvider.existSesion() && currentLatLng != null){
+        if (authProvider.existSesion() && currentLatLng != null) {
             employeeProvider.saveLocation(authProvider.getId(), currentLatLng);
         }
     }
@@ -692,6 +813,15 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
 
     @Override
     public void onResume() {
+        timezoneID = TimeZone.getDefault().getID();
+        employee = dbEmployees.getEmployee(authProvider.getId());
+        if(employee!=null){
+            textViewName.setText(employee.getName());
+            calendar = Calendar.getInstance(TimeZone.getTimeZone(timezoneID), Locale.getDefault());
+            Date date = calendar.getTime();
+            updateInfo(date);
+        }
+        reviewTakePhoto();
         super.onResume();
     }
 
@@ -700,9 +830,6 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         super.onDestroy();
         if (locationCallback != null && fusedLocation != null) {
             fusedLocation.removeLocationUpdates(locationCallback);
-        }
-        if(listenerRegistration != null){
-            listenerRegistration.remove();
         }
         handler.removeCallbacks(runnable);
     }
@@ -721,9 +848,29 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         locationRequest.setInterval(1000);
         locationRequest.setFastestInterval(1000);
         locationRequest.setPriority(Priority.PRIORITY_HIGH_ACCURACY);
-        locationRequest.setSmallestDisplacement(2);
+        locationRequest.setSmallestDisplacement(3);
 
         startLocation();
     }
 
+    public void setInfoMap(){
+        timezoneID = TimeZone.getDefault().getID();
+        calendar = Calendar.getInstance(TimeZone.getTimeZone(timezoneID), Locale.getDefault());
+        Date date = calendar.getTime();
+        updateInfo(date);
+    }
+
+    public void removeWach(boolean remove) {
+        if (remove) {
+            if(isConnect){
+                fusedLocation.removeLocationUpdates(locationCallback);
+            }
+            handler.removeCallbacks(runnable);
+        } else {
+            if(isConnect){
+                startLocation2();
+            }
+            runnable.run();
+        }
+    }
 }

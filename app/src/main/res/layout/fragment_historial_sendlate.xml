@@ -17,19 +17,19 @@
             android:id="@+id/rvChecksLateSend"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:layout_marginTop="66dp"
-            android:layout_marginBottom="10dp"
+            android:layout_marginTop="44dp"
+            android:layout_marginBottom="5dp"
             android:background="@color/colorRV"/>
     </LinearLayout>
 
     <FrameLayout
         android:layout_width="match_parent"
-        android:layout_height="90dp">
+        android:layout_height="70dp">
 
 
         <com.github.florent37.shapeofview.shapes.BubbleView
             android:layout_width="match_parent"
-            android:layout_height="90dp"
+            android:layout_height="70dp"
             app:shape_bubble_arrowHeight="10dp"
             app:shape_bubble_arrowWidth="30dp"
             app:shape_bubble_arrowPosition="bottom"
@@ -44,12 +44,12 @@
 
             <com.airbnb.lottie.LottieAnimationView
                 android:id="@+id/animation"
-                android:layout_width="80dp"
-                android:layout_height="80dp"
+                android:layout_width="60dp"
+                android:layout_height="60dp"
                 app:lottie_imageAssetsFolder="assets"
                 app:lottie_fileName="late-check.json"
                 android:layout_gravity="top"
-                android:layout_marginLeft="10dp"
+                android:layout_marginLeft="15dp"
                 app:lottie_loop="true"
                 app:lottie_autoPlay="true"/>
 
@@ -60,7 +60,8 @@
                 android:layout_gravity="center|left"
                 android:layout_marginLeft="40dp"
                 android:src="@drawable/ic_delete_white"
-                android:visibility="gone"/>
+                android:layout_marginBottom="5dp"
+                android:visibility="visible"/>
 
             <CheckBox
                 android:id="@+id/checkboxDeleteAll"
@@ -73,25 +74,48 @@
                 android:scaleY="0.8"
                 android:checked="false"
                 android:onClick="onCheckboxClicked"
-                android:visibility="gone"/>
+                android:layout_marginBottom="5dp"
+                android:visibility="visible"/>
+
+            <FrameLayout
+                android:id="@+id/frameLayoutNumberChecksDelete"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:visibility="visible"
+                android:layout_gravity="left|center"
+                android:layout_marginBottom="6dp"
+                android:layout_marginLeft="75dp">
+
+                <View
+                    android:layout_width="28dp"
+                    android:layout_height="28dp"
+                    android:background="@drawable/circular_view"/>
+                <TextView
+                    android:id="@+id/textViewNumberChecksDelete"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:text="127"
+                    android:layout_gravity="center"
+                    android:textAlignment="center"
+                    android:textColor="@color/white"
+                    android:textSize="12dp"/>
+
+            </FrameLayout>
 
             <TextView
-                android:layout_width="250dp"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="REGISTROS NO ENVIADOS O CON RETARDO"
+                android:text="REGISTROS PENDIENTES"
                 android:textColor="@color/whiteLigth"
                 android:textStyle="bold"
                 android:textSize="18sp"
                 android:textAlignment="center"
-                android:layout_gravity="center|top"
-                android:layout_marginTop="16dp"
-                android:layout_marginLeft="56dp"/>
+                android:layout_gravity="center"
+                android:layout_marginLeft="25dp"
+                android:layout_marginBottom="6dp"/>
 
         </com.github.florent37.shapeofview.shapes.BubbleView>
 
-
-
     </FrameLayout>
-
 
 </FrameLayout>

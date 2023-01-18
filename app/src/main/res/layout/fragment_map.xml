@@ -130,7 +130,7 @@
                     android:textStyle="bold"
                     android:maxLines="1"
                     android:textSize="20sp"
-                    android:textColor="@color/colorBlueLigth"
+                    android:textColor="@color/colorBlueDate"
                     android:gravity="center"/>
 
                 <TextView
@@ -149,39 +149,68 @@
 
         </com.github.florent37.shapeofview.shapes.BubbleView>
 
+        <FrameLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:padding="6dp"
+            android:background="@drawable/circle_background"
+            android:backgroundTint="@color/colorGrisLigth"
+            android:layout_gravity="center|top"
+            android:layout_marginTop="27dp">
+
+            <de.hdodenhof.circleimageview.CircleImageView
+                android:id="@+id/circleImageMap"
+                android:layout_width="120dp"
+                android:layout_height="120dp"
+                android:src="@drawable/icon_image"
+                android:scaleType="centerCrop"
+                android:backgroundTint="@color/white"
+                app:civ_circle_background_color="@color/colorGrisLigth"/>
+
+        </FrameLayout>
+
+        <com.google.android.material.floatingactionbutton.FloatingActionButton
+            android:id="@+id/mapSelectImage"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:src="@drawable/ic_camera_white"
+            app:backgroundTint="@color/colorOrange"
+            android:layout_gravity="center|top"
+            android:layout_marginTop="104dp"
+            android:layout_marginLeft="60dp"/>
 
     </FrameLayout>
+
 
     <FrameLayout
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:padding="6dp"
-        android:background="@drawable/circle_background"
-        android:backgroundTint="@color/colorGrisLigth"
-        android:layout_gravity="center|top"
-        android:layout_marginTop="27dp">
+        android:id="@+id/loading"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:visibility="gone">
 
-    <de.hdodenhof.circleimageview.CircleImageView
-        android:id="@+id/circleImageMap"
-        android:layout_width="120dp"
-        android:layout_height="120dp"
-        android:src="@drawable/icon_image"
-        android:scaleType="centerCrop"
-        android:backgroundTint="@color/white"
-        app:civ_circle_background_color="@color/colorGrisLigth"/>
+        <ImageView
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@color/colorGrisLigth"/>
 
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:gravity="center">
 
+            <com.airbnb.lottie.LottieAnimationView
+                android:id="@+id/animation"
+                android:layout_width="150dp"
+                android:layout_height="150dp"
+                app:lottie_autoPlay="true"
+                app:lottie_fileName="loading-orange.json"
+                app:lottie_imageAssetsFolder="assets"
+                app:lottie_loop="true" />
+
+        </LinearLayout>
 
     </FrameLayout>
 
-    <com.google.android.material.floatingactionbutton.FloatingActionButton
-        android:id="@+id/mapSelectImage"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:src="@drawable/ic_camera_white"
-        app:backgroundTint="@color/colorOrange"
-        android:layout_gravity="center|top"
-        android:layout_marginTop="104dp"
-        android:layout_marginLeft="60dp"/>
 
 </FrameLayout>

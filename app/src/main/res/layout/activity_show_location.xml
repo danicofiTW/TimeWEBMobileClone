@@ -79,6 +79,7 @@
                 android:textSize="20sp"
                 android:layout_gravity="center"
                 android:maxLines="1"
+                android:textStyle="bold"
                 android:textAlignment="center"/>
 
             <TextView
@@ -98,11 +99,12 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="FECHA"
-                android:textColor="@color/colorBlueLigth"
+                android:textColor="@color/colorBlueDate"
                 android:textSize="20sp"
                 android:layout_marginTop="2dp"
                 android:layout_gravity="center"
                 android:maxLines="1"
+                android:textStyle="bold"
                 android:textAlignment="center"/>
 
         </LinearLayout>

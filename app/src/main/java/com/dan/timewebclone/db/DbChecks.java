@@ -33,10 +33,7 @@ import java.util.List;
 public class DbChecks extends DbHelper{
 
     Context myContext;
-    String str;
     String imagenString;
-    Bitmap  bitmap;
-    HomeTW homeTW;
 
     public DbChecks(@Nullable Context context) {
         super(context);
@@ -91,10 +88,6 @@ public class DbChecks extends DbHelper{
                 double latD = Double.parseDouble(cursorChecks.getString(8));
                 double longD = Double.parseDouble(cursorChecks.getString(9));
                 boolean bool = Boolean.parseBoolean(cursorChecks.getString(10));
-                //byte[] image = cursorChecks.getBlob(6);
-               /* if(image != null){
-                    imagenString = new String(image);
-                } else imagenString = null;*/
 
                 check = new Check();
                 check.setIdCheck(cursorChecks.getString(1));
@@ -196,8 +189,8 @@ public class DbChecks extends DbHelper{
         String dateS = String.valueOf(date);
 
         try{
+            db.execSQL("UPDATE " + TABLE_CHECKS + " SET idCheck = '"+idCheck+"'WHERE date = '"+dateS+"'");
             db.execSQL("UPDATE " + TABLE_CHECKS + " SET statusSend = '"+tipeSendCheck+"'WHERE statusSend = '0'");
-            db.execSQL("UPDATE " + TABLE_CHECKS + " SET idCheck = '"+idCheck+"'WHERE date = '"+dateS+"' and WHERE idcheck = NULL");
             update = true;
         } catch (Exception ex){
             ex.toString();

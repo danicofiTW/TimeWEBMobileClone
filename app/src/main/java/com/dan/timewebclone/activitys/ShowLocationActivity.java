@@ -66,6 +66,7 @@ public class ShowLocationActivity extends AppCompatActivity implements OnMapRead
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_show_location);
+        setStatusBarColor();
 
         imageViewBackShowLocation = findViewById(R.id.imageViewBackShowLocation);
         circleImageViewPhotoShow = findViewById(R.id.circleImageViewShowCheck);
@@ -74,12 +75,10 @@ public class ShowLocationActivity extends AppCompatActivity implements OnMapRead
         textViewLocation = findViewById(R.id.textViewShowLocation);
         textViewName = findViewById(R.id.textViewShowName);
 
-
         mapFragmentLocation = (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.mapLocation);
         if(mapFragmentLocation != null){
             mapFragmentLocation.getMapAsync(this);
         }
-        setStatusBarColor();
 
         mExtraLatitud = getIntent().getDoubleExtra("lat",0);
         mExtraLongitud = getIntent().getDoubleExtra("lng", 0);
@@ -101,8 +100,32 @@ public class ShowLocationActivity extends AppCompatActivity implements OnMapRead
 
     }
 
+    //Obtener la informacion del registro
     private void setInfo() {
+        mostrarImagen();
+        Date aux = new Date(mExtraDate);
+        SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
+        String date = sdf.format(aux);
+        textViewDate.setText(date);
 
+        try {
+            Geocoder geocoder = new Geocoder(this);
+            List<Address> addressList = geocoder.getFromLocation(mExtraLatitud, mExtraLongitud, 1);
+            String city = addressList.get(0).getLocality();
+            //String country = addressList.get(0).getCountryName();
+            String address = addressList.get(0).getAddressLine(0);
+            textViewLocation.setText(address + " " + city);
+
+        } catch (IOException e) {
+            Log.d("Error:", "Mensaje de error: " + e.getMessage());
+        }
+        DbEmployees dbEmployees = new DbEmployees(ShowLocationActivity.this);
+        Employee employee = dbEmployees.getEmployee(check.getIdUser());
+        textViewName.setText(employee.getName());
+    }
+
+    //Mostrar imagen
+    private void mostrarImagen() {
         if(check.getUrlImage() != null){
             Uri uri;
             uri = Uri.parse(check.getUrlImage());
@@ -151,39 +174,9 @@ public class ShowLocationActivity extends AppCompatActivity implements OnMapRead
         } else {
             defaultImage();
         }
-
-        Date aux = new Date(mExtraDate);
-        SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
-        String date = sdf.format(aux);
-        textViewDate.setText(date);
-
-        try {
-            Geocoder geocoder = new Geocoder(this);
-            List<Address> addressList = geocoder.getFromLocation(mExtraLatitud, mExtraLongitud, 1);
-            String city = addressList.get(0).getLocality();
-            //String country = addressList.get(0).getCountryName();
-            String address = addressList.get(0).getAddressLine(0);
-            textViewLocation.setText(address + " " + city);
-
-        } catch (IOException e) {
-            Log.d("Error:", "Mensaje de error: " + e.getMessage());
-        }
-        DbEmployees dbEmployees = new DbEmployees(ShowLocationActivity.this);
-        Employee employee = dbEmployees.getEmployee(check.getIdUser());
-        textViewName.setText(employee.getName());
     }
 
-    private void openImageView() {
-        circleImageViewPhotoShow.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                Intent i = new Intent(ShowLocationActivity.this, ShowImageActivity.class);
-                i.putExtra("idCheck", check.getIdCheck());
-                startActivity(i);
-            }
-        });
-    }
-
+    //Mostrar imagen por defecto cuando el registro no cuenta con imagen
     private void defaultImage(){
         if(mExtraTipe.equals("startWork")){
             circleImageViewPhotoShow.setImageResource(R.drawable.icon_int);
@@ -198,6 +191,7 @@ public class ShowLocationActivity extends AppCompatActivity implements OnMapRead
     }
 
 
+    //Mostrar tipo de registro cuando hay imagen
     private void viewTipeCheck(){
         if(mExtraTipe.equals("startWork")){
             circleImageViewTipeShowCheck.setImageResource(R.drawable.icon_int);
@@ -211,15 +205,19 @@ public class ShowLocationActivity extends AppCompatActivity implements OnMapRead
         circleImageViewTipeShowCheck.setVisibility(View.VISIBLE);
     }
 
-    private void setStatusBarColor() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            getWindow().setStatusBarColor(getResources().getColor(R.color.black, this.getTheme()));
-        }
-        else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            getWindow().setStatusBarColor(getResources().getColor(R.color.black));
-        }
+    //Abrir imagen si es que tiene
+    private void openImageView() {
+        circleImageViewPhotoShow.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                Intent i = new Intent(ShowLocationActivity.this, ShowImageActivity.class);
+                i.putExtra("idCheck", check.getIdCheck());
+                startActivity(i);
+            }
+        });
     }
 
+    //Mostrar el mapa y el marcador
     @Override
     public void onMapReady(@NonNull GoogleMap googleMap) {
         map = googleMap;
@@ -242,4 +240,15 @@ public class ShowLocationActivity extends AppCompatActivity implements OnMapRead
                         .build()
         ));
     }
+
+    //Cambiar el color de la barra de notificaciones
+    private void setStatusBarColor() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            getWindow().setStatusBarColor(getResources().getColor(R.color.black, this.getTheme()));
+        }
+        else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            getWindow().setStatusBarColor(getResources().getColor(R.color.black));
+        }
+    }
+
 }

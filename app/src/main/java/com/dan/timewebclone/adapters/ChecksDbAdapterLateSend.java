@@ -21,6 +21,7 @@ import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
@@ -53,6 +54,7 @@ public class ChecksDbAdapterLateSend extends RecyclerView.Adapter<ChecksDbAdapte
     EmployeeProvider employeeProvider;
     ChecksProvider checksProvider;
     Employee employee;
+    private Toast mToast = null;
 
     ArrayList<ChecksDbAdapterLateSend.  CheckViewHolder> viewHolders;
     ArrayList<Check> checks;
@@ -60,9 +62,10 @@ public class ChecksDbAdapterLateSend extends RecyclerView.Adapter<ChecksDbAdapte
 
     HistoryChecksSendOkFragment historyChecksSendOkFragment;
     private RelativeTime relativeTime;
+    private SimpleDateFormat sdfLongDate;
+    private SimpleDateFormat sdfDate;
 
     public boolean isDelete = false;
-    private boolean longClick = false;
 
 
     public ChecksDbAdapterLateSend(ArrayList<Check> listChecks, HomeTW context) {
@@ -74,6 +77,8 @@ public class ChecksDbAdapterLateSend extends RecyclerView.Adapter<ChecksDbAdapte
         viewHolders = new ArrayList<>();
         relativeTime = new RelativeTime();
         historyChecksSendOkFragment = new HistoryChecksSendOkFragment();
+        sdfLongDate = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
+        sdfDate = new SimpleDateFormat("dd/MM/yyyy");
 
         checks = listChecks;
         idChecksDelete = new ArrayList<>();
@@ -88,36 +93,38 @@ public class ChecksDbAdapterLateSend extends RecyclerView.Adapter<ChecksDbAdapte
 
     @Override
     public void onBindViewHolder(@NonNull CheckViewHolder holder, int position) {
-        int post = position;
+        //int post = position;
 
         Date aux = new Date(checks.get(position).getTime());
-        SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
-        String date = sdf.format(aux);
+        String date = sdfLongDate.format(aux);
         holder.textViewFecha.setText(date);
 
-        if(checks.get(position).getStatusSend() == 1){
-            holder.imageViewSendCheck.setImageResource(R.drawable.icon_double_check);
-        } else if(checks.get(position).getStatusSend() == 2){
-            holder.imageViewSendCheck.setImageResource(R.drawable.ic_check_gray);
+        //holder.myView.setEnabled(true);
+
+        if(checks.get(position).getStatusSend() == 2){
+            holder.imageViewSendCheck.setImageResource(R.drawable.icon_double_check_gray);
+            holder.open = true;
+            //holder.myView.setEnabled(true);
         } else if(checks.get(position).getStatusSend() == 0){
-            holder.imageViewSendCheck.setImageResource(R.drawable.ic_cancel_red);
+            holder.imageViewSendCheck.setImageResource(R.drawable.ic_check_gray);
+            holder.open = false;
+            //holder.myView.setEnabled(false);
         }
 
-
         if(checks.get(position).getTipeCheck().equals("startWork")){
-            //holder.imageViewHistoryCheck.setImageResource(R.drawable.icon_entrar);
+            holder.imageViewHistoryCheck.setImageResource(R.drawable.icon_int);
             holder.textViewTipeCheck.setText("Registro de Entrada");
             holder.textViewTipeCheck.setTextColor(context.getColor(R.color.colorGreenLigth));
         } else if(checks.get(position).getTipeCheck().equals("startEating")){
-            //holder.imageViewHistoryCheck.setImageResource(R.drawable.icon_entrarcomer);
+            holder.imageViewHistoryCheck.setImageResource(R.drawable.icon_comer);
             holder.textViewTipeCheck.setText("Registro de Comida");
             holder.textViewTipeCheck.setTextColor(context.getColor(R.color.colorBlueLigth));
         } else if(checks.get(position).getTipeCheck().equals("finishEating")){
-            //holder.imageViewHistoryCheck.setImageResource(R.drawable.icon_terminarcomer);
+            holder.imageViewHistoryCheck.setImageResource(R.drawable.icon_termincomer);
             holder.textViewTipeCheck.setText("Registro de Fin Comida");
             holder.textViewTipeCheck.setTextColor(context.getColor(R.color.colorYellowLigth));
         } else if(checks.get(position).getTipeCheck().equals("finishWork")){
-            //holder.imageViewHistoryCheck.setImageResource(R.drawable.icon_salir);
+            holder.imageViewHistoryCheck.setImageResource(R.drawable.icon_out);
             holder.textViewTipeCheck.setText("Registro de Salida");
             holder.textViewTipeCheck.setTextColor(context.getColor(R.color.colorRedLigth));
         }
@@ -145,81 +152,15 @@ public class ChecksDbAdapterLateSend extends RecyclerView.Adapter<ChecksDbAdapte
             holder.imageViewDelete.setVisibility(View.GONE);
         }
 
-        holder.myView.setOnLongClickListener(new View.OnLongClickListener() {
-            @Override
-            public boolean onLongClick(View view) {
-                DbChecks dbChecks = new DbChecks(context);
-                if(!checks.get(post).isDelete()){
-                    holder.viewDelete.setVisibility(View.VISIBLE);
-                    holder.imageViewDelete.setVisibility(View.VISIBLE);
-                    context.idChecksLateDelete.add(checks.get(post).getIdCheck());
-                    checks.get(post).setDelete(true);
-                    dbChecks.updateCheckDelete(true, checks.get(post).getIdCheck());
-                    if(context.idChecksLateDelete.size() == checks.size()){
-                        context.updateDeleteAllChecksLate(true);
-                    }
-                    notifyDataSetChanged();
-                } else {
-                    holder.viewDelete.setVisibility(View.GONE);
-                    holder.imageViewDelete.setVisibility(View.GONE);
-                    checks.get(post).setDelete(false);
-                    dbChecks.updateCheckDelete(false, checks.get(post).getIdCheck());
-                    context.updateDeleteAllChecksLate(false);
-                    //notifyDataSetChanged();
-                    if(context.idChecksLateDelete.size()!=0){
-                        for(int i = 0; i<context.idChecksLateDelete.size(); i++){
-                            if (context.idChecksLateDelete.get(i).equals(checks.get(post).getIdCheck())) {
-                                context.idChecksLateDelete.remove(i);
-                            }
-                        }
-                    } else {
-                        notifyDataSetChanged();
-                    }
-                }
-                return false;
-            }
-        });
+
+        longCLickCheck(holder,position);
+
         reviewDate(holder, checks, position);
     }
 
+
+
     private void setImage(ChecksDbAdapterLateSend.CheckViewHolder holder, int position){
-        /*if(checks.get(position).getUrlImage() != null){
-            Uri uri;
-            uri = Uri.parse(checks.get(position).getUrlImage());
-            ContentResolver contentResolver = context.getContentResolver();
-            Bitmap bitmap = null;
-            try {
-                if(Build.VERSION.SDK_INT < 28) {
-                    bitmap = MediaStore.Images.Media.getBitmap(contentResolver, uri);
-                } else {
-                    ImageDecoder.Source source = ImageDecoder.createSource(contentResolver, uri);
-                    bitmap = ImageDecoder.decodeBitmap(source);
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-            if(uri != null && bitmap != null){
-                holder.imageViewHistoryCheck.setImageURI(uri);
-            } else {
-                if(checks.get(position).getImage() != null){
-                    try{
-                        byte[] decodedString = Base64.decode(checks.get(position).getImage(), Base64.DEFAULT);
-                        Bitmap decodedByte = BitmapFactory.decodeByteArray(decodedString, 0, decodedString.length);
-                        //RoundedBitmapDrawable roundedDrawable = RoundedBitmapDrawableFactory.create(context.getResources(), decodedByte);
-                        if(decodedByte != null){
-                            holder.imageViewHistoryCheck.setImageBitmap(decodedByte);
-                        } else {
-                            holder.imageViewHistoryCheck.setImageResource(R.drawable.ic_broken_image_white);
-                        }
-                    }
-                    catch(Exception e){
-                        e.getMessage();
-                    }
-                } else {
-                    defaultImage(holder, checks.get(position));
-                }
-            }
-        } else {*/
             if(checks.get(position).getImage() != null){
                 try{
                     byte[] decodedString = Base64.decode(checks.get(position).getImage(), Base64.DEFAULT);
@@ -234,27 +175,27 @@ public class ChecksDbAdapterLateSend extends RecyclerView.Adapter<ChecksDbAdapte
                 catch(Exception e){
                     e.getMessage();
                 }
-            } else {
-                defaultImage(holder, checks.get(position));
             }
-       // }
     }
 
     private void openLocation(ChecksDbAdapterLateSend.CheckViewHolder holder, Check check) {
         holder.myView.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+                if(!holder.open){
+                    enviarToast();
+                } else {
                 DbChecks dbChecks = new DbChecks(context);
                 if(context.idChecksLateDelete.size() == 0){
-                    dbChecks.updateCheckDelete(false, check.getIdCheck());
-                    check.setDelete(false);
-                    Intent i = new Intent(context, ShowLocationActivity.class);
-                    i.putExtra("lat", check.getCheckLat());
-                    i.putExtra("lng", check.getCheckLong());
-                    i.putExtra("date", check.getTime());
-                    i.putExtra("tipe", check.getTipeCheck());
-                    i.putExtra("idCheck", check.getIdCheck());
-                    context.startActivity(i);
+                        dbChecks.updateCheckDelete(false, check.getIdCheck());
+                        check.setDelete(false);
+                        Intent i = new Intent(context, ShowLocationActivity.class);
+                        i.putExtra("lat", check.getCheckLat());
+                        i.putExtra("lng", check.getCheckLong());
+                        i.putExtra("date", check.getTime());
+                        i.putExtra("tipe", check.getTipeCheck());
+                        i.putExtra("idCheck", check.getIdCheck());
+                        context.startActivity(i);
                 } else {
                     //if(!longClick){
                         if(!check.isDelete()) {
@@ -279,16 +220,73 @@ public class ChecksDbAdapterLateSend extends RecyclerView.Adapter<ChecksDbAdapte
                                     context.idChecksLateDelete.remove(i);
                                 }
                             }
-                            if(context.idChecksLateDelete.size()==0){
                                 notifyDataSetChanged();
-                            }
                         }
                     //} else {
                    //    longClick = false;
                   //  }
+                    }
                 }
             }
         });
+    }
+
+    private void longCLickCheck(CheckViewHolder holder, int position) {
+        holder.myView.setOnLongClickListener(new View.OnLongClickListener() {
+            @Override
+            public boolean onLongClick(View view) {
+                if(!holder.open){
+                    enviarToast();
+                } else {
+                    DbChecks dbChecks = new DbChecks(context);
+                    if(!checks.get(position).isDelete()){
+                        holder.viewDelete.setVisibility(View.VISIBLE);
+                        holder.imageViewDelete.setVisibility(View.VISIBLE);
+                        context.idChecksLateDelete.add(checks.get(position).getIdCheck());
+                        checks.get(position).setDelete(true);
+                        dbChecks.updateCheckDelete(true, checks.get(position).getIdCheck());
+                        if(context.idChecksLateDelete.size() == checks.size()){
+                            context.updateDeleteAllChecksLate(true);
+                        }
+                        notifyDataSetChanged();
+                    } else {
+                        holder.viewDelete.setVisibility(View.GONE);
+                        holder.imageViewDelete.setVisibility(View.GONE);
+                        checks.get(position).setDelete(false);
+                        dbChecks.updateCheckDelete(false, checks.get(position).getIdCheck());
+                        context.updateDeleteAllChecksLate(false);
+                        //notifyDataSetChanged();
+                        if(context.idChecksLateDelete.size()!=0) {
+                            for (int i = 0; i < context.idChecksLateDelete.size(); i++) {
+                                if (context.idChecksLateDelete.get(i).equals(checks.get(position).getIdCheck())) {
+                                    context.idChecksLateDelete.remove(i);
+                                }
+                            }
+                        }
+                        notifyDataSetChanged();
+                    }
+                }
+                return false;
+            }
+        });
+    }
+
+    private void enviarToast() {
+        CharSequence text = "Conectate a internet para poder enviar!!";
+        int duration = Toast.LENGTH_SHORT;
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
+            if (mToast == null || !mToast.getView().isShown()) {
+                if (mToast != null) {
+                    mToast.cancel();
+                }
+                mToast = Toast.makeText(context, text, duration);
+                mToast.show();
+            }
+        } else {
+            if (mToast != null) mToast.cancel();
+            mToast = Toast.makeText(context, text, duration);
+            mToast.show();
+        }
     }
 
     public void filtrar(ArrayList<Check> checks) {
@@ -296,23 +294,26 @@ public class ChecksDbAdapterLateSend extends RecyclerView.Adapter<ChecksDbAdapte
         notifyDataSetChanged();
     }
 
+    public void updateChecks(ArrayList<Check> checks) {
+        this.checks = checks;
+        notifyDataSetChanged();
+    }
+
     private void reviewDate(ChecksDbAdapterLateSend.CheckViewHolder holder, ArrayList<Check> checks, int position) {
         Date aux = new Date(checks.get(position).getTime());
-        SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy");
-        String date1S = sdf.format(aux);
+        String date1S = sdfDate.format(aux);
         Date date1 = null;
         try {
-            date1 = sdf.parse(date1S);
+            date1 = sdfDate.parse(date1S);
         } catch (ParseException e) {
             e.printStackTrace();
         }
         if(position!=0){
             Date aux2 = new Date(checks.get(position-1).getTime());
-            SimpleDateFormat sdf2 = new SimpleDateFormat("dd/MM/yyyy");
-            String date2S = sdf.format(aux2);
+            String date2S = sdfDate.format(aux2);
             Date date2 = null;
             try {
-                date2 = sdf2.parse(date2S);
+                date2 = sdfDate.parse(date2S);
             } catch (ParseException e) {
                 e.printStackTrace();
             }
@@ -320,9 +321,9 @@ public class ChecksDbAdapterLateSend extends RecyclerView.Adapter<ChecksDbAdapte
                 holder.linearLayoutLineDate.setVisibility(View.VISIBLE);
                 holder.textViewLineDate.setText(relativeTime.timeFormatDay(checks.get(position).getTime()));
                 holder.linearLayoutCheck.setPadding(0,31,0,0);
-                if(relativeTime.timeFormatDay(checks.get(position).getTime()).equals("Ayer")){
+                /*if(relativeTime.timeFormatDay(checks.get(position).getTime()).equals("Ayer")){
                     holder.linearLayoutCheck.setPadding(0,40,0,0);
-                }
+                }*/
             } else {
                 holder.linearLayoutLineDate.setVisibility(View.GONE);
                 holder.linearLayoutCheck.setPadding(0,0,0,0);
@@ -336,17 +337,7 @@ public class ChecksDbAdapterLateSend extends RecyclerView.Adapter<ChecksDbAdapte
     }
 
 
-    private void defaultImage(ChecksDbAdapterLateSend.CheckViewHolder holder, Check check){
-        if(check.getTipeCheck().equals("startWork")){
-            holder.imageViewHistoryCheck.setImageResource(R.drawable.icon_int);
-        } else if(check.getTipeCheck().equals("startEating")){
-            holder.imageViewHistoryCheck.setImageResource(R.drawable.icon_comer);
-        } else if(check.getTipeCheck().equals("finishEating")){
-            holder.imageViewHistoryCheck.setImageResource(R.drawable.icon_termincomer);
-        } else if(check.getTipeCheck().equals("finishWork")){
-            holder.imageViewHistoryCheck.setImageResource(R.drawable.icon_out);
-        }
-    }
+
 
     @Override
     public int getItemCount() {
@@ -358,6 +349,7 @@ public class ChecksDbAdapterLateSend extends RecyclerView.Adapter<ChecksDbAdapte
         ImageView imageViewSendCheck, imageViewHistoryCheck, imageViewDelete;
         LinearLayout linearLayoutOpenLocation, linearLayoutLineDate, linearLayoutCheck;
         View myView, viewDelete;
+        boolean open = false;
 
 
         public CheckViewHolder(View view){

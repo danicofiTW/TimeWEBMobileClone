@@ -11,17 +11,17 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import android.view.LayoutInflater;
-import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.CheckBox;
+import android.widget.FrameLayout;
 import android.widget.ImageView;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.airbnb.lottie.LottieAnimationView;
 import com.dan.timewebclone.R;
 import com.dan.timewebclone.activitys.HomeTW;
-import com.dan.timewebclone.adapters.ChecksDbAdapter;
 import com.dan.timewebclone.adapters.ChecksDbAdapterLateSend;
 import com.dan.timewebclone.db.DbChecks;
 import com.dan.timewebclone.models.Check;
@@ -32,20 +32,16 @@ import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.QuerySnapshot;
 
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Calendar;
 import java.util.Collections;
-import java.util.Date;
 import java.util.List;
 
 public class HistoryChecksLateSendFragment extends Fragment {
 
+    private View mView;
     private RecyclerView mReciclerView;
     private ChecksDbAdapterLateSend checksDbAdapter;
-    //private ChecksAdapter mAdapter;
 
     //private CheckBox checkboxSendSuccesful, checkboxSendLate, checkboxSendAdd;
 
@@ -58,6 +54,8 @@ public class HistoryChecksLateSendFragment extends Fragment {
     public CheckBox deleteAllChecks;
     private ImageView deleteChecks;
     private LottieAnimationView animation;
+    private TextView textViewNumberChecksDelete;
+    private FrameLayout frameLayoutNumberChecksDelete;
 
     private ArrayList<Check> listChecks;
 
@@ -83,17 +81,14 @@ public class HistoryChecksLateSendFragment extends Fragment {
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
-        return inflater.inflate(R.layout.fragment_menu, container, false);
-    }
+        mView = inflater.inflate(R.layout.fragment_historial_sendlate, container, false);
 
-    @Override
-    public void onViewCreated(View view, Bundle savedInstanceState) {
-        super.onViewCreated(view, savedInstanceState);
-
-        mReciclerView = view.findViewById(R.id.rvChecksLateSend);
-        deleteChecks = view.findViewById(R.id.imageViewDeleteChecks);
-        animation = view.findViewById(R.id.animation);
-        deleteAllChecks = view.findViewById(R.id.checkboxDeleteAll);
+        mReciclerView = mView.findViewById(R.id.rvChecksLateSend);
+        deleteChecks = mView.findViewById(R.id.imageViewDeleteChecks);
+        animation = mView.findViewById(R.id.animation);
+        deleteAllChecks = mView.findViewById(R.id.checkboxDeleteAll);
+        textViewNumberChecksDelete = mView.findViewById(R.id.textViewNumberChecksDelete);
+        frameLayoutNumberChecksDelete = mView.findViewById(R.id.frameLayoutNumberChecksDelete);
         linearLayoutManager = new LinearLayoutManager(myContext);
         mReciclerView.setLayoutManager(linearLayoutManager);
         authProvider = new AuthProvider();
@@ -101,9 +96,11 @@ public class HistoryChecksLateSendFragment extends Fragment {
         relativeTime = new RelativeTime();
         listChecks = new ArrayList<>();
         statusSend = Arrays.asList(0,2);
-        getChecksById(statusSend);
+        getChecksById();
 
+        return mView;
     }
+
 
     @Override
     public void onAttach(@NonNull Context context) {
@@ -111,29 +108,15 @@ public class HistoryChecksLateSendFragment extends Fragment {
         super.onAttach(context);
     }
 
-    @Override
-    public void onStart() {
-        super.onStart();
-        if (checksDbAdapter != null) {
-            mReciclerView.getRecycledViewPool().clear();
-            checksDbAdapter.notifyDataSetChanged();
-            //mAdapter.startListening();
-            mReciclerView.scrollToPosition(0);
-        }
+
+    public void notifyChangeAdapter() {
+       // checksDbAdapter.notifyDataSetChanged();
+        DbChecks dbChecks = new DbChecks(myContext);
+        checksDbAdapter.updateChecks(dbChecks.getChecksNotSendSucces(statusSend));
+        mReciclerView.scrollToPosition(0);
     }
 
-
-
-    @Override
-    public void onStop() {
-        super.onStop();
-        /*if (mAdapter != null) {
-            mAdapter.stopListening();
-        }*/
-    }
-
-
-    public void getChecksById(List<Integer> statusSend) {
+    public void getChecksById() {
 
         if(checksProvider!=null){
         if(myContext!=null){
@@ -142,15 +125,6 @@ public class HistoryChecksLateSendFragment extends Fragment {
             mReciclerView.setAdapter(checksDbAdapter);
             mReciclerView.scrollToPosition(0);
 
-
-            checksDbAdapter.registerAdapterDataObserver(new RecyclerView.AdapterDataObserver() {
-                @Override
-                public void onItemRangeInserted(int positionStart, int itemCount) {
-                    super.onItemRangeInserted(positionStart, itemCount);
-                    if(positionStart==0)
-                        mReciclerView.scrollToPosition(positionStart);
-                }
-            });
 
             checksDbAdapter.registerAdapterDataObserver(new RecyclerView.AdapterDataObserver() {
                 @Override
@@ -168,23 +142,20 @@ public class HistoryChecksLateSendFragment extends Fragment {
         }
     }
 
-    public void notifyInsertCheck() {
-        if(checksDbAdapter!=null){
-            checksDbAdapter.notifyDataSetChanged();
-        }
-    }
-
     public void showImageDelete(boolean visible){
         if(visible){
             animation.setVisibility(View.GONE);
             deleteChecks.setVisibility(View.VISIBLE);
             deleteAllChecks.setVisibility(View.VISIBLE);
+            frameLayoutNumberChecksDelete.setVisibility(View.VISIBLE);
+            textViewNumberChecksDelete.setText(""+myContext.idChecksLateDelete.size());
             deleteChecks();
             allChecks();
         } else {
             animation.setVisibility(View.VISIBLE);
             deleteChecks.setVisibility(View.GONE);
             deleteAllChecks.setVisibility(View.GONE);
+            frameLayoutNumberChecksDelete.setVisibility(View.GONE);
         }
     }
 
@@ -201,12 +172,12 @@ public class HistoryChecksLateSendFragment extends Fragment {
                         myContext.idChecksLateDelete.add(checksD.get(i).getIdCheck());
                     }
                     dbChecks.updateChecksDelete(true, authProvider.getId());
-                    getChecksById(statusSend);
+                    notifyChangeAdapter();
                 } else {
                     myContext.idChecksLateDelete.clear();
                     dbChecks.updateChecksDelete(false, authProvider.getId());
                     showImageDelete(false);
-                    getChecksById(statusSend);
+                    notifyChangeAdapter();
                 }
             }
         });
@@ -226,7 +197,7 @@ public class HistoryChecksLateSendFragment extends Fragment {
                                 boolean delete = dbChecks.delete(myContext.idChecksLateDelete);
                                 if(delete){
                                     myContext.idChecksLateDelete.clear();
-                                    getChecksById(statusSend);
+                                    notifyChangeAdapter();
                                     showImageDelete(false);
                                     if(myContext.menuItemSearch.isActionViewExpanded()){
                                         myContext.toolbar.collapseActionView();
@@ -247,7 +218,7 @@ public class HistoryChecksLateSendFragment extends Fragment {
         });
     }
 
-    public void reviewData(ArrayList<Check> listChecksSendOk) {
+    public void reviewData(ArrayList<Check> listChecksSendOk, ArrayList<String> idDeleteChecksOk) {
      if(checksProvider!=null) {
          if (myContext != null) {
                  checksProvider.getChecksByUserAndStatusSend(authProvider.getId(), 2).get().addOnSuccessListener(new OnSuccessListener<QuerySnapshot>() {
@@ -272,21 +243,33 @@ public class HistoryChecksLateSendFragment extends Fragment {
                                  }
                              }
                          }
-                         if(idDeleteChecks.size() != 0){
-                             if(dbChecks.delete(idDeleteChecks)){
-                                 Toast.makeText(myContext, "Se eliminaron algunos checks con más de 30 días", Toast.LENGTH_SHORT).show();
+
+                         if(idDeleteChecks.size() != 0 || idDeleteChecksOk.size() != 0){
+                             if(idDeleteChecksOk.size() != 0){
+                                 dbChecks.delete(idDeleteChecksOk);
+                             } else {
+                                 dbChecks.delete(idDeleteChecks);
                              }
+                             Toast.makeText(myContext, "Se eliminaron algunos checks con más de 30 días", Toast.LENGTH_SHORT).show();
                          }
+
                          Collections.reverse(listChecks);
-                         if(dbChecks.getChecksNotSendSucces(statusSend).size() == 0  && listChecks.size() != 0){
-                             myContext.mostrarUpdateChecks(dbChecks, listChecks, listChecksSendOk);
-                         } else if(listChecksSendOk.size() != 0 && dbChecks.getChecksSendSucces().size() == 0){
-                             myContext.mostrarUpdateChecks(dbChecks, listChecks, listChecksSendOk);
+                         if(myContext.linearLayoutLoadingHome.getVisibility() == View.VISIBLE) {
+                             myContext.linearLayoutLoadingHome.setVisibility(View.GONE);
                          }
-                         getChecksById(statusSend);
-                         /*if(myContext.pdRevieData.isShowing()){
+                         if(myContext.pdRevieData.isShowing()){
                              myContext.pdRevieData.dismiss();
-                         }*/
+                         }
+
+                         if(dbChecks.getChecksNotSendSucces(statusSend).size() == 0  && listChecks.size() != 0){
+                             myContext.mostrarUpdateChecks(listChecks, listChecksSendOk);
+                         } else if(listChecksSendOk.size() != 0 && dbChecks.getChecksSendSucces().size() == 0){
+                             myContext.mostrarUpdateChecks(listChecks, listChecksSendOk);
+                         }
+
+                         if(myContext.pdRevieData.isShowing()){
+                             myContext.pdRevieData.dismiss();
+                         }
                      }
                  });
          } else {
@@ -295,6 +278,31 @@ public class HistoryChecksLateSendFragment extends Fragment {
          }
      }
      }
+
+    public void updateChecks(int tipeCheck) {
+        ChecksProvider checksProvider = new ChecksProvider();
+        if(authProvider!=null){
+            checksProvider.getChecksNotSend(authProvider.getId()).get().addOnSuccessListener(new OnSuccessListener<QuerySnapshot>() {
+                @Override
+                public void onSuccess(QuerySnapshot queryDocumentSnapshots) {
+                    Check check;
+                    int i = 0;
+                    for (DocumentSnapshot document: queryDocumentSnapshots.getDocuments()) {
+                        check = document.toObject(Check.class);
+                        i++;
+                        checksProvider.updateStatus(check.getIdCheck(), tipeCheck);
+                    }
+                    if(i != 0){
+                        if (i == 1) {
+                            Toast.makeText(myContext, "Registro enviado", Toast.LENGTH_SHORT).show();
+                        } else {
+                            Toast.makeText(myContext, "Se enviaron " + i + " registros", Toast.LENGTH_SHORT).show();
+                        }
+                    }
+                }
+            });
+        }
+    }
 
 
     /*public  int compareToDate(Long dateCheck) {

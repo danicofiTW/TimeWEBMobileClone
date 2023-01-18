@@ -1,5 +1,6 @@
 package com.dan.timewebclone.activitys;
 
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.fragment.app.DialogFragment;
 import androidx.fragment.app.Fragment;
@@ -7,6 +8,7 @@ import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
 
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Build;
@@ -24,27 +26,25 @@ import com.google.firebase.auth.FirebaseAuth;
 
 public class MainActivity extends AppCompatActivity {
 
-    Button btnGoToRegister, btnGoToLogin;
+    private Button btnGoToRegister, btnGoToLogin;
+    private AlertDialog.Builder builderDialogExit;
 
-    AuthProvider mAuth = null;
+    private LoginFragment loginFragment;
+    private RegisterFragment registerFragment;
 
+    private FragmentTransaction fragmentTransaction;
+    private FragmentManager fragmentManager;
+    private DialogFragment termsAndConditionsFragment;
 
-    LoginFragment loginFragment;
-    RegisterFragment registerFragment;
+    private AuthProvider mAuth = null;
 
-    FragmentTransaction fragmentTransaction;
-    FragmentManager fragmentManager;
-    DialogFragment termsAndConditionsFragment;
-
-
+    private String changePassword;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
         setStatusBarColor();
-
         btnGoToRegister = findViewById(R.id.btnGoToRegister);
         btnGoToLogin = findViewById(R.id.btnGoToLogin);
 
@@ -52,10 +52,15 @@ public class MainActivity extends AppCompatActivity {
         registerFragment = new RegisterFragment();
         termsAndConditionsFragment = new TermsAndConditionsFragment();
         mAuth = new AuthProvider();
+        builderDialogExit = new AlertDialog.Builder(this);
 
-        checkViewFragment(registerFragment);
-        checkViewFragment(loginFragment);
+        //Cachar variable que se entrega al cerrar sesion y al cambiar password
+        changePassword = getIntent().getStringExtra("ChangePassword");
+        if (changePassword != null) {
+            moveFragment(loginFragment);
+        }
 
+        //Ir a registrarte
         btnGoToRegister.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -64,6 +69,7 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        //Iniciar sesion
         btnGoToLogin.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -75,40 +81,74 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onStart() {
         super.onStart();
-       if(mAuth.getId() != null){
+        //Si el usuario ya inicio sesion ingresar al Home
+        if (mAuth.getId() != null) {
             Intent i = new Intent(MainActivity.this, HomeTW.class);
             i.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
             startActivity(i);
-        } else{
-           //Toast.makeText(MainActivity.this, "No se pudo registrar el usuario", Toast.LENGTH_SHORT).show();
-       }
+        }
     }
 
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-    }
-
-
+    //Cambiar fragment a mostrar
     private void moveFragment(Fragment fragment) {
         fragmentManager = getSupportFragmentManager();
         fragmentTransaction = fragmentManager.beginTransaction();
-        if (fragment.isHidden()){
+        if (fragment.isHidden()) {
+            setBtns(false);
             fragmentTransaction.show(fragment).commit();
         } else {
+            setBtns(false);
             fragmentTransaction.add(R.id.frameLayoutMain, fragment).addToBackStack(null).commit();
         }
     }
 
-    private void checkViewFragment(Fragment fragment) {
-        if (fragment.isVisible()){
-            fragmentManager = getSupportFragmentManager();
-            fragmentTransaction = fragmentManager.beginTransaction();
-            fragmentTransaction.hide(fragment).commit();
+
+    //Accion hacia atras del dispositivo
+    @Override
+    public void onBackPressed() {
+        setBtns(true);
+        if (!registerFragment.isVisible() && !loginFragment.isVisible()) {
+            mostrarSalida();
+        } else {
+            super.onBackPressed();
         }
     }
 
-    public void saveInfoUser(Employee employee) {
+    //Mensaje de salida de la app
+    public void mostrarSalida(){
+        builderDialogExit.setMessage("¿Deseas salir de TimeWEBMobile?")
+                .setPositiveButton("Si", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialogInterface, int i) {
+                        dialogInterface.dismiss();
+                        Intent in = new Intent(Intent.ACTION_MAIN);
+                        in.addCategory(Intent.CATEGORY_HOME);
+                        in.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                        startActivity(in);
+                    }
+                })
+                .setNegativeButton("Cancelar", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialogInterface, int i) {
+                        dialogInterface.dismiss();
+                    }
+                });
+        builderDialogExit.show();
+    }
+
+    //Inhabilitar botones del main
+    public void setBtns(boolean clickBottom){
+        if(clickBottom){
+            btnGoToLogin.setEnabled(true);
+            btnGoToRegister.setEnabled(true);
+        } else {
+            btnGoToLogin.setEnabled(false);
+            btnGoToRegister.setEnabled(false);
+        }
+    }
+
+
+    /*public void saveInfoUser(Employee employee) {
         SharedPreferences sharedPref = getSharedPreferences("Employee", Context.MODE_PRIVATE);
         //sharedPref = getPreferences(Context.MODE_PRIVATE);
         SharedPreferences.Editor editor = sharedPref.edit();
@@ -122,8 +162,10 @@ public class MainActivity extends AppCompatActivity {
         editor.putString("url", employee.getImage());
         editor.apply();
         editor.commit();
-    }
+    }*/
 
+
+    //Cambiar el color de la barra de notificaciones
     private void setStatusBarColor() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             getWindow().setStatusBarColor(getResources().getColor(R.color.colorNotificationToolbarMain, this.getTheme()));
