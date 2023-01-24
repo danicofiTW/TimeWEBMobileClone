@@ -1,13 +1,10 @@
 package com.dan.timewebclone.activitys;
 
-import static androidx.constraintlayout.helper.widget.MotionEffect.TAG;
-
 import static com.dan.timewebclone.fragments.MapFragment.circleImageViewMap;
 
 import android.Manifest;
 import android.app.Activity;
 import android.app.ProgressDialog;
-import android.content.ClipData;
 import android.content.ContentResolver;
 import android.content.ContentValues;
 import android.content.Context;
@@ -15,22 +12,16 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
-import android.content.pm.ResolveInfo;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
-import android.graphics.Color;
-import android.graphics.ImageDecoder;
 import android.graphics.Matrix;
 import android.location.Address;
 import android.location.Geocoder;
 import android.media.ExifInterface;
-import android.media.MediaScannerConnection;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 
 import com.bumptech.glide.Glide;
-import com.dan.timewebclone.BuildConfig;
 import com.dan.timewebclone.R;
 import com.dan.timewebclone.adapters.ViewPagerAdapter;
 import com.dan.timewebclone.db.DbChecks;
@@ -57,25 +48,19 @@ import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
-import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.Toast;
 
-import androidx.appcompat.widget.PopupMenu;
 import androidx.appcompat.widget.SearchView;
 import androidx.appcompat.widget.Toolbar;
+import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
-import androidx.core.content.FileProvider;
-import androidx.core.graphics.BitmapCompat;
 import androidx.viewpager.widget.ViewPager;
 
 import com.dan.timewebclone.providers.ImageProvider;
-import com.fxn.adapters.InstantImageAdapter;
-import com.fxn.pix.Options;
-import com.fxn.pix.Pix;
-import com.fxn.utility.ImageQuality;
+import com.dan.timewebclone.utils.RelativeTime;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
@@ -84,29 +69,24 @@ import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.EventListener;
 import com.google.firebase.firestore.FirebaseFirestoreException;
 import com.google.firebase.firestore.ListenerRegistration;
+import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.QuerySnapshot;
-import com.google.firebase.storage.UploadTask;
-import com.mancj.materialsearchbar.MaterialSearchBar;
-import com.squareup.picasso.Picasso;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.nio.charset.StandardCharsets;
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Calendar;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
-import java.util.Map;
-
-import id.zelory.compressor.Compressor;
+import java.util.Locale;
+import java.util.TimeZone;
 
 public class HomeTW extends AppCompatActivity{
 
@@ -115,6 +95,7 @@ public class HomeTW extends AppCompatActivity{
     private ImageProvider mImageProvider;
     private EmployeeProvider employeeProvider;
     private DbChecks dbChecks;
+    private DbEmployees dbEmployees;
     private Employee employee;
 
     private SearchView searchView;
@@ -139,16 +120,21 @@ public class HomeTW extends AppCompatActivity{
     public Bitmap imagenBitmap;
     public Uri fotoUri;
     public String imagetoBase64 = "";
+    private boolean revieEmployee;
+    private int updateNet;
+    public int semanasSendOk;
+    public int semanasSendLate;
+
 
     public ArrayList<String> idChecksDelete;
     public ArrayList<String> idChecksLateDelete;
     public LinearLayout linearLayoutLoadingHome;
-
-    public ListenerRegistration listenerRegistration;
+    public ConstraintLayout constraintLayoutProgress;
     //OnBackPressedCallback callback;
     private AlertDialog.Builder builderDialogExit;
-    private AlertDialog.Builder builderDialogUpdateChecks;
+    public AlertDialog.Builder builderDialogUpdateChecks;
     public ProgressDialog pdRevieData;
+    public boolean updateData;
 
     private static final int REQUEST_PERMISSION_CAMERA = 100;
     private static final int TAKE_PICTURE = 101;
@@ -158,22 +144,26 @@ public class HomeTW extends AppCompatActivity{
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_home_tw);
-        setStatusBarColor();
-
-        toolbar = findViewById(R.id.toolbar);
-        setSupportActionBar(toolbar);
-        getSupportActionBar().setTitle("timeWEBMobile");
 
         linearLayoutLoadingHome = findViewById(R.id.linearLayoutLoadingHome);
         linearLayoutLoadingHome.setVisibility(View.VISIBLE);
-
-        mTabLayout = findViewById(R.id.tabLayout);
-        mViewPager = findViewById(R.id.viewPager);
+        constraintLayoutProgress = findViewById(R.id.progressLayout);
 
         pdRevieData = new ProgressDialog(this);
         pdRevieData.setTitle("Revisando informacion");
         pdRevieData.setMessage("Espere un momento ...");
         pdRevieData.setCancelable(false);
+
+        setStatusBarColor();
+
+        updateData = false;
+
+        toolbar = findViewById(R.id.toolbar);
+        setSupportActionBar(toolbar);
+        getSupportActionBar().setTitle("timeWEBMobile");
+
+        mTabLayout = findViewById(R.id.tabLayout);
+        mViewPager = findViewById(R.id.viewPager);
 
         authHome = new AuthProvider();
         checksProvider = new ChecksProvider();
@@ -182,12 +172,20 @@ public class HomeTW extends AppCompatActivity{
         mImageProvider = new ImageProvider();
         employeeProvider = new EmployeeProvider();
         dbChecks = new DbChecks(HomeTW.this);
+        dbEmployees = new DbEmployees(HomeTW.this);
 
         builderDialogExit = new AlertDialog.Builder(this);
         builderDialogUpdateChecks = new AlertDialog.Builder(HomeTW.this);
+        builderDialogUpdateChecks.setCancelable(false);
 
         mViewPager.setOffscreenPageLimit(3);
         viewPagerAdapter = new ViewPagerAdapter(getSupportFragmentManager());
+
+        //Revisar el empleado
+        revieEmployee = getIntent().getBooleanExtra("revieEmployee", true);
+        //if (revieEmployee) {
+            reviewEmployee();
+        //}
 
         mapFragment = new MapFragment();
         historyChecksSendOkFragment = new HistoryChecksSendOkFragment();
@@ -201,19 +199,10 @@ public class HomeTW extends AppCompatActivity{
         mTabLayout.setupWithViewPager(mViewPager);
         mViewPager.setCurrentItem(tabSelected);
 
-
-
-        //Actualizar los checks a eliminar
-        dbChecks.updateChecksDelete(false, authHome.getId());
-        idChecksDelete.clear();
-        idChecksLateDelete.clear();
-
         //Revisar cambios en la vista
         listenerChangeViewPager();
         mViewPager.addOnPageChangeListener(pageChangeListener);
 
-        //Revisar el empleado
-        reviewEmployee();
 
         //Menu del toolbar
         toolbar.setOnMenuItemClickListener(new Toolbar.OnMenuItemClickListener() {
@@ -319,13 +308,36 @@ public class HomeTW extends AppCompatActivity{
                     public void onClick(DialogInterface dialogInterface, int i) {
                         authHome.signOut();
                         dialogInterface.dismiss();
+                        if(historyChecksLateSendFragment.deleteChecks.getVisibility() == View.VISIBLE){
+                            historyChecksLateSendFragment.updateDelete();
+                        }
+                        if(historyChecksSendOkFragment.deleteChecks.getVisibility() == View.VISIBLE){
+                            historyChecksSendOkFragment.updateDelete();
+                        }
                         Intent in = new Intent(HomeTW.this, MainActivity.class);
                         in.putExtra("ChangePassword", "true");
                         in.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
                         startActivity(in);
                     }
                 })
-                .setNegativeButton("Cancelar", new DialogInterface.OnClickListener() {
+                .setNegativeButton("Olvidar", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialogInterface, int i) {
+                        dialogInterface.dismiss();
+                        Intent in = new Intent(HomeTW.this, MainActivity.class);
+                        if(dbChecks.deleteAllChecks() && dbEmployees.deleteAllEmployees()){
+                            authHome.signOut();
+                            if(historyChecksLateSendFragment.deleteChecks.getVisibility() == View.VISIBLE){
+                                historyChecksLateSendFragment.updateDelete();
+                            }
+                            if(historyChecksSendOkFragment.deleteChecks.getVisibility() == View.VISIBLE){
+                                historyChecksSendOkFragment.updateDelete();
+                            }
+                            in.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
+                            startActivity(in);
+                        }
+                    }
+                }).setNeutralButton("Cancelar", new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialogInterface, int i) {
                         dialogInterface.dismiss();
@@ -336,27 +348,46 @@ public class HomeTW extends AppCompatActivity{
 
     //Ir a configuracion
     private void goToSetings() {
+        if(historyChecksLateSendFragment.deleteChecks.getVisibility() == View.VISIBLE){
+            historyChecksLateSendFragment.updateDelete();
+        }
+        if(historyChecksSendOkFragment.deleteChecks.getVisibility() == View.VISIBLE){
+            historyChecksSendOkFragment.updateDelete();
+        }
         Intent i = new Intent(HomeTW.this, SettingsActivity.class);
         startActivity(i);
     }
 
     //Ir a cambiar el password
     private void goToChangePassword() {
+        if(historyChecksLateSendFragment.deleteChecks.getVisibility() == View.VISIBLE){
+            historyChecksLateSendFragment.updateDelete();
+        }
+        if(historyChecksSendOkFragment.deleteChecks.getVisibility() == View.VISIBLE){
+            historyChecksSendOkFragment.updateDelete();
+        }
         Intent i = new Intent(HomeTW.this, ChangePasswordActivity.class);
         startActivity(i);
     }
 
     //Ir a tu perfil
     private void goToProfile() {
+
+        if(historyChecksLateSendFragment.deleteChecks.getVisibility() == View.VISIBLE){
+            historyChecksLateSendFragment.updateDelete();
+        }
+        if(historyChecksSendOkFragment.deleteChecks.getVisibility() == View.VISIBLE){
+            historyChecksSendOkFragment.updateDelete();
+        }
         Intent i = new Intent(HomeTW.this, ProfileActivity.class);
         startActivity(i);
     }
 
     //Funcion para filtrar
     private void filterTextSearchView(String textSearch) {
-        List<Integer> statusSend = Arrays.asList(0, 2);
-        ArrayList<Check> checksSend = dbChecks.getChecksSendSucces();
-        ArrayList<Check> checksLateSend = dbChecks.getChecksNotSendSucces(statusSend);
+        //List<Integer> statusSend = Arrays.asList(0, 2);
+        ArrayList<Check> checksSend = dbChecks.getChecksSendSucces(authHome.getId());
+        ArrayList<Check> checksLateSend = dbChecks.getChecksNotSendSucces(authHome.getId());
         ArrayList<Check> checksFilterSend = new ArrayList<>();
         ArrayList<Check> checksFilterLateSend = new ArrayList<>();
         SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
@@ -641,8 +672,8 @@ public class HomeTW extends AppCompatActivity{
     }
 
     //Notificar cambio checks enviados
-    public void updateChecks(String idCheck, int tipeSend, long date) {
-        dbChecks.updateCheck(idCheck, tipeSend, date);
+    public void updateChecks(String idCheck, int tipeSend, long date, long dateSend) {
+        dbChecks.updateCheck(idCheck, tipeSend, date, dateSend);
         if(tipeSend==1){
             historyChecksSendOkFragment.notifyChangeAdapter();
             historyChecksLateSendFragment.notifyChangeAdapter();
@@ -659,30 +690,110 @@ public class HomeTW extends AppCompatActivity{
             @Override
             public void onSuccess(Void unused) {
                 if (linearLayoutLoadingHome.getVisibility() == View.GONE) {
+                    mapFragment.loadin(false);
                     pdRevieData.show();
                 }
                 time1 = Calendar.getInstance().getTime();
                 //Eliminar mensajes de prueba internet
-                checksProvider.getChecksByUser(authHome.getId() + "100").addSnapshotListener(new EventListener<QuerySnapshot>() {
+                checksProvider.getChecksByUser(authHome.getId() + "100").get().addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
                     @Override
-                    public void onEvent(@Nullable QuerySnapshot value, @Nullable FirebaseFirestoreException error) {
-                        if (value != null) {
-                            for (DocumentSnapshot document : value.getDocuments()) {
+                    public void onComplete(@NonNull Task<QuerySnapshot> task) {
+                        if(task.isSuccessful()){
+                            for (DocumentSnapshot document : task.getResult()) {
                                 Check check = document.toObject(Check.class);
                                 checksProvider.deleteCheck(check);
                             }
                         }
                     }
                 });
+
                 //Actualizar enviados
+                checksProvider.deleteCheck(ch);
                 dbChecks.reviewChecks(2);
                 historyChecksLateSendFragment.updateChecks(2);
-
-                historyChecksSendOkFragment.reviewData();
-                historyChecksLateSendFragment.reviewData(historyChecksSendOkFragment.listChecks, historyChecksSendOkFragment.idDeleteChecks);
-                historyChecksSendOkFragment.notifyChangeAdapter();
                 historyChecksLateSendFragment.notifyChangeAdapter();
-                checksProvider.deleteCheck(ch);
+
+                checksProvider.getChecksByUser(authHome.getId()).get().addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
+                    @Override
+                    public void onComplete(@NonNull Task<QuerySnapshot> task) {
+                        if(task.isSuccessful()){
+                            int numberChecksUser = task.getResult().size();
+                            if(numberChecksUser != 0){
+                                SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy");
+                                Date mDateD = Calendar.getInstance(TimeZone.getTimeZone(TimeZone.getDefault().getID()), Locale.getDefault()).getTime();
+                                String date = sdf.format(mDateD);
+
+                                SharedPreferences sharedPref = getSharedPreferences("datos", MODE_PRIVATE);
+                                String dateRevie = sharedPref.getString("dateReview","");
+                                dateRevie = "18/01/2023";
+
+                                if(dateRevie.equals("")){
+                                    reviewChecksOlderThan31Days(task.getResult());
+                                    savePreferenceReviewChecks(date);
+                                } else {
+                                    long dateSave = 0;
+                                    long dateThisMoment = 0;
+                                    try {
+                                        Date d = sdf.parse(dateRevie);
+                                        dateSave = d.getTime();
+                                        Date d1 = sdf.parse(date);
+                                        dateThisMoment = d1.getTime();
+                                        long diferencia = dateThisMoment - dateSave;
+                                        double diasD = Math.floor(diferencia / (1000 * 60 * 60 * 24));
+                                        int dias = (int) diasD;
+                                        if(dias != 0){
+                                            reviewChecksOlderThan31Days(task.getResult());
+                                            savePreferenceReviewChecks(date);
+                                        } else {
+                                            if(linearLayoutLoadingHome.getVisibility() == View.VISIBLE) {
+                                                linearLayoutLoadingHome.setVisibility(View.GONE);
+                                            }
+                                        }
+                                    } catch (ParseException e) {
+                                        e.printStackTrace();
+                                    }
+                                }
+
+                                if (linearLayoutLoadingHome.getVisibility() == View.VISIBLE) {
+                                    linearLayoutLoadingHome.setVisibility(View.GONE);
+                                } else {
+                                    if(pdRevieData.isShowing()){
+                                        pdRevieData.dismiss();
+                                    }
+                                }
+
+
+
+                                if(dbChecks.getChecksNotSendSucces(authHome.getId()).size() == 0 || dbChecks.getChecksSendSucces(authHome.getId()).size() == 0){
+                                    mostrarUpdateChecks();
+                                }
+
+
+                                /*historyChecksSendOkFragment.reviewData();
+                                historyChecksLateSendFragment.reviewData(historyChecksSendOkFragment.listChecks, historyChecksSendOkFragment.idDeleteChecks);
+                                historyChecksSendOkFragment.notifyChangeAdapter();
+                                historyChecksLateSendFragment.notifyChangeAdapter();
+                                */
+                            } else {
+                                if (linearLayoutLoadingHome.getVisibility() == View.VISIBLE) {
+                                    linearLayoutLoadingHome.setVisibility(View.GONE);
+                                } else {
+                                    if(pdRevieData.isShowing()){
+                                        pdRevieData.dismiss();
+                                    }
+                                }
+                            }
+                        } else {
+                            if (linearLayoutLoadingHome.getVisibility() == View.VISIBLE) {
+                                linearLayoutLoadingHome.setVisibility(View.GONE);
+                            } else {
+                                if(pdRevieData.isShowing()){
+                                    pdRevieData.dismiss();
+                                }
+                            }
+                        }
+                    }
+                });
             }
         });
         if(!mapFragment.isOnlineNet()){
@@ -692,29 +803,65 @@ public class HomeTW extends AppCompatActivity{
         }
     }
 
+    public void reviewChecksOlderThan31Days(QuerySnapshot result) {
+        Check check;
+        ArrayList<String> idDeleteChecks = new ArrayList<>();
+        RelativeTime relativeTime = new RelativeTime();
+        int numberDelete = 0;
+        for (DocumentSnapshot document : result) {
+            check = document.toObject(Check.class);
+            int dias = 31;
+            if(check.getTime() != null){
+                dias = relativeTime.compareToDate(check.getTime());
+            }
+            if(dias > 31){
+                numberDelete ++;
+                idDeleteChecks.add(check.getIdCheck());
+            } else {
+                break;
+            }
+        }
+
+        if(numberDelete!=0) {
+            checksProvider.deleteChecksForId(idDeleteChecks);
+            dbChecks.delete(idDeleteChecks);
+            if(linearLayoutLoadingHome.getVisibility() == View.VISIBLE) {
+                linearLayoutLoadingHome.setVisibility(View.GONE);
+            }
+            if(numberDelete==1){
+                Toast.makeText(HomeTW.this, "Se elimino un registro enviado hace más de 31 días", Toast.LENGTH_SHORT).show();
+            } else {
+                Toast.makeText(HomeTW.this, "Se eliminaron " + numberDelete + " registros enviados hace más de 31 días", Toast.LENGTH_SHORT).show();
+            }
+        } else {
+            if(linearLayoutLoadingHome.getVisibility() == View.VISIBLE) {
+                linearLayoutLoadingHome.setVisibility(View.GONE);
+            }
+        }
+    }
+
+    private void savePreferenceReviewChecks(String dateReview){
+        SharedPreferences sharedPref = getSharedPreferences("datos", Context.MODE_PRIVATE);
+        SharedPreferences.Editor editor = sharedPref.edit();
+        editor.putString("dateReview", dateReview);
+        editor.commit();
+    }
+
     //Mostrar mensaje de actualizaion de informacion
-    public void mostrarUpdateChecks(ArrayList<Check> listChecksLate, ArrayList<Check> listChecksSendOk){
+    public void mostrarUpdateChecks(){
         builderDialogUpdateChecks.setMessage("Se encontraron registros en la red, ¿Deseas actualizar los registros?")
                 .setPositiveButton("Si", new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialogInterface, int i) {
-                        pdRevieData.show();
-                        if(dbChecks.getChecksSendSucces().size() == 0){
-                            for(int j = 0; j<listChecksSendOk.size(); j++){
-                                dbChecks.insertCheck(listChecksSendOk.get(j));
-                            }
-                            historyChecksSendOkFragment.notifyChangeAdapter();
+                        if(mapFragment.isOnlineNet()){
+                            dialogInterface.dismiss();
+                            constraintLayoutProgress.setVisibility(View.VISIBLE);
+                            updateDataNet();
                         }
-
-                        List<Integer> statusSend = Arrays.asList(0,2);
-                        if(dbChecks.getChecksNotSendSucces(statusSend).size() == 0){
-                            for(int j = 0; j<listChecksLate.size(); j++){
-                                dbChecks.insertCheck(listChecksLate.get(j));
-                            }
-                            historyChecksLateSendFragment.notifyChangeAdapter();
+                        else {
+                            Toast.makeText(HomeTW.this, "Conectate a internet para actualizar información", Toast.LENGTH_SHORT).show();
+                            mostrarUpdateChecks();
                         }
-                        pdRevieData.dismiss();
-                        dialogInterface.dismiss();
                     }
                 })
                 .setNegativeButton("Cancelar", new DialogInterface.OnClickListener() {
@@ -726,121 +873,190 @@ public class HomeTW extends AppCompatActivity{
         builderDialogUpdateChecks.show();
     }
 
-    //Actualizar la vista al eliminar
-    public void updateDeleteAllChecksSeendOk(boolean b) {
-        if(historyChecksSendOkFragment.deleteAllChecks != null){
-            if(b){
-                historyChecksSendOkFragment.deleteAllChecks.setChecked(true);
-            } else{
-                historyChecksSendOkFragment.deleteAllChecks.setChecked(false);
-                if(idChecksDelete.size()==0){
-                    historyChecksSendOkFragment.showImageDelete(false);
-                }
-            }
-        }
-    }
-
-    //Actualizar la vista al eliminar
-    public void updateDeleteAllChecksLate(boolean b) {
-        if(historyChecksLateSendFragment.deleteAllChecks != null){
-            if(b){
-                historyChecksLateSendFragment.deleteAllChecks.setChecked(true);
-            } else{
-                historyChecksLateSendFragment.deleteAllChecks.setChecked(false);
-                if(idChecksLateDelete.size()==0){
-                    historyChecksLateSendFragment.showImageDelete(false);
-                }
-            }
-        }
-    }
-
-    //Revisar el empleado que inicio sesion
-    private void reviewEmployee() {
-        DbEmployees dbEmployees = new DbEmployees(HomeTW.this);
-        employee = dbEmployees.getEmployee(authHome.getId());
-        if(employee == null){
-            listenerRegistration = employeeProvider.getUserInfo(authHome.getId()).addSnapshotListener(new EventListener<DocumentSnapshot>() {
+    private void updateDataNet() {
+        updateNet = 2;
+        if(dbChecks.getChecksSendSucces(authHome.getId()).size() == 0){
+            checksProvider.getChecksByUserAndStatusSend(authHome.getId(), 1).get().addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
                 @Override
-                public void onEvent(@Nullable DocumentSnapshot documentSnapshot, @Nullable FirebaseFirestoreException error) {
-                    if (documentSnapshot != null) {
-                        if (documentSnapshot.exists()) {
-                            employee = documentSnapshot.toObject(Employee.class);
+                public void onComplete(@NonNull Task<QuerySnapshot> task) {
+                    if(task.isSuccessful()){
+                        ArrayList<Check> checks = new ArrayList<>();
+                        for (DocumentSnapshot document : task.getResult()) {
+                            dbChecks.insertCheck(document.toObject(Check.class));
+                        }
+                        updateNet--;
+                        if(updateNet == 0){
+                            constraintLayoutProgress.setVisibility(View.GONE);
+                        }
+                        historyChecksSendOkFragment.notifyChangeAdapter();
+                    }
+                }
+            });
+        } else {
+            updateNet--;
+        }
 
-                            //Si el usuario logeado no existe en db se actualiza la informacion
-                            Employee employee1 = dbEmployees.getEmployee(employee.getIdUser());
-                            if(employee1 == null){
-                                if(dbEmployees.deleteAllEmployees() && dbChecks.deleteAllChecks()){
-                                    dbEmployees.insertEmployye(employee);
-                                    SharedPreferences sharedPref = getSharedPreferences("datos", Context.MODE_PRIVATE);
-                                    SharedPreferences.Editor editor = sharedPref.edit();
-                                    editor.putBoolean("takePhoto", false);
-                                    editor.commit();
-                                    mapFragment.setInfoMap();
-                                }
-                            }
-
+        if(dbChecks.getChecksNotSendSucces(authHome.getId()).size() == 0){
+            checksProvider.getChecksByUserAndStatusSend(authHome.getId(), 2).get().addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
+                @Override
+                public void onComplete(@NonNull Task<QuerySnapshot> task) {
+                    if(task.isSuccessful()){
+                        for (DocumentSnapshot document : task.getResult()) {
+                            dbChecks.insertCheck(document.toObject(Check.class));
+                        }
+                        updateNet--;
+                        historyChecksLateSendFragment.notifyChangeAdapter();
+                        if(updateNet == 0){
+                            constraintLayoutProgress.setVisibility(View.GONE);
                         }
                     }
                 }
             });
+        } else {
+            updateNet--;
+        }
+        if(updateNet == 0){
+            constraintLayoutProgress.setVisibility(View.GONE);
+        }
+
+    }
+
+
+            //Actualizar la vista al eliminar
+            public void updateDeleteAllChecksSeendOk(boolean b) {
+                if(historyChecksSendOkFragment.deleteAllChecks != null){
+                    if(b){
+                        historyChecksSendOkFragment.deleteAllChecks.setChecked(true);
+                    } else{
+                        historyChecksSendOkFragment.deleteAllChecks.setChecked(false);
+                        if(idChecksDelete.size()==0){
+                            historyChecksSendOkFragment.showImageDelete(false);
+                        }
+                    }
+                }
+            }
+
+
+            //Actualizar la vista al eliminar
+            public void updateDeleteAllChecksLate(boolean b) {
+                if(historyChecksLateSendFragment.deleteAllChecks != null){
+                    if(b){
+                        historyChecksLateSendFragment.deleteAllChecks.setChecked(true);
+                    } else{
+                        historyChecksLateSendFragment.deleteAllChecks.setChecked(false);
+                        if(idChecksLateDelete.size()==0){
+                            historyChecksLateSendFragment.showImageDelete(false);
+                        }
+                    }
+                }
+            }
+
+            public int isViewDeleteSendOk(){
+                return historyChecksSendOkFragment.deleteChecks.getVisibility();
+            }
+
+            public int isViewDeleteSendLate() {
+                return historyChecksLateSendFragment.deleteChecks.getVisibility();
+            }
+
+            //Revisar el empleado que inicio sesion
+            private void reviewEmployee() {
+                employee = dbEmployees.getEmployee(authHome.getId());
+                //Si el usuario logeado no existe en db se actualiza la informacion
+                if(employee == null){
+                    employeeProvider.getUserInfo(authHome.getId()).get().addOnCompleteListener(new OnCompleteListener<DocumentSnapshot>() {
+                        @Override
+                        public void onComplete(@NonNull Task<DocumentSnapshot> task) {
+                            if(task.isSuccessful()){
+                                if (task.getResult() != null) {
+                                    if (task.getResult().exists()) {
+                                        employee = task.getResult().toObject(Employee.class);
+                                        if(dbEmployees.deleteAllEmployees() && dbChecks.deleteAllChecks()){
+                                            dbEmployees.insertEmployye(employee);
+                                            /*SharedPreferences sharedPref = getSharedPreferences("datos", Context.MODE_PRIVATE);
+                                            SharedPreferences.Editor editor = sharedPref.edit();
+                                            editor.putBoolean("takePhoto", false);
+                                            editor.commit();*/
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    });
+                }
+            }
+
+            @Override
+            protected void onSaveInstanceState(Bundle outState) {
+                super.onSaveInstanceState(outState);
+                //Clear the Activity's bundle of the subsidiary fragments' bundles.
+                outState.clear();
+            }
+
+            //Accion hacia atras del dispositivo
+            @Override
+            public void onBackPressed() {
+                mostrarSalida();
+                //super.onBackPressed();
+            }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        if(historyChecksLateSendFragment.deleteChecks.getVisibility() == View.VISIBLE){
+            historyChecksLateSendFragment.updateDelete();
+        }
+        if(historyChecksSendOkFragment.deleteChecks.getVisibility() == View.VISIBLE){
+            historyChecksSendOkFragment.updateDelete();
         }
     }
 
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        if(listenerRegistration != null)
-            listenerRegistration.remove();
-
-        dbChecks.updateChecksDelete(false, authHome.getId());
-        idChecksDelete.clear();
-            //if(callback != null)
-        //  callback.remove();
-    }
-
-    @Override
-    protected void onSaveInstanceState(Bundle outState) {
-        super.onSaveInstanceState(outState);
-        //Clear the Activity's bundle of the subsidiary fragments' bundles.
-        outState.clear();
-    }
-
-    //Accion hacia atras del dispositivo
-    @Override
-    public void onBackPressed() {
-        mostrarSalida();
-        //super.onBackPressed();
-    }
 
     //Mensaje de salida de la app
-    public void mostrarSalida(){
-        builderDialogExit.setMessage("¿Deseas salir de TimeWEBMobile?")
-                .setPositiveButton("Si", new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialogInterface, int i) {
-                        dialogInterface.dismiss();
-                        Intent in = new Intent(Intent.ACTION_MAIN);
-                        in.addCategory(Intent.CATEGORY_HOME);
-                        in.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                        startActivity(in);
-                    }
-                })
-                .setNegativeButton("Cancelar", new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialogInterface, int i) {
-                        dialogInterface.dismiss();
-                    }
-                });
-        builderDialogExit.show();
-    }
+            public void mostrarSalida(){
+                builderDialogExit.setMessage("¿Deseas salir de TimeWEBMobile?")
+                        .setPositiveButton("Si", new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialogInterface, int i) {
+                                dialogInterface.dismiss();
+                                if(historyChecksLateSendFragment.deleteChecks.getVisibility() == View.VISIBLE){
+                                    historyChecksLateSendFragment.updateDelete();
+                                }
+                                if(historyChecksSendOkFragment.deleteChecks.getVisibility() == View.VISIBLE){
+                                    historyChecksSendOkFragment.updateDelete();
+                                }
+                                Intent in = new Intent(Intent.ACTION_MAIN);
+                                in.addCategory(Intent.CATEGORY_HOME);
+                                in.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                                startActivity(in);
+                            }
+                        })
+                        .setNegativeButton("Cancelar", new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialogInterface, int i) {
+                                dialogInterface.dismiss();
+                            }
+                        }).setNeutralButton("", new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialogInterface, int i) {
+                            }
+                        });
+                builderDialogExit.show();
+            }
 
-    //Cambiar el color de la barra de notificaciones
-    private void setStatusBarColor() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            getWindow().setStatusBarColor(getResources().getColor(R.color.black, this.getTheme()));
+            //Cambiar el color de la barra de notificaciones
+            private void setStatusBarColor() {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                    getWindow().setStatusBarColor(getResources().getColor(R.color.colorHomeTw, this.getTheme()));
+                }
+                else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                    getWindow().setStatusBarColor(getResources().getColor(R.color.colorHomeTw));
+                }
+            }
+
         }
-        else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            getWindow().setStatusBarColor(getResources().getColor(R.color.black));
-        }
-    }
-}

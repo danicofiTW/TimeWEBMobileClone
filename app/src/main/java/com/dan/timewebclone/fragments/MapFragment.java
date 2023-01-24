@@ -1,7 +1,5 @@
 package com.dan.timewebclone.fragments;
 
-import static androidx.constraintlayout.helper.widget.MotionEffect.TAG;
-
 import android.Manifest;
 import android.app.AlertDialog;
 import android.app.ProgressDialog;
@@ -9,13 +7,9 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.content.pm.ApplicationInfo;
-import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
-import android.graphics.Bitmap;
 import android.location.Location;
 import android.location.LocationManager;
-import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 
@@ -27,7 +21,6 @@ import androidx.fragment.app.Fragment;
 import android.os.Handler;
 import android.os.Looper;
 import android.provider.Settings;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -37,8 +30,6 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.android.volley.Request;
-import com.android.volley.Response;
 import com.dan.timewebclone.activitys.HomeTW;
 import com.dan.timewebclone.R;
 import com.dan.timewebclone.db.DbChecks;
@@ -48,9 +39,6 @@ import com.dan.timewebclone.models.Employee;
 import com.dan.timewebclone.providers.AuthProvider;
 import com.dan.timewebclone.providers.ChecksProvider;
 import com.dan.timewebclone.providers.EmployeeProvider;
-import com.dan.timewebclone.providers.ImageProvider;
-import com.dan.timewebclone.utils.SNTPClient;
-import com.fxn.pix.Options;
 import com.getbase.floatingactionbutton.FloatingActionButton;
 import com.getbase.floatingactionbutton.FloatingActionsMenu;
 import com.google.android.gms.location.FusedLocationProviderClient;
@@ -66,31 +54,13 @@ import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.LatLng;
-import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
-import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.OnSuccessListener;
-import com.google.android.gms.tasks.Task;
-import com.google.common.net.MediaType;
-import com.google.firebase.database.ValueEventListener;
-import com.google.firebase.firestore.ListenerRegistration;
-import com.google.firebase.messaging.FirebaseMessaging;
-import com.google.type.DateTime;
 
-import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.nio.charset.StandardCharsets;
-import java.sql.Time;
-import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.time.ZonedDateTime;
-import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
-import java.util.List;
 import java.util.Locale;
 import java.util.TimeZone;
 
@@ -101,6 +71,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
     private AuthProvider authProvider;
     private ChecksProvider checksProvider;
     private EmployeeProvider employeeProvider;
+    private DbChecks dbChecks;
 
     public FloatingActionsMenu floatingActionsMenu;
     private FloatingActionButton sendStartWork, sendStartEating, sendFinishEating, sendFinishWork;
@@ -118,17 +89,15 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
 
     private Marker marker;
     private Button buttonConnect;
-    private Boolean isConnect = false;
+    private boolean isConnect = false;
+    private boolean withoutInternet = true;
     public static CircleImageView circleImageViewMap;
     private ImageView imageViewPhotoMap;
 
     private LatLng currentLatLng;
     private HomeTW myContext;
     //private Long date;
-    private Long mDateL;
-    private String mDateS;
     private Date mDateD;
-    private Location mLocation;
     public ProgressDialog pdSendCheck;
     public Date time1;
     private String zone = "America/Mexico_City";
@@ -137,7 +106,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
     private LocationRequest locationRequest;
 
     private DbEmployees dbEmployees;
-    private Employee employee;
+    public Employee employee;
     private Calendar calendar;
     private String timezoneID;
     private SimpleDateFormat sdf1;
@@ -176,6 +145,12 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                         //textViewGoodTime.setText("");
                     }
                 }
+            } else {
+                employee = dbEmployees.getEmployee(authProvider.getId());
+                if (employee != null){
+                    setGreeting();
+                    reviewTakePhoto();
+                }
             }
             handler.postDelayed(runnable, 1000);
         }
@@ -185,8 +160,8 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         @Override
         public void onLocationResult(LocationResult locationResult) {
             for (Location location : locationResult.getLocations()) {
-                mLocation = location;
-                Log.d("UBICACION", "Location: " + mLocation.getLatitude()+ ", " + mLocation.getLongitude());
+                //mLocation = location;
+                //Log.d("UBICACION", "Location: " + mLocation.getLatitude()+ ", " + mLocation.getLongitude());
                 if (isMockLocationOn(location, myContext)) {
                     disconnect();
                     Toast.makeText(myContext, "Se ha detectado ubicacion de prueba, por lo que no se puede enviar registros", Toast.LENGTH_LONG).show();
@@ -210,19 +185,17 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                     ));
                 }
 
-                if (myContext.linearLayoutLoadingHome.getVisibility() == View.VISIBLE) {
-                    //myContext.linearLayoutLoadingHome.setVisibility(View.GONE);
+                if (myContext.updateData == false) {
+                    myContext.updateData = true;
                     myContext.checkUpdateSend();
                 } else {
                     loadin(false);
-
                 }
                 //updateInfo(date);
                 //updateLocation();
             }
         }
     };
-
 
 
     public MapFragment() {
@@ -247,6 +220,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         authProvider = new AuthProvider();
         checksProvider = new ChecksProvider();
         employeeProvider = new EmployeeProvider();
+        dbChecks = new DbChecks(myContext);
 
         fusedLocation = LocationServices.getFusedLocationProviderClient(mView.getContext());
 
@@ -266,6 +240,9 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
 
 
         dbEmployees = new DbEmployees(myContext);
+
+
+        //employee = dbEmployees.getEmployee(authProvider.getId());
         //employee = dbEmployees.getEmployee(authProvider.getId());
         //textViewName.setText(employee.getName());
         textViewState.setText("!Conectate para enviar¡");
@@ -292,8 +269,8 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
             @Override
             public void onClick(View view) {
                 if (currentLatLng != null && isConnect) {
-                    if(takePhoto){
-                        if(!myContext.imagetoBase64.equals("")){
+                    if (takePhoto) {
+                        if (!myContext.imagetoBase64.equals("")) {
                             seendCheck("startWork");
                         } else {
                             Toast.makeText(myContext, "La fotografia es necesaria para el registro", Toast.LENGTH_SHORT).show();
@@ -311,8 +288,8 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
             @Override
             public void onClick(View view) {
                 if (currentLatLng != null && isConnect) {
-                    if(takePhoto){
-                        if(!myContext.imagetoBase64.equals("")){
+                    if (takePhoto) {
+                        if (!myContext.imagetoBase64.equals("")) {
                             seendCheck("startEating");
                         } else {
                             Toast.makeText(myContext, "La fotografia es necesaria para el registro", Toast.LENGTH_SHORT).show();
@@ -330,8 +307,8 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
             @Override
             public void onClick(View view) {
                 if (currentLatLng != null && isConnect) {
-                    if(takePhoto){
-                        if(!myContext.imagetoBase64.equals("")){
+                    if (takePhoto) {
+                        if (!myContext.imagetoBase64.equals("")) {
                             seendCheck("finishEating");
                         } else {
                             Toast.makeText(myContext, "La fotografia es necesaria para el registro", Toast.LENGTH_SHORT).show();
@@ -349,8 +326,8 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
             @Override
             public void onClick(View view) {
                 if (currentLatLng != null && isConnect) {
-                    if(takePhoto){
-                        if(!myContext.imagetoBase64.equals("")){
+                    if (takePhoto) {
+                        if (!myContext.imagetoBase64.equals("")) {
                             seendCheck("finishWork");
                         } else {
                             Toast.makeText(myContext, "La fotografia es necesaria para el registro", Toast.LENGTH_SHORT).show();
@@ -372,14 +349,13 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         });
         runnable.run();
 
-
         return mView;
     }
 
     private void reviewTakePhoto() {
-        SharedPreferences prefe = myContext.getSharedPreferences("datos", Context.MODE_PRIVATE);
-        takePhoto = prefe.getBoolean("takePhoto",false);
-        if(takePhoto){
+        //SharedPreferences prefe = myContext.getSharedPreferences("datos", Context.MODE_PRIVATE);
+        takePhoto = employee.isStateCamera();
+        if (takePhoto) {
             imageViewPhotoMap.setVisibility(View.VISIBLE);
             setImageDefault();
         } else {
@@ -388,7 +364,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         }
     }
 
-    private void loadin(boolean b) {
+    public void loadin(boolean b) {
         if (b) {
             frameLayoutLoading.setVisibility(View.VISIBLE);
             buttonConnect.setEnabled(false);
@@ -404,14 +380,6 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         }
     }
 
-    private void getTimeZone() {
-        SNTPClient.getDate(TimeZone.getTimeZone(zone), new SNTPClient.Listener() {
-            @Override
-            public void onTimeResponse(String rawDate, Date date, Exception ex) {
-                mDateD = date;
-            }
-        });
-    }
 
     private void updateInfo(Date Date) {
         if (Date != null) {
@@ -480,84 +448,105 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
 
 
     public void setImageDefault() {
-        if(takePhoto){
+        if (employee.isStateCamera()) {
             circleImageViewMap.setImageResource(R.drawable.icon_image);
         }
     }
 
     private void seendCheck(String tipe) {
-        loadin(true);
+        //loadin(true);
+        myContext.constraintLayoutProgress.setVisibility(View.VISIBLE);
         if (checkIfLocationOpened()) {
-            String timezoneID = TimeZone.getDefault().getID();
-            Calendar calendar = Calendar.getInstance(TimeZone.getTimeZone(timezoneID), Locale.getDefault());
-            time1 = calendar.getTime();
+            if (ContextCompat.checkSelfPermission(myContext, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+                fusedLocation.getLastLocation().addOnSuccessListener(new OnSuccessListener<Location>() {
+                    @Override
+                    public void onSuccess(Location location) {
+                        String timezoneID = TimeZone.getDefault().getID();
+                        Calendar calendar = Calendar.getInstance(TimeZone.getTimeZone(timezoneID), Locale.getDefault());
+                        time1 = calendar.getTime();
 
-            Check check = new Check();
-            check.setTipeCheck(tipe);
-            check.setIdUser(authProvider.getId());
-            check.setTime(time1.getTime());
-            check.setCheckLat(currentLatLng.latitude);
-            check.setCheckLong(currentLatLng.longitude);
-            check.setStatusSend(0);
-
-            numberChecksSendLate++;
-
-            if (myContext.imagetoBase64 != null) {
-                if (myContext.imagetoBase64 != "") {
-                    check.setImage(myContext.imagetoBase64);
-                    myContext.imagetoBase64 = "";
-                }
-            }
-
-            if (myContext.fotoUri != null) {
-                check.setUrlImage(myContext.fotoUri.toString());
-                myContext.fotoUri = null;
-            }
-
-            checksProvider.createCheck(check).addOnSuccessListener(new OnSuccessListener<Void>() {
-                @Override
-                public void onSuccess(Void aVoid) {
-                    int tipeSend;
-                    Date time2 = Calendar.getInstance().getTime();
-                    if (time1 != null) {
-                        if (evaluarLimite(time2, time1)) {
-                            tipeSend = 1;
-                        } else {
-                            tipeSend = 2;
+                        Check check = new Check();
+                        check.setTipeCheck(tipe);
+                        check.setIdUser(authProvider.getId());
+                        check.setTime(time1.getTime());
+                        check.setCheckLat(location.getLatitude());
+                        check.setCheckLong(location.getLongitude());
+                        check.setStatusSend(0);
+                        if (myContext.imagetoBase64 != null) {
+                            if (myContext.imagetoBase64 != "") {
+                                check.setImage(myContext.imagetoBase64);
+                                myContext.imagetoBase64 = "";
+                            }
                         }
-                    } else {
-                        tipeSend = 2;
+                        if (myContext.fotoUri != null) {
+                            check.setUrlImage(myContext.fotoUri.toString());
+                            myContext.fotoUri = null;
+                        }
+
+                        numberChecksSendLate++;
+
+                        checksProvider.createCheck(check).addOnSuccessListener(new OnSuccessListener<Void>() {
+                            @Override
+                            public void onSuccess(Void aVoid) {
+                                if(myContext.constraintLayoutProgress.getVisibility() == View.GONE){
+                                    myContext.constraintLayoutProgress.setVisibility(View.VISIBLE);
+                                }
+                                int tipeSend;
+                                String timezoneID = TimeZone.getDefault().getID();
+                                Calendar calendar = Calendar.getInstance(TimeZone.getTimeZone(timezoneID), Locale.getDefault());
+                                Date time2 = calendar.getTime();
+
+                                if (time1 != null) {
+                                    if (withoutInternet == true) {
+                                        tipeSend = 1;
+                                    } else {
+                                        tipeSend = 2;
+                                    }
+                                } else {
+                                    tipeSend = 2;
+                                }
+
+                                time1 = null;
+                                check.setStatusSend(tipeSend);
+
+                                checksProvider.updateStatus(check.getIdCheck(), tipeSend, time2.getTime());
+                                myContext.updateChecks(check.getIdCheck(), tipeSend, check.getTime(), time2.getTime());
+
+                                //loadin(false);
+
+                                myContext.constraintLayoutProgress.setVisibility(View.GONE);
+                                if (numberChecksSendLate != 0) {
+                                    enviarToast(true);
+                                    numberChecksSendLate = 0;
+                                    withoutInternet = true;
+                                }
+                            }
+                        });
+                        long id = dbChecks.insertCheck(check);
+                        myContext.image = null;
+                        if (id > 0) {
+                            myContext.updateViewLateCheck();
+                            setImageDefault();
+
+                            if (!isOnlineNet()) {
+                                //loadin(false);
+                                withoutInternet = false;
+                                myContext.constraintLayoutProgress.setVisibility(View.GONE);
+                                enviarToast(false);
+                            }
+                        } else {
+                            loadin(false);
+                            Toast.makeText(myContext, "Error al registrar", Toast.LENGTH_SHORT).show();
+                        }
                     }
-                    time1 = null;
-                    check.setStatusSend(tipeSend);
-
-                    checksProvider.updateStatus(check.getIdCheck(), tipeSend);
-                    myContext.updateChecks(check.getIdCheck(), tipeSend, check.getTime());
-
-                    loadin(false);
-                    if (numberChecksSendLate != 0) {
-                        enviarToast(true);
-                        numberChecksSendLate = 0;
-                    }
-                }
-            });
-
-            DbChecks dbChecks = new DbChecks(myContext);
-            long id = dbChecks.insertCheck(check);
-            myContext.image = null;
-            if (id > 0) {
-                myContext.updateViewLateCheck();
-                setImageDefault();
-                if (!isOnlineNet()) {
-                    loadin(false);
-                    enviarToast(false);
-                }
-            } else {
-                loadin(false);
-                Toast.makeText(myContext, "Error al registrar", Toast.LENGTH_SHORT).show();
+                });
+            }else {
+                myContext.constraintLayoutProgress.setVisibility(View.GONE);
+                //loadin(false);
             }
         } else {
-            loadin(false);
+            myContext.constraintLayoutProgress.setVisibility(View.GONE);
+            //loadin(false);
             disconnect();
         }
     }
@@ -573,7 +562,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                 text = "Se enviaron " + numberChecksSendLate + " registros";
             }
         } else {
-            text = "Registro demorado, conectate a internet para enviar!!";
+            text = "Registro pendiente, conectate a internet para enviar!!";
         }
 
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
@@ -623,7 +612,6 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                     if (myContext.linearLayoutLoadingHome.getVisibility() == View.GONE) {
                         loadin(true);
                     }
-
                     buttonConnect.setText("Desconectarse");
                     textViewState.setText("¡Listo para enviar registros!");
                     isConnect = true;
@@ -638,6 +626,12 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
             }
         } else {
             if (gpsActived()) {
+                if (myContext.linearLayoutLoadingHome.getVisibility() == View.GONE) {
+                    loadin(true);
+                }
+                buttonConnect.setText("Desconectarse");
+                textViewState.setText("¡Listo para enviar registros!");
+                isConnect = true;
                 fusedLocation.requestLocationUpdates(locationRequest, locationCallback, Looper.myLooper());
                 map.setMyLocationEnabled(false);
             } else {
@@ -686,9 +680,8 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
 
     private void showAlertDialogNOGPS() {
         //myContext.pdRevieData.dismiss();
-        if (myContext.linearLayoutLoadingHome.getVisibility() == View.VISIBLE) {
+        if (myContext.linearLayoutLoadingHome.getVisibility() == View.VISIBLE ) {
             myContext.linearLayoutLoadingHome.setVisibility(View.GONE);
-            myContext.checkUpdateSend();
         }
         AlertDialog.Builder builder = new AlertDialog.Builder(myContext);
         builder.setMessage("Por favor activa tu ubicacion para continuar")
@@ -699,13 +692,13 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                     }
                 }).create().show();
 
+
     }
 
     private void checkLocationPermissions() {
         //myContext.pdRevieData.dismiss();
         if (myContext.linearLayoutLoadingHome.getVisibility() == View.VISIBLE) {
             myContext.linearLayoutLoadingHome.setVisibility(View.GONE);
-            myContext.checkUpdateSend();
         }
         if (ContextCompat.checkSelfPermission(myContext, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_DENIED) {
             if (ActivityCompat.shouldShowRequestPermissionRationale(myContext, Manifest.permission.ACCESS_FINE_LOCATION)) {
@@ -799,11 +792,11 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
     }
 
 
-    private void updateLocation() {
+    /*private void updateLocation() {
         if (authProvider.existSesion() && currentLatLng != null) {
             employeeProvider.saveLocation(authProvider.getId(), currentLatLng);
         }
-    }
+    }*/
 
     @Override
     public void onAttach(@NonNull Context context) {
@@ -816,12 +809,9 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         timezoneID = TimeZone.getDefault().getID();
         employee = dbEmployees.getEmployee(authProvider.getId());
         if(employee!=null){
-            textViewName.setText(employee.getName());
-            calendar = Calendar.getInstance(TimeZone.getTimeZone(timezoneID), Locale.getDefault());
-            Date date = calendar.getTime();
-            updateInfo(date);
+            setGreeting();
+            reviewTakePhoto();
         }
-        reviewTakePhoto();
         super.onResume();
     }
 
@@ -853,7 +843,8 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         startLocation();
     }
 
-    public void setInfoMap(){
+    public void setGreeting(){
+        textViewName.setText(employee.getName());
         timezoneID = TimeZone.getDefault().getID();
         calendar = Calendar.getInstance(TimeZone.getTimeZone(timezoneID), Locale.getDefault());
         Date date = calendar.getTime();

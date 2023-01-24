@@ -40,11 +40,12 @@ public class DbChecks extends DbHelper{
         myContext = context;
     }
 
+    //Insertar un registro en SQLite
     public long insertCheck(Check check){
         long id = 0;
+        DbHelper dbHelper = new DbHelper(myContext);
+        SQLiteDatabase db = getWritableDatabase();
         try {
-            DbHelper dbHelper = new DbHelper(myContext);
-            SQLiteDatabase db = getWritableDatabase();
             ContentValues values = new ContentValues();
             /*yteArrayOutputStream baos = new ByteArrayOutputStream(20480);
             imagen.compress(Bitmap.CompressFormat.PNG, 0 , baos);
@@ -57,6 +58,7 @@ public class DbChecks extends DbHelper{
             values.put("checkLat", check.getCheckLat());
             values.put("checkLong", check.getCheckLong());
             values.put("statusSend", check.getStatusSend());
+            values.put("dateSend", check.getTimeSend());
 
             values.put("isDelete", String.valueOf(check.isDelete()));
 
@@ -68,11 +70,15 @@ public class DbChecks extends DbHelper{
             id = db.insert(TABLE_CHECKS, null, values);
         } catch (Exception ex){
             Toast.makeText(myContext, ex.toString(), Toast.LENGTH_SHORT).show();
+        } finally {
+            dbHelper.close();
         }
         return id;
     }
 
-    public ArrayList<Check> getChecksSendSucces(){
+
+    //Obtener los registros enviados correctamente
+    public ArrayList<Check> getChecksSendSucces(String idUser){
         DbHelper dbChecks = new DbHelper(myContext);
         SQLiteDatabase db = dbChecks.getWritableDatabase();
 
@@ -81,7 +87,7 @@ public class DbChecks extends DbHelper{
         Cursor cursorChecks = null;
 
 
-        cursorChecks = db.rawQuery("SELECT * FROM " +TABLE_CHECKS+ " WHERE statusSend='1' ", null);
+        cursorChecks = db.rawQuery("SELECT * FROM " +TABLE_CHECKS+ " WHERE statusSend='1' AND idUser='"+idUser+"' ", null);
         if(cursorChecks.moveToFirst()){
             do{
                 Long dateL = Long.valueOf(cursorChecks.getString(7));
@@ -100,16 +106,20 @@ public class DbChecks extends DbHelper{
                 check.setUrlImage(cursorChecks.getString(5));
                 check.setDelete(bool);
                 check.setStatusSend(cursorChecks.getInt(11));
+                check.setTimeSend(cursorChecks.getInt(12));
                 listChecks.add(check);
             } while (cursorChecks.moveToNext());
         }
         imagenString = null;
+        dbChecks.close();
         cursorChecks.close();
         Collections.reverse(listChecks);
         return listChecks;
     }
 
-    public ArrayList<Check> getChecksNotSendSucces(List<Integer> statusSend){
+
+    //Obtener los registros no enviados correctamente
+    public ArrayList<Check> getChecksNotSendSucces(String idUser){
         DbHelper dbChecks = new DbHelper(myContext);
         SQLiteDatabase db = dbChecks.getWritableDatabase();
 
@@ -117,11 +127,8 @@ public class DbChecks extends DbHelper{
         Check check = null;
         Cursor cursorChecks = null;
 
-        if(statusSend.size()==1) {
-            cursorChecks = db.rawQuery("SELECT * FROM " + TABLE_CHECKS + " WHERE statusSend='2' ", null);
-         } else {
-            cursorChecks = db.rawQuery("SELECT * FROM " + TABLE_CHECKS + " WHERE statusSend='0' OR statusSend='2' ", null);
-        }
+        cursorChecks = db.rawQuery("SELECT * FROM " + TABLE_CHECKS + " WHERE statusSend='0' OR statusSend='2' AND idUser='"+idUser+"' ", null);
+
         if(cursorChecks.moveToFirst()){
             do{
                 Long dateL = Long.valueOf(cursorChecks.getString(7));
@@ -140,15 +147,19 @@ public class DbChecks extends DbHelper{
                 check.setCheckLong(longD);
                 check.setDelete(bool);
                 check.setStatusSend(cursorChecks.getInt(11));
+                check.setTimeSend(cursorChecks.getInt(12));
                 listChecks.add(check);
             } while (cursorChecks.moveToNext());
         }
         imagenString = null;
         cursorChecks.close();
+        dbChecks.close();
         Collections.reverse(listChecks);
         return listChecks;
     }
 
+
+    //Obtener un registro con id
     public Check getCheck(String idCheck){
         DbHelper dbChecks = new DbHelper(myContext);
         SQLiteDatabase db = dbChecks.getWritableDatabase();
@@ -173,13 +184,16 @@ public class DbChecks extends DbHelper{
             check.setCheckLat(latD);
             check.setCheckLong(longD);
             check.setStatusSend(cursorChecks.getInt(11));
+            check.setTimeSend(cursorChecks.getInt(12));
         }
         cursorChecks.close();
+        dbChecks.close();
         //Collections.reverse(listChecks);
         return check;
     }
 
-    public boolean updateCheck(String idCheck, int tipeSendCheck, long date){
+    //Actulizar registro enviado
+    public boolean updateCheck(String idCheck, int tipeSendCheck, long date, long dateSend){
         DbHelper dbChecks = new DbHelper(myContext);
         SQLiteDatabase db = dbChecks.getWritableDatabase();
         ArrayList<Check> listChecks = new ArrayList<>();
@@ -191,6 +205,7 @@ public class DbChecks extends DbHelper{
         try{
             db.execSQL("UPDATE " + TABLE_CHECKS + " SET idCheck = '"+idCheck+"'WHERE date = '"+dateS+"'");
             db.execSQL("UPDATE " + TABLE_CHECKS + " SET statusSend = '"+tipeSendCheck+"'WHERE statusSend = '0'");
+            db.execSQL("UPDATE " + TABLE_CHECKS + " SET dateSend = '"+dateSend+"'WHERE idCheck = '"+idCheck+"'");
             update = true;
         } catch (Exception ex){
             ex.toString();
@@ -202,6 +217,7 @@ public class DbChecks extends DbHelper{
         return update;
     }
 
+    //Revisar registros no enviados
     public boolean reviewChecks(int tipeSendCheck){
         DbHelper dbChecks = new DbHelper(myContext);
         SQLiteDatabase db = dbChecks.getWritableDatabase();
@@ -224,7 +240,8 @@ public class DbChecks extends DbHelper{
     }
 
 
-    public boolean updateChecksDelete(boolean isDelete, String idUser){
+    //Actualizar registros a eliminar
+    public boolean updateChecksDelete(boolean isDelete, String idUser, boolean sendOk){
         DbHelper dbChecks = new DbHelper(myContext);
         SQLiteDatabase db = dbChecks.getWritableDatabase();
         ArrayList<Check> listChecks = new ArrayList<>();
@@ -234,6 +251,11 @@ public class DbChecks extends DbHelper{
         String dateS = String.valueOf(isDelete);
 
         try{
+            if (sendOk) {
+                db.execSQL("UPDATE " + TABLE_CHECKS + " SET isDelete = '"+dateS+"' WHERE idUser = '"+idUser+"' AND statusSend='1'");
+            } else {
+                db.execSQL("UPDATE " + TABLE_CHECKS + " SET isDelete = '"+dateS+"' WHERE idUser = '"+idUser+"' AND statusSend='0' OR statusSend='2'");
+            }
             //db.execSQL("UPDATE " + TABLE_CHECKS + " SET statusSend = '"+tipeSendCheck+"'WHERE statusSend = '0'");
             db.execSQL("UPDATE " + TABLE_CHECKS + " SET isDelete = '"+dateS+"'WHERE idUser = '"+idUser+"'");
             update = true;
@@ -247,6 +269,7 @@ public class DbChecks extends DbHelper{
         return update;
     }
 
+    //Actualizar registro a eliminar
     public boolean updateCheckDelete(boolean isDelete, String idCheck){
         DbHelper dbChecks = new DbHelper(myContext);
         SQLiteDatabase db = dbChecks.getWritableDatabase();
@@ -271,6 +294,7 @@ public class DbChecks extends DbHelper{
     }
 
 
+    //Eliminar registros con id
     public boolean delete(ArrayList<String> idChecksDelete) {
         DbHelper dbChecks = new DbHelper(myContext);
         SQLiteDatabase db = dbChecks.getWritableDatabase();
@@ -294,15 +318,18 @@ public class DbChecks extends DbHelper{
         return delete;
     }
 
+    //Eliminar todos los registros de SQLite
     public boolean deleteAllChecks() {
         boolean delete = false;
+        DbHelper dbHelper = new DbHelper(myContext);
+        SQLiteDatabase db = dbHelper.getWritableDatabase();
         try {
-            DbHelper dbHelper = new DbHelper(myContext);
-            SQLiteDatabase db = dbHelper.getWritableDatabase();
             db.execSQL("DELETE FROM " +TABLE_CHECKS + "");
             delete = true;
         } catch (Exception ex){
             ex.toString();
+        } finally {
+            dbHelper.close();
         }
 
         return delete;

@@ -20,23 +20,22 @@ import java.util.Map;
 public class EmployeeProvider {
     private CollectionReference collection;
 
+    //Instancia
     public EmployeeProvider(){
         collection = FirebaseFirestore.getInstance().collection("Employees");
     }
 
-    public DocumentReference getUserInfo(String clave) {
-        return collection.document(clave);
+    //Obtener informacion de usuario
+    public DocumentReference getUserInfo(String idUser) {
+        return collection.document(idUser);
     }
 
+    //Crear empleado
     public Task<Void> create (Employee employee){
         return collection.document(employee.getIdUser()).set(employee);
     }
-    public SQLiteDatabase createDB (Context context){
-        DbHelper dbHelper = new DbHelper(context);
-        SQLiteDatabase db = dbHelper.getWritableDatabase();
-        return db;
-    }
 
+    //Actualizar Imagen
     public Task<Void> updateImage(String id, String url){
         Map<String, Object> map = new HashMap<>();
         map.put("image",url);
@@ -49,34 +48,46 @@ public class EmployeeProvider {
         return collection.document(id).update(map);
     }*/
 
+    //Actualizar password
     public Task<Void> updatePassword(String id, String password){
         Map<String, Object> map = new HashMap<>();
         map.put("password", password);
         return collection.document(id).update(map);
     }
 
+    //Actualizar nombre de usuario
     public Task<Void> updateUserName(String id, String name){
         Map<String, Object> map = new HashMap<>();
         map.put("name", name);
         return collection.document(id).update(map);
     }
 
+    //Actualizar telefono
     public Task<Void> updatePhone(String id, String phone){
         Map<String, Object> map = new HashMap<>();
         map.put("phone", phone);
         return collection.document(id).update(map);
     }
 
+    //Actualizar la compania del usuario
     public Task<Void> updateCompany(String id, String company){
         Map<String, Object> map = new HashMap<>();
         map.put("company", company);
         return collection.document(id).update(map);
     }
 
+    //Guardar ubicacion del usuario
     public Task<Void> saveLocation(String id, LatLng location){
         Map<String, Object> map = new HashMap<>();
         map.put("checkLat", location.latitude);
         map.put("checkLong", location.longitude);
+        return collection.document(id).update(map);
+    }
+
+    //Actualizar ajuste de la camara
+    public Task<Void> updateStateCamera(String id, boolean stateCamera){
+        Map<String, Object> map = new HashMap<>();
+        map.put("stateCamera", stateCamera);
         return collection.document(id).update(map);
     }
 

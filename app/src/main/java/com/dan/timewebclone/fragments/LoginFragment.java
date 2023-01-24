@@ -145,18 +145,19 @@ public class LoginFragment extends Fragment {
 
     private void login(String mEmail, String mPassword) {
         if(isOnlineNet()){
-        authProvider.loginEmail(mEmail,mPassword).addOnCompleteListener(new OnCompleteListener<AuthResult>() {
-            @Override
-            public void onComplete(@NonNull Task<AuthResult> task) {
-                if(task.isSuccessful()){
-                    mDialog.dismiss();
-                    goToHome();
-                } else {
-                    mDialog.dismiss();
-                    Toast.makeText(myContext, "La contraseña o el email son incorrectos", Toast.LENGTH_SHORT).show();
+            authProvider.signOut();
+            authProvider.loginEmail(mEmail,mPassword).addOnCompleteListener(new OnCompleteListener<AuthResult>() {
+                @Override
+                public void onComplete(@NonNull Task<AuthResult> task) {
+                    if(task.isSuccessful()){
+                        mDialog.dismiss();
+                        goToHome();
+                    } else {
+                        mDialog.dismiss();
+                        Toast.makeText(myContext, "La contraseña o el email son incorrectos", Toast.LENGTH_SHORT).show();
+                    }
                 }
-            }
-        });
+            });
         } else {
             mDialog.dismiss();
             Toast.makeText(myContext, "No cuentas con internet", Toast.LENGTH_SHORT).show();

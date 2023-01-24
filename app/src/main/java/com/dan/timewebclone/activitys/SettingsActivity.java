@@ -13,6 +13,9 @@ import android.widget.ImageView;
 import android.widget.Switch;
 
 import com.dan.timewebclone.R;
+import com.dan.timewebclone.db.DbEmployees;
+import com.dan.timewebclone.providers.AuthProvider;
+import com.dan.timewebclone.providers.EmployeeProvider;
 
 public class SettingsActivity extends AppCompatActivity {
 
@@ -20,6 +23,9 @@ public class SettingsActivity extends AppCompatActivity {
     private SwitchCompat switchPhoto;
     private ImageView mImageBack;
     private SharedPreferences sharedPref;
+    private DbEmployees dbEmployees;
+    private AuthProvider authProvider;
+    private EmployeeProvider employeeProvider;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -29,9 +35,14 @@ public class SettingsActivity extends AppCompatActivity {
 
         switchPhoto = findViewById(R.id.switchPhoto);
         mImageBack = findViewById(R.id.circleImageBack);
+        dbEmployees = new DbEmployees(this);
+        authProvider = new AuthProvider();
+        employeeProvider = new EmployeeProvider();
 
-        sharedPref = getSharedPreferences("datos", MODE_PRIVATE);
-        takePhoto = sharedPref.getBoolean("takePhoto", false);
+        takePhoto = dbEmployees.getEmployee(authProvider.getId()).isStateCamera();
+
+        /*sharedPref = getSharedPreferences("datos", MODE_PRIVATE);
+        takePhoto = sharedPref.getBoolean("takePhoto", false);*/
 
         if(takePhoto){
             switchPhoto.setChecked(true);
@@ -62,19 +73,23 @@ public class SettingsActivity extends AppCompatActivity {
 
     //Guardar imagen obligatoria en registro
     private void savePreference(boolean takePhoto){
-        SharedPreferences sharedPref = getSharedPreferences("datos", Context.MODE_PRIVATE);
+        if(dbEmployees.updateStateCamera(authProvider.getId(), takePhoto)){
+            employeeProvider.updateStateCamera(authProvider.getId(), takePhoto);
+        }
+
+        /*SharedPreferences sharedPref = getSharedPreferences("datos", Context.MODE_PRIVATE);
         SharedPreferences.Editor editor = sharedPref.edit();
         editor.putBoolean("takePhoto", takePhoto);
-        editor.commit();
+        editor.commit();*/
     }
 
     //Cambiar el color de la barra de notificaciones
     private void setStatusBarColor() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            getWindow().setStatusBarColor(getResources().getColor(R.color.black, this.getTheme()));
+            getWindow().setStatusBarColor(getResources().getColor(R.color.colorHomeTw, this.getTheme()));
         }
         else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            getWindow().setStatusBarColor(getResources().getColor(R.color.black));
+            getWindow().setStatusBarColor(getResources().getColor(R.color.colorHomeTw));
         }
     }
 

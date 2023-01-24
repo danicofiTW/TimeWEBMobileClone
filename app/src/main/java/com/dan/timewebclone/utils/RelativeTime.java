@@ -19,6 +19,7 @@ public class RelativeTime extends Application {
 
     }
 
+    //Obtener fecha aproximidad hace unos momentos
     public static String getTimeAgo(long time) {
         if (time < 1000000000000L) {
             // if timestamp given in seconds, convert to millis
@@ -50,6 +51,7 @@ public class RelativeTime extends Application {
     }
 
 
+    //Obtener fecha por dia
     public static String timeFormatAMPM(long time) {
 
         SimpleDateFormat formatter = new SimpleDateFormat("hh:mm");
@@ -79,6 +81,7 @@ public class RelativeTime extends Application {
 
     }
 
+    //Obtener fecha por dia
     public String timeFormatDay(long time) {
         int diasI = compareToDate(time);
 
@@ -91,6 +94,7 @@ public class RelativeTime extends Application {
         }
     }
 
+    //Obtener cuantos días hay de diferencia desde el dia de hoy
     public int compareToDate(long time){
         int dias;
         long dateThisMoment = new Date().getTime();
@@ -115,7 +119,6 @@ public class RelativeTime extends Application {
         } catch (ParseException e) {
             e.printStackTrace();
         }
-        //int dayThisMoment = Integer.parseInt(date1);
         long diferencia = dateThisMomentLong - dateCheckLong;
         double diasD = Math.floor(diferencia / (1000 * 60 * 60 * 24));
         dias = (int) diasD;

@@ -13,19 +13,21 @@ public class DbHelper extends SQLiteOpenHelper {
 
     Context myContext;
 
-    private static final int DATABASE_VERSION=11;
+    private static final int DATABASE_VERSION=14;
     private static final String DATABASE_NAME="timeWEBMobile.db";
     public static final String TABLE_CHECKS="checks";
     public static final String TABLE_EMPLOYEES="employees";
+    public static final String TABLE_GEOCERCA="geocercas";
+    public static final String TABLE_BITACORA="bitacora";
 
 
     public DbHelper(@Nullable Context context) {
         super(context, DATABASE_NAME, null, DATABASE_VERSION);
     }
 
+    //Crear tablas
     @Override
     public void onCreate(SQLiteDatabase sqLiteDatabase) {
-        //crear la tabla
         sqLiteDatabase.execSQL("CREATE TABLE " + TABLE_EMPLOYEES + "(" +
                 "id INTEGER PRIMARY KEY AUTOINCREMENT," +
                 "idUser TEXT NOT NULL," +
@@ -40,7 +42,7 @@ public class DbHelper extends SQLiteOpenHelper {
                 "idCompany TEXT," +
                 "image TEXT," +
                 "url TEXT," +
-                "state TEXT," +
+                "stateCamera INTEGER," +
                 "department TEXT)");
 
         sqLiteDatabase.execSQL("CREATE TABLE " + TABLE_CHECKS + "(" +
@@ -55,7 +57,29 @@ public class DbHelper extends SQLiteOpenHelper {
                 "checkLat TEXT NOT NULL," +
                 "checkLong TEXT NOT NULL," +
                 "isDelete TEXT NOT NULL," +
-                "statusSend INTEGER NOT NULL)");
+                "statusSend INTEGER NOT NULL," +
+                "dateSend TEXT NOT NULL)");
+
+        sqLiteDatabase.execSQL("CREATE TABLE " + TABLE_GEOCERCA + "(" +
+                "id INTEGER PRIMARY KEY AUTOINCREMENT," +
+                "idGeocerca TEXT NOT NULL," +
+                "idCompany TEXT," +
+                "clave TEXT NOT NULL," +
+                "geoNombre TEXT," +
+                "descripcion TEXT," +
+                "geoLatitud TEXT NOT NULL," +
+                "geoLongitud TEXT NOT NULL," +
+                "radio TEXT NOT NULL," +
+                "direccion TEXT NOT NULL," +
+                "alta TEXT," +
+                "status INTEGER NOT NULL)");
+
+        sqLiteDatabase.execSQL("CREATE TABLE " + TABLE_BITACORA + "(" +
+                "id INTEGER PRIMARY KEY AUTOINCREMENT," +
+                "idBitacora TEXT NOT NULL," +
+                "idGeocerca TEXT NOT NULL," +
+                "idUser TEXT NOT NULL," +
+                "stateActivated INTEGER)");
 
     }
 

@@ -7,6 +7,10 @@
     android:layout_height="match_parent"
     tools:context=".activitys.HomeTW">
 
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
     <LinearLayout
         android:id="@+id/linearLayoutHome"
         android:layout_width="match_parent"
@@ -21,7 +25,7 @@
             android:id="@+id/tabLayout"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:background="@color/colorHomeTw"
+            android:background="@color/colorHomeTw2"
             app:tabIndicatorColor="@color/colorOrangeTimeBlackLight"
             app:tabSelectedTextColor="@color/colorOrange"
             app:tabTextColor="@color/colorGrayLigthPluse" />
@@ -59,5 +63,28 @@
             app:lottie_loop="true" />
 
     </LinearLayout>
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:id="@+id/progressLayout"
+            android:layout_width="match_parent"
+            android:visibility="gone"
+            android:clickable="true"
+            android:layout_height="match_parent"
+            android:background="@color/colorGris">
+
+            <ProgressBar
+                android:id="@+id/loading_icon_sign_up"
+                style="?android:attr/progressBarStyleLarge"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:elevation="6dp"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+    </FrameLayout>
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

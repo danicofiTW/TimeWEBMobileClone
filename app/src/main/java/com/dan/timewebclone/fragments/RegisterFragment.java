@@ -202,7 +202,7 @@ public class RegisterFragment extends Fragment{
             @Override
             public void onComplete(@NonNull Task<Void> task) {
                 if(task.isSuccessful()){
-                    getUserInfo();
+                    //getUserInfo();
                     Intent intent = new Intent(myContext, HomeTW.class);
                     intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
                     startActivity(intent);
@@ -214,7 +214,7 @@ public class RegisterFragment extends Fragment{
 
     }
 
-    private void getUserInfo() {
+    /*private void getUserInfo() {
         employeeProvider.getUserInfo(authProvider.getId()).addSnapshotListener(new EventListener<DocumentSnapshot>() {
             @Override
             public void onEvent(@Nullable DocumentSnapshot documentSnapshot, @Nullable FirebaseFirestoreException error) {
@@ -228,7 +228,7 @@ public class RegisterFragment extends Fragment{
             }
         });
 
-    }
+    }*/
 
     /*private void goToVerificationCode() {
         loginFragment = new VerificationFragment();

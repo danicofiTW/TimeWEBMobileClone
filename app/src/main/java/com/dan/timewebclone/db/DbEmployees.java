@@ -21,11 +21,12 @@ public class DbEmployees extends DbHelper{
         myContext = context;
     }
 
+    //Insertar empleado en SQLite
     public long insertEmployye(Employee employee){
         long id = 0;
+        DbHelper dbHelper = new DbHelper(myContext);
+        SQLiteDatabase db = getWritableDatabase();
         try {
-            DbHelper dbHelper = new DbHelper(myContext);
-            SQLiteDatabase db = getWritableDatabase();
             ContentValues values = new ContentValues();
             values.put("name", employee.getName());
             values.put("claveUser", employee.getClaveUser());
@@ -35,6 +36,11 @@ public class DbEmployees extends DbHelper{
             values.put("password", employee.getPassword());
             values.put("idUser", employee.getIdUser());
             values.put("company", employee.getCompany());
+            if(employee.isStateCamera()){
+                values.put("stateCamera", 1);
+            } else{
+                values.put("stateCamera", 0);
+            }
             if(employee.getImage()!=null){
                 values.put("image", employee.getImage());
             }
@@ -42,6 +48,8 @@ public class DbEmployees extends DbHelper{
             id = db.insert(TABLE_EMPLOYEES, null, values);
         } catch (Exception ex){
             ex.toString();
+        } finally {
+            dbHelper.close();
         }
 
         return id;
@@ -69,20 +77,25 @@ public class DbEmployees extends DbHelper{
         return update;
     }*/
 
+    //Eliminar empleado por id
     public boolean deleteEmployee(String idUser){
         boolean delete = false;
+
+        DbHelper dbHelper = new DbHelper(myContext);
+        SQLiteDatabase db = dbHelper.getWritableDatabase();
         try {
-            DbHelper dbHelper = new DbHelper(myContext);
-            SQLiteDatabase db = dbHelper.getWritableDatabase();
             db.execSQL("DELETE FROM " +TABLE_EMPLOYEES + " WHERE idUser= '"+idUser+"'");
             delete=true;
         } catch (Exception ex){
             ex.toString();
+        } finally {
+            dbHelper.close();
         }
 
         return delete;
     }
 
+    //Obtener el empleado por id
     public Employee getEmployee(String idUser){
         DbHelper dbEmploye = new DbHelper(myContext);
         SQLiteDatabase db = dbEmploye.getWritableDatabase();
@@ -100,12 +113,19 @@ public class DbEmployees extends DbHelper{
                 employee.setEmail(cursorChecks.getString(6));
                 employee.setPassword(cursorChecks.getString(8));
                 employee.setImage(cursorChecks.getString(11));
+                if(cursorChecks.getInt(13) == 1){
+                    employee.setStateCamera(true);
+                } else {
+                    employee.setStateCamera(false);
+                }
         }
         cursorChecks.close();
+        dbEmploye.close();
         //Collections.reverse(listChecks);
         return employee;
     }
 
+    //Actualizar nombre de usuario
     public boolean updateName(String idUser, String name){
         boolean up = false;
         DbHelper dbEmployee = new DbHelper(myContext);
@@ -126,6 +146,7 @@ public class DbEmployees extends DbHelper{
         return up;
     }
 
+    //Actualizar compania
     public boolean updateCompany(String idUser, String company){
         boolean save = false;
         DbHelper dbEmployee = new DbHelper(myContext);
@@ -146,6 +167,7 @@ public class DbEmployees extends DbHelper{
         return save;
     }
 
+    //Actualizar password
     public boolean updatePassword(String idUser, String password){
         boolean save = false;
         DbHelper dbEmployee = new DbHelper(myContext);
@@ -166,6 +188,7 @@ public class DbEmployees extends DbHelper{
         return save;
     }
 
+    //Actualizar numero telefonico
     public boolean updatePhone(String idUser, String phone){
         boolean save = false;
         DbHelper dbEmployee = new DbHelper(myContext);
@@ -186,6 +209,32 @@ public class DbEmployees extends DbHelper{
         return save;
     }
 
+    //Actualizar configuracion de la camara
+    public boolean updateStateCamera(String idUser, boolean stateCamera){
+        boolean save = false;
+        DbHelper dbEmployee = new DbHelper(myContext);
+        SQLiteDatabase db = dbEmployee.getWritableDatabase();
+        Employee employee = null;
+        Cursor cursorChecks = null;
+        //String dateS = String.valueOf(date);
+
+        try{
+            if(stateCamera){
+                db.execSQL("UPDATE " + TABLE_EMPLOYEES + " SET stateCamera = '"+1+"'WHERE idUser = '"+idUser+"'");
+            } else{
+                db.execSQL("UPDATE " + TABLE_EMPLOYEES + " SET stateCamera = '"+0+"'WHERE idUser = '"+idUser+"'");
+            }
+            save = true;
+        } catch (Exception ex){
+            ex.toString();
+            save = false;
+        } finally {
+            dbEmployee.close();
+        }
+        return save;
+    }
+
+    //Eliminar todos los empleados
     public boolean deleteAllEmployees() {
         DbHelper dbEmployee = new DbHelper(myContext);
         SQLiteDatabase db = dbEmployee.getWritableDatabase();
@@ -202,6 +251,7 @@ public class DbEmployees extends DbHelper{
         return delete;
     }
 
+    //Guardar Imagen
     public boolean saveImage(String idUser, String image){
         boolean save = false;
         DbHelper dbEmployee = new DbHelper(myContext);

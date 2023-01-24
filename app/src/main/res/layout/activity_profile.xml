@@ -14,7 +14,7 @@
         <View
             android:layout_width="match_parent"
             android:layout_height="50dp"
-            android:background="@color/colorHomeTw"/>
+            android:background="@color/colorHomeTw2"/>
 
         <ImageView
             android:id="@+id/circleImageBack"
@@ -44,6 +44,7 @@
         android:layout_marginRight="30dp"
         android:layout_marginLeft="30dp"
         android:layout_marginTop="40dp"
+        android:layout_gravity="center"
         app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
         <FrameLayout
@@ -79,7 +80,7 @@
         </FrameLayout>
 
         <LinearLayout
-            android:layout_width="match_parent"
+            android:layout_width="350dp"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:layout_marginTop="30dp">
@@ -127,14 +128,14 @@
         </LinearLayout>
 
         <View
-            android:layout_width="match_parent"
+            android:layout_width="310dp"
             android:layout_height="1dp"
             android:background="@color/colorGris"
             android:layout_marginTop="10dp"
             android:layout_marginLeft="40dp"/>
 
         <LinearLayout
-            android:layout_width="match_parent"
+            android:layout_width="350dp"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:layout_marginTop="20dp">
@@ -178,14 +179,14 @@
         </LinearLayout>
 
         <View
-            android:layout_width="match_parent"
+            android:layout_width="310dp"
             android:layout_height="1dp"
             android:background="@color/colorGris"
             android:layout_marginTop="10dp"
             android:layout_marginLeft="40dp"/>
 
         <LinearLayout
-            android:layout_width="match_parent"
+            android:layout_width="350dp"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:layout_marginTop="20dp">
@@ -233,14 +234,14 @@
         </LinearLayout>
 
         <View
-            android:layout_width="match_parent"
+            android:layout_width="310dp"
             android:layout_height="1dp"
             android:background="@color/colorGris"
             android:layout_marginTop="10dp"
             android:layout_marginLeft="40dp"/>
 
         <LinearLayout
-            android:layout_width="match_parent"
+            android:layout_width="350dp"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:layout_marginTop="20dp">

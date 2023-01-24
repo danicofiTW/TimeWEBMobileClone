@@ -77,8 +77,8 @@
             android:id="@+id/viewDelete"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:background="@color/colorGray"
-            android:visibility="gone"/>
+            android:background="@color/colorDeleteCardView"
+            android:visibility="visible"/>
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -99,7 +99,7 @@
                     android:id="@+id/imageViewDelete"
                     android:layout_width="30dp"
                     android:layout_height="30dp"
-                    android:src="@drawable/ic_delete_red2"
+                    android:src="@drawable/icon_delete_check_green"
                     android:scaleType="centerCrop"
                     android:layout_gravity="bottom|right"
                     android:visibility="gone"/>

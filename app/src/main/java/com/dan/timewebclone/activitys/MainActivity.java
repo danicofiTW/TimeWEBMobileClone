@@ -84,6 +84,7 @@ public class MainActivity extends AppCompatActivity {
         //Si el usuario ya inicio sesion ingresar al Home
         if (mAuth.getId() != null) {
             Intent i = new Intent(MainActivity.this, HomeTW.class);
+            i.putExtra("revieEmployee", false);
             i.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
             startActivity(i);
         }

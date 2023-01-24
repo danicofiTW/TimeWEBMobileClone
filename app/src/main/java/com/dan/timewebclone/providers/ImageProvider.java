@@ -17,11 +17,13 @@ public class ImageProvider {
     private FirebaseStorage mFirebaseStorage;
     private StorageReference storageReference;
 
+    //Instancia
     public ImageProvider() {
         mFirebaseStorage = FirebaseStorage.getInstance();
         storageReference = FirebaseStorage.getInstance().getReference();
     }
 
+    //Guardar imagen bite en storage
     public UploadTask saveImage(Context context, byte[] image) {
         StorageReference storage = storageReference.child(new Date() + ".jpg");
         storageReference = storage;
@@ -29,6 +31,8 @@ public class ImageProvider {
         return task;
     }
 
+
+    //Guardar imagen file en storage
     public UploadTask saveImage(Context context,File file) {
         byte[] imageByte = CompressorBitmapImage.getImage(context, file.getPath(), 500, 500);
         StorageReference storage = storageReference.child(new Date() + ".jpg");
@@ -37,10 +41,12 @@ public class ImageProvider {
         return task;
     }
 
+    //Obtener Url donde se guardo imagen
     public Task<Uri> getDownloadUri() {
         return storageReference.getDownloadUrl();
     }
 
+    //Eliminar imagen
     public Task<Void> delete(String url) {
         return mFirebaseStorage.getReferenceFromUrl(url).delete();
     }

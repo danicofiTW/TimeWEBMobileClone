@@ -8,20 +8,33 @@
     tools:context=".fragments.HistoryChecksSendOkFragment">
 
 
-<LinearLayout
+<FrameLayout
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
     android:background="@color/colorRV"
-    android:layout_marginTop="10dp">
+    android:layout_marginTop="20dp">
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/rvChecks"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_marginTop="44dp"
+        android:layout_marginTop="34dp"
         android:layout_marginBottom="5dp"
         android:background="@color/colorRV"/>
-</LinearLayout>
+
+    <TextView
+        android:id="@+id/textViewNoChecks"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:textAlignment="center"
+        android:textSize="20sp"
+        android:textStyle="italic"
+        android:text="Sin registros enviados"
+        android:textColor="@color/white"
+        android:visibility="visible"/>
+
+</FrameLayout>
 
         <FrameLayout
             android:layout_width="match_parent"
@@ -55,59 +68,78 @@
                     app:lottie_loop="true"/>
                     <!--app:lottie_loop="true"-->
 
+                <LinearLayout
+                    android:id="@+id/linearLayoutDeleteHistory"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:orientation="horizontal"
+                    android:visibility="gone">
+
+                    <ImageView
+                        android:id="@+id/imageViewCancelDelete"
+                        android:layout_width="30dp"
+                        android:layout_height="30dp"
+                        android:layout_gravity="center"
+                        android:src="@drawable/icon_cancel_delete"
+                        android:layout_marginBottom="5dp"
+                        android:layout_marginLeft="15dp"
+                        android:visibility="visible"/>
+
+                    <FrameLayout
+                        android:id="@+id/frameLayoutNumberChecksDelete"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:visibility="visible"
+                        android:layout_gravity="center"
+                        android:layout_marginBottom="6dp"
+                        android:layout_marginLeft="9dp">
+
+                        <View
+                            android:layout_width="28dp"
+                            android:layout_height="28dp"
+                            android:background="@drawable/circular_view"/>
+                        <TextView
+                            android:id="@+id/textViewNumberChecksDelete"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:text="127"
+                            android:layout_gravity="center"
+                            android:textAlignment="center"
+                            android:textColor="@color/white"
+                            android:textSize="12dp"/>
+
+                    </FrameLayout>
+
+                    <CheckBox
+                        android:id="@+id/checkboxDeleteAll"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="left|center"
+                        android:layout_marginLeft="1dp"
+                        android:button="@drawable/custom_checkbox"
+                        android:scaleX="0.8"
+                        android:scaleY="0.8"
+                        android:checked="false"
+                        android:onClick="onCheckboxClicked"
+                        android:layout_marginBottom="6dp"
+                        android:visibility="visible"/>
+
+                </LinearLayout>
+
                 <ImageView
                     android:id="@+id/imageViewDeleteChecks"
                     android:layout_width="40dp"
                     android:layout_height="40dp"
-                    android:layout_gravity="center|left"
-                    android:layout_marginLeft="40dp"
+                    android:layout_gravity="center|right"
+                    android:layout_marginRight="15dp"
                     android:src="@drawable/ic_delete_white"
                     android:layout_marginBottom="5dp"
-                    android:visibility="visible"/>
-
-                <CheckBox
-                    android:id="@+id/checkboxDeleteAll"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_gravity="left|center"
-                    android:layout_marginLeft="2dp"
-                    android:button="@drawable/custom_checkbox"
-                    android:scaleX="0.8"
-                    android:scaleY="0.8"
-                    android:checked="false"
-                    android:onClick="onCheckboxClicked"
-                    android:layout_marginBottom="5dp"
-                    android:visibility="visible"/>
-
-
-                <FrameLayout
-                    android:id="@+id/frameLayoutNumberChecksDelete"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:visibility="visible"
-                    android:layout_gravity="left|center"
-                    android:layout_marginBottom="6dp"
-                    android:layout_marginLeft="75dp">
-
-                    <View
-                        android:layout_width="28dp"
-                        android:layout_height="28dp"
-                        android:background="@drawable/circular_view"/>
-                    <TextView
-                        android:id="@+id/textViewNumberChecksDelete"
-                        android:layout_width="match_parent"
-                        android:layout_height="match_parent"
-                        android:text="127"
-                        android:layout_gravity="center"
-                        android:textAlignment="center"
-                        android:textColor="@color/white"
-                        android:textSize="12dp"/>
-
-                </FrameLayout>
+                    android:visibility="gone"/>
 
 
 
                 <TextView
+                    android:id="@+id/textViewTitleHistoryChecks"
                     android:layout_width="220dp"
                     android:layout_height="wrap_content"
                     android:text="REGISTROS ENVIADOS"
@@ -118,6 +150,7 @@
                     android:layout_gravity="center"
                     android:layout_marginBottom="6dp"
                     android:layout_marginLeft="25dp"
+                    android:visibility="visible"
                     />
 
 

@@ -27,8 +27,8 @@
     <color name="white">#FFFFFFFF</color>
     <color name="whiteLigth">#EDEDED</color>
     <color name="colorGreen">#117015</color>
-    <color name="colorChecks">#006DA8</color>
-    <color name="colorBlueDate">#0066FF</color>
+    <color name="colorChecks">#2B92BA</color>
+    <color name="colorBlueDate">#1975FF</color>
     <color name="colorNotificationToolbarHome">#133849</color>
     <color name="colorNotificationToolbarMain">#A55104</color>
     <color name="colorYellow">#B88401</color>
@@ -39,8 +39,10 @@
     <color name="colorYellowLigth">#E6BD52</color>
     <color name="colorDark">#F3002B29</color>
     <color name="colorHomeTw">#010620</color>
+    <color name="colorHomeTw2">#000930</color>
     <color name="colorRV">#070A1B</color>
     <color name="colorGrayLigth">#28405A</color>
+    <color name="colorDeleteCardView">#272E2E</color>
     <color name="colorGrayLigthPluse">#BABABA</color>
 
 </resources>

@@ -15,7 +15,8 @@ public class Employee {
     private String departamento;
     private String image;
     private String url;
-    private String state;
+    private boolean stateCamera = false;
+    //private String configuracion;
 
 
 
@@ -44,21 +45,37 @@ public class Employee {
         this.idUser = idUser;
     }
 
-    public Employee(String name, String claveUser,String company, String rfcCompany, String email, String phone, String password, String idUser, String idEmpresa, String departamento, String image, String url, String token,  String state) {
+    public Employee(String name, String claveUser, String company, String rfcCompany, String email, String phone, String password, String token, String idUser, String idCompany, String departamento, String image, String url, boolean stateCamera) {
         this.name = name;
         this.claveUser = claveUser;
+        this.company = company;
         this.rfcCompany = rfcCompany;
         this.email = email;
         this.phone = phone;
         this.password = password;
         this.token = token;
         this.idUser = idUser;
-        this.idCompany = idEmpresa;
+        this.idCompany = idCompany;
         this.departamento = departamento;
         this.image = image;
         this.url = url;
-        this.state = state;
-        this.company = company;
+        this.stateCamera = stateCamera;
+    }
+
+    public String getIdCompany() {
+        return idCompany;
+    }
+
+    public void setIdCompany(String idCompany) {
+        this.idCompany = idCompany;
+    }
+
+    public boolean isStateCamera() {
+        return stateCamera;
+    }
+
+    public void setStateCamera(boolean stateCamera) {
+        this.stateCamera = stateCamera;
     }
 
     public String getCompany() {
@@ -67,14 +84,6 @@ public class Employee {
 
     public void setCompany(String company) {
         this.company = company;
-    }
-
-    public String getState() {
-        return state;
-    }
-
-    public void setState(String state) {
-        this.state = state;
     }
 
     public String getName() {

@@ -10,11 +10,13 @@ public class Check {
     private String tipeCheck;
     private String urlImage;
     private String image;
-    private Long time;
+    private long time;
+    private long timeSend;
     private double checkLat;
     private double checkLong;
     private int statusSend;
     private boolean isDelete = false;
+    private int semana;
 
     public Check(){
     }
@@ -44,6 +46,53 @@ public class Check {
         this.checkLong = checkLong;
         this.statusSend = statusSend;
         this.isDelete = isDelete;
+    }
+
+    public Check(String idCheck, String idUser, String idCompany, String tipeCheck, String urlImage, String image, long time, long timeSend, double checkLat, double checkLong, int statusSend, boolean isDelete) {
+        this.idCheck = idCheck;
+        this.idUser = idUser;
+        this.idCompany = idCompany;
+        this.tipeCheck = tipeCheck;
+        this.urlImage = urlImage;
+        this.image = image;
+        this.time = time;
+        this.timeSend = timeSend;
+        this.checkLat = checkLat;
+        this.checkLong = checkLong;
+        this.statusSend = statusSend;
+        this.isDelete = isDelete;
+    }
+
+    public Check(String idCheck, String idUser, String idCompany, String tipeCheck, String urlImage, String image, long time, long timeSend, double checkLat, double checkLong, int statusSend, boolean isDelete, int semana) {
+        this.idCheck = idCheck;
+        this.idUser = idUser;
+        this.idCompany = idCompany;
+        this.tipeCheck = tipeCheck;
+        this.urlImage = urlImage;
+        this.image = image;
+        this.time = time;
+        this.timeSend = timeSend;
+        this.checkLat = checkLat;
+        this.checkLong = checkLong;
+        this.statusSend = statusSend;
+        this.isDelete = isDelete;
+        this.semana = semana;
+    }
+
+    public int getSemana() {
+        return semana;
+    }
+
+    public void setSemana(int semana) {
+        this.semana = semana;
+    }
+
+    public long getTimeSend() {
+        return timeSend;
+    }
+
+    public void setTimeSend(long timeSend) {
+        this.timeSend = timeSend;
     }
 
     public boolean isDelete() {

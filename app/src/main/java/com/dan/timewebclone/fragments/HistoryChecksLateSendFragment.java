@@ -16,6 +16,7 @@ import android.view.ViewGroup;
 import android.widget.CheckBox;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -34,28 +35,34 @@ import com.google.firebase.firestore.QuerySnapshot;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Calendar;
 import java.util.Collections;
+import java.util.Date;
 import java.util.List;
+import java.util.Locale;
+import java.util.TimeZone;
 
 public class HistoryChecksLateSendFragment extends Fragment {
 
     private View mView;
     private RecyclerView mReciclerView;
-    private ChecksDbAdapterLateSend checksDbAdapter;
+    public ChecksDbAdapterLateSend checksDbAdapterLateSend;
 
     //private CheckBox checkboxSendSuccesful, checkboxSendLate, checkboxSendAdd;
 
     private AuthProvider authProvider;
     private ChecksProvider checksProvider;
+    private DbChecks dbChecks;
 
     private HomeTW myContext;
 
     private LinearLayoutManager linearLayoutManager;
     public CheckBox deleteAllChecks;
-    private ImageView deleteChecks;
+    public ImageView deleteChecks, imageViewCancelDelete;
     private LottieAnimationView animation;
-    private TextView textViewNumberChecksDelete;
+    private TextView textViewNumberChecksDelete, textViewTitleHistory, textViewNoChecks;
     private FrameLayout frameLayoutNumberChecksDelete;
+    private LinearLayout linearLayoutDeleteChecks;
 
     private ArrayList<Check> listChecks;
 
@@ -89,14 +96,27 @@ public class HistoryChecksLateSendFragment extends Fragment {
         deleteAllChecks = mView.findViewById(R.id.checkboxDeleteAll);
         textViewNumberChecksDelete = mView.findViewById(R.id.textViewNumberChecksDelete);
         frameLayoutNumberChecksDelete = mView.findViewById(R.id.frameLayoutNumberChecksDelete);
+        linearLayoutDeleteChecks = mView.findViewById(R.id.linearLayoutDeleteHistory);
+        textViewTitleHistory = mView.findViewById(R.id.textViewTitleHistoryChecks);
+        imageViewCancelDelete = mView.findViewById(R.id.imageViewCancelDelete);
+        textViewNoChecks = mView.findViewById(R.id.textViewNoChecks);
         linearLayoutManager = new LinearLayoutManager(myContext);
         mReciclerView.setLayoutManager(linearLayoutManager);
+        mReciclerView.setHasFixedSize(true);
         authProvider = new AuthProvider();
         checksProvider = new ChecksProvider();
+        dbChecks = new DbChecks(myContext);
         relativeTime = new RelativeTime();
         listChecks = new ArrayList<>();
         statusSend = Arrays.asList(0,2);
+
         getChecksById();
+        //checksDbAdapterLateSend.updateChecks(dbChecks.getChecksNotSendSucces(authProvider.getId()));
+        //updateChecks();
+        if(checksDbAdapterLateSend.checks.size() != 0){
+            textViewNoChecks.setVisibility(View.GONE);
+        }
+        //Actualizar los checks a eliminar
 
         return mView;
     }
@@ -111,8 +131,7 @@ public class HistoryChecksLateSendFragment extends Fragment {
 
     public void notifyChangeAdapter() {
        // checksDbAdapter.notifyDataSetChanged();
-        DbChecks dbChecks = new DbChecks(myContext);
-        checksDbAdapter.updateChecks(dbChecks.getChecksNotSendSucces(statusSend));
+        checksDbAdapterLateSend.updateChecks(dbChecks.getChecksNotSendSucces(authProvider.getId()));
         mReciclerView.scrollToPosition(0);
     }
 
@@ -120,13 +139,12 @@ public class HistoryChecksLateSendFragment extends Fragment {
 
         if(checksProvider!=null){
         if(myContext!=null){
-            DbChecks dbChecks = new DbChecks(myContext);
-            checksDbAdapter = new ChecksDbAdapterLateSend(dbChecks.getChecksNotSendSucces(statusSend), myContext);
-            mReciclerView.setAdapter(checksDbAdapter);
-            mReciclerView.scrollToPosition(0);
+            ArrayList<Check> checks = dbChecks.getChecksNotSendSucces(authProvider.getId());
+            checksDbAdapterLateSend = new ChecksDbAdapterLateSend(checks, myContext);
+            mReciclerView.setAdapter(checksDbAdapterLateSend);
+            checksDbAdapterLateSend.notifyDataSetChanged();
 
-
-            checksDbAdapter.registerAdapterDataObserver(new RecyclerView.AdapterDataObserver() {
+            checksDbAdapterLateSend.registerAdapterDataObserver(new RecyclerView.AdapterDataObserver() {
                 @Override
                 public void onChanged() {
                     super.onChanged();
@@ -135,6 +153,13 @@ public class HistoryChecksLateSendFragment extends Fragment {
                     } else {
                         showImageDelete(false);
                     }
+
+                    if(checksDbAdapterLateSend.checks.size() == 0){
+                        textViewNoChecks.setVisibility(View.VISIBLE);
+                    } else {
+                        textViewNoChecks.setVisibility(View.GONE);
+                    }
+
                 }
             });
 
@@ -145,87 +170,119 @@ public class HistoryChecksLateSendFragment extends Fragment {
     public void showImageDelete(boolean visible){
         if(visible){
             animation.setVisibility(View.GONE);
+            textViewTitleHistory.setVisibility(View.GONE);
             deleteChecks.setVisibility(View.VISIBLE);
-            deleteAllChecks.setVisibility(View.VISIBLE);
-            frameLayoutNumberChecksDelete.setVisibility(View.VISIBLE);
+            linearLayoutDeleteChecks.setVisibility(View.VISIBLE);
+            /*deleteAllChecks.setVisibility(View.VISIBLE);
+            frameLayoutNumberChecksDelete.setVisibility(View.VISIBLE);*/
             textViewNumberChecksDelete.setText(""+myContext.idChecksLateDelete.size());
             deleteChecks();
             allChecks();
+            cancelDeleteChecks();
         } else {
             animation.setVisibility(View.VISIBLE);
+            textViewTitleHistory.setVisibility(View.VISIBLE);
             deleteChecks.setVisibility(View.GONE);
-            deleteAllChecks.setVisibility(View.GONE);
-            frameLayoutNumberChecksDelete.setVisibility(View.GONE);
+            linearLayoutDeleteChecks.setVisibility(View.GONE);
+            /*deleteAllChecks.setVisibility(View.GONE);
+            frameLayoutNumberChecksDelete.setVisibility(View.GONE);*/
         }
+    }
+
+    private void cancelDeleteChecks() {
+        imageViewCancelDelete.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+               updateDelete();
+            }
+        });
+    }
+
+    public void updateDelete() {
+        myContext.idChecksLateDelete.clear();
+        dbChecks.updateChecksDelete(false, authProvider.getId(), false);
+        showImageDelete(false);
+        if(deleteAllChecks.isChecked()){
+            deleteAllChecks.setChecked(false);
+        }
+        notifyChangeAdapter();
     }
 
     private void allChecks() {
         deleteAllChecks.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                DbChecks dbChecks = new DbChecks(myContext);
                 //ArrayList<Check> checks = dbChecks.getChecksNotSendSucces(statusSend);
                 if(deleteAllChecks.isChecked()){
-                    ArrayList<Check> checksD= dbChecks.getChecksNotSendSucces(statusSend);
+                    ArrayList<Check> checksD= dbChecks.getChecksNotSendSucces(authProvider.getId());
                     myContext.idChecksLateDelete.clear();
                     for(int i = 0; i < checksD.size(); i++){
                         myContext.idChecksLateDelete.add(checksD.get(i).getIdCheck());
                     }
-                    dbChecks.updateChecksDelete(true, authProvider.getId());
+                    dbChecks.updateChecksDelete(true, authProvider.getId(), false);
                     notifyChangeAdapter();
                 } else {
                     myContext.idChecksLateDelete.clear();
-                    dbChecks.updateChecksDelete(false, authProvider.getId());
-                    showImageDelete(false);
+                    dbChecks.updateChecksDelete(false, authProvider.getId(), false);
                     notifyChangeAdapter();
+                    showImageDelete(true);
                 }
             }
         });
     }
 
     private void deleteChecks() {
+
         deleteChecks.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                new AlertDialog.Builder(myContext)
-                        .setTitle("ELIMINAR REGISTROS")
-                        .setMessage("¿Deseas eliminar los registros seleccionados?")
-                        .setPositiveButton("OK", new DialogInterface.OnClickListener() {
-                            @Override
-                            public void onClick(DialogInterface dialogInterface, int i) {
-                                DbChecks dbChecks = new DbChecks(myContext);
-                                boolean delete = dbChecks.delete(myContext.idChecksLateDelete);
-                                if(delete){
-                                    myContext.idChecksLateDelete.clear();
-                                    notifyChangeAdapter();
-                                    showImageDelete(false);
-                                    if(myContext.menuItemSearch.isActionViewExpanded()){
-                                        myContext.toolbar.collapseActionView();
+                if (myContext.idChecksLateDelete.size() != 0) {
+                    String message;
+                    if (deleteAllChecks.isChecked()) {
+                        message = "¿Deseas eliminar todos los registros pendientes?";
+                    } else {
+                        message = "¿Deseas eliminar los " + myContext.idChecksLateDelete.size() + " registros seleccionados?";
+                    }
+                    new AlertDialog.Builder(myContext)
+                            .setTitle("ELIMINAR REGISTROS")
+                            .setMessage(message)
+                            .setPositiveButton("OK", new DialogInterface.OnClickListener() {
+                                @Override
+                                public void onClick(DialogInterface dialogInterface, int i) {
+                                    boolean delete = dbChecks.delete(myContext.idChecksLateDelete);
+                                    if (delete) {
+                                        myContext.idChecksLateDelete.clear();
+                                        notifyChangeAdapter();
+                                        showImageDelete(false);
+                                        if (myContext.menuItemSearch.isActionViewExpanded()) {
+                                            myContext.toolbar.collapseActionView();
+                                        }
+                                        Toast.makeText(myContext, "Los registros se eliminaron correctamente", Toast.LENGTH_SHORT).show();
+                                    } else {
+                                        Toast.makeText(myContext, "Error al eliminar", Toast.LENGTH_SHORT).show();
                                     }
-                                    Toast.makeText(myContext, "Los registros se eliminaron correctamente", Toast.LENGTH_SHORT).show();
-                                } else {
-                                    Toast.makeText(myContext, "Error al eliminar", Toast.LENGTH_SHORT).show();
                                 }
-                            }
-                        })
-                        .setNegativeButton("Cancelar", new DialogInterface.OnClickListener() {
-                            @Override
-                            public void onClick(DialogInterface dialogInterface, int i) {
-                                dialogInterface.cancel();
-                            }
-                        }).create().show();
+                            })
+                            .setNegativeButton("Cancelar", new DialogInterface.OnClickListener() {
+                                @Override
+                                public void onClick(DialogInterface dialogInterface, int i) {
+                                    dialogInterface.cancel();
+                                }
+                            }).create().show();
+                } else {
+                    showImageDelete(false);
+                }
             }
         });
     }
 
-    public void reviewData(ArrayList<Check> listChecksSendOk, ArrayList<String> idDeleteChecksOk) {
+    /*public void reviewData(ArrayList<Check> listChecksSendOk, ArrayList<String> idDeleteChecksOk) {
      if(checksProvider!=null) {
          if (myContext != null) {
                  checksProvider.getChecksByUserAndStatusSend(authProvider.getId(), 2).get().addOnSuccessListener(new OnSuccessListener<QuerySnapshot>() {
                      @Override
                      public void onSuccess(QuerySnapshot querySnapshot) {
                          Check check;
-                         DbChecks dbChecks = new DbChecks(myContext);
                          ArrayList<String> idDeleteChecks = new ArrayList<>();
                          for (DocumentSnapshot document : querySnapshot.getDocuments()) {
                              check = document.toObject(Check.class);
@@ -247,7 +304,8 @@ public class HistoryChecksLateSendFragment extends Fragment {
                          if(idDeleteChecks.size() != 0 || idDeleteChecksOk.size() != 0){
                              if(idDeleteChecksOk.size() != 0){
                                  dbChecks.delete(idDeleteChecksOk);
-                             } else {
+                             }
+                             if(idDeleteChecks.size() != 0) {
                                  dbChecks.delete(idDeleteChecks);
                              }
                              Toast.makeText(myContext, "Se eliminaron algunos checks con más de 30 días", Toast.LENGTH_SHORT).show();
@@ -257,19 +315,17 @@ public class HistoryChecksLateSendFragment extends Fragment {
                          if(myContext.linearLayoutLoadingHome.getVisibility() == View.VISIBLE) {
                              myContext.linearLayoutLoadingHome.setVisibility(View.GONE);
                          }
-                         if(myContext.pdRevieData.isShowing()){
-                             myContext.pdRevieData.dismiss();
-                         }
-
-                         if(dbChecks.getChecksNotSendSucces(statusSend).size() == 0  && listChecks.size() != 0){
-                             myContext.mostrarUpdateChecks(listChecks, listChecksSendOk);
-                         } else if(listChecksSendOk.size() != 0 && dbChecks.getChecksSendSucces().size() == 0){
-                             myContext.mostrarUpdateChecks(listChecks, listChecksSendOk);
-                         }
 
                          if(myContext.pdRevieData.isShowing()){
                              myContext.pdRevieData.dismiss();
                          }
+
+                         if(dbChecks.getChecksNotSendSucces(authProvider.getId()).size() == 0  && listChecks.size() != 0){
+                             myContext.mostrarUpdateChecks(listChecks, listChecksSendOk);
+                         } else if(listChecksSendOk.size() != 0 && dbChecks.getChecksSendSucces(authProvider.getId()).size() == 0){
+                             myContext.mostrarUpdateChecks(listChecks, listChecksSendOk);
+                         }
+
                      }
                  });
          } else {
@@ -277,7 +333,7 @@ public class HistoryChecksLateSendFragment extends Fragment {
              myContext.pdRevieData.dismiss();
          }
      }
-     }
+     }*/
 
     public void updateChecks(int tipeCheck) {
         ChecksProvider checksProvider = new ChecksProvider();
@@ -287,10 +343,13 @@ public class HistoryChecksLateSendFragment extends Fragment {
                 public void onSuccess(QuerySnapshot queryDocumentSnapshots) {
                     Check check;
                     int i = 0;
+                    String timezoneID = TimeZone.getDefault().getID();
+                    Calendar calendar = Calendar.getInstance(TimeZone.getTimeZone(timezoneID), Locale.getDefault());
+                    Date time2 = calendar.getTime();
                     for (DocumentSnapshot document: queryDocumentSnapshots.getDocuments()) {
                         check = document.toObject(Check.class);
                         i++;
-                        checksProvider.updateStatus(check.getIdCheck(), tipeCheck);
+                        checksProvider.updateStatus(check.getIdCheck(), tipeCheck, time2.getTime());
                     }
                     if(i != 0){
                         if (i == 1) {
@@ -303,6 +362,15 @@ public class HistoryChecksLateSendFragment extends Fragment {
             });
         }
     }
+
+    @Override
+    public void onStop() {
+        dbChecks.updateChecksDelete(false, authProvider.getId(), false);
+        myContext.idChecksLateDelete.clear();
+        checksDbAdapterLateSend.notifyDataSetChanged();
+        super.onStop();
+    }
+
 
 
     /*public  int compareToDate(Long dateCheck) {
@@ -317,7 +385,7 @@ public class HistoryChecksLateSendFragment extends Fragment {
     }*/
 
     public void filterSendLate(ArrayList<Check> checks){
-        checksDbAdapter.filtrar(checks);
+        checksDbAdapterLateSend.filtrar(checks);
     }
 
 
