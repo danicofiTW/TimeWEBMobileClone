@@ -24,14 +24,17 @@ import android.os.Bundle;
 import com.bumptech.glide.Glide;
 import com.dan.timewebclone.R;
 import com.dan.timewebclone.adapters.ViewPagerAdapter;
+import com.dan.timewebclone.db.DbBitacoras;
 import com.dan.timewebclone.db.DbChecks;
 import com.dan.timewebclone.db.DbEmployees;
+import com.dan.timewebclone.db.DbGeocercas;
 import com.dan.timewebclone.fragments.HistoryChecksSendOkFragment;
 import com.dan.timewebclone.fragments.MapFragment;
 import com.dan.timewebclone.fragments.HistoryChecksLateSendFragment;
 import com.dan.timewebclone.models.Check;
 import com.dan.timewebclone.models.Employee;
 import com.dan.timewebclone.providers.AuthProvider;
+import com.dan.timewebclone.providers.BitacoraProvider;
 import com.dan.timewebclone.providers.ChecksProvider;
 import com.dan.timewebclone.providers.EmployeeProvider;
 
@@ -96,7 +99,10 @@ public class HomeTW extends AppCompatActivity{
     private EmployeeProvider employeeProvider;
     private DbChecks dbChecks;
     private DbEmployees dbEmployees;
+    private DbGeocercas dbGeocercas;
+    private DbBitacoras dbBitacoras;
     private Employee employee;
+    private BitacoraProvider bitacoraProvider;
 
     private SearchView searchView;
     private EditText editTextSearch;
@@ -124,7 +130,11 @@ public class HomeTW extends AppCompatActivity{
     private int updateNet;
     public int semanasSendOk;
     public int semanasSendLate;
-
+    public float geoLat;
+    public float geoLong;
+    public float geoRadio;
+    public String idGeocerca;
+    public int numberChecksSendLate = 0;
 
     public ArrayList<String> idChecksDelete;
     public ArrayList<String> idChecksLateDelete;
@@ -135,6 +145,8 @@ public class HomeTW extends AppCompatActivity{
     public AlertDialog.Builder builderDialogUpdateChecks;
     public ProgressDialog pdRevieData;
     public boolean updateData;
+    public boolean reviewSettings;
+    public boolean updateChecksNotSend;
 
     private static final int REQUEST_PERMISSION_CAMERA = 100;
     private static final int TAKE_PICTURE = 101;
@@ -154,9 +166,15 @@ public class HomeTW extends AppCompatActivity{
         pdRevieData.setMessage("Espere un momento ...");
         pdRevieData.setCancelable(false);
 
+
+
+        dbGeocercas = new DbGeocercas(this);
+        dbBitacoras = new DbBitacoras(this);
+
         setStatusBarColor();
 
         updateData = false;
+        updateChecksNotSend = false;
 
         toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
@@ -171,6 +189,7 @@ public class HomeTW extends AppCompatActivity{
         idChecksLateDelete = new ArrayList<>();
         mImageProvider = new ImageProvider();
         employeeProvider = new EmployeeProvider();
+        bitacoraProvider = new BitacoraProvider();
         dbChecks = new DbChecks(HomeTW.this);
         dbEmployees = new DbEmployees(HomeTW.this);
 
@@ -181,11 +200,18 @@ public class HomeTW extends AppCompatActivity{
         mViewPager.setOffscreenPageLimit(3);
         viewPagerAdapter = new ViewPagerAdapter(getSupportFragmentManager());
 
+        /*geoLat = getIntent().getFloatExtra("geoLat",0);
+        geoLong = getIntent().getFloatExtra("geoLong",0);*/
+        geoRadio = getIntent().getFloatExtra("geoRadio",0);
+        reviewSettings = getIntent().getBooleanExtra("reviewSettings", false);
+
         //Revisar el empleado
-        revieEmployee = getIntent().getBooleanExtra("revieEmployee", true);
+        //revieEmployee = getIntent().getBooleanExtra("revieEmployee", true);
         //if (revieEmployee) {
+        if(geoRadio == 0){
+            //reviewSettings = false;
             reviewEmployee();
-        //}
+        }
 
         mapFragment = new MapFragment();
         historyChecksSendOkFragment = new HistoryChecksSendOkFragment();
@@ -216,6 +242,8 @@ public class HomeTW extends AppCompatActivity{
                     goToChangePassword();
                 } else if(item.getItemId() == R.id.itemSettings){
                     goToSetings();
+                } else if(item.getItemId() == R.id.itemGeocercas){
+                    goToGeocercas();
                 }
                 return true;
             }
@@ -314,6 +342,7 @@ public class HomeTW extends AppCompatActivity{
                         if(historyChecksSendOkFragment.deleteChecks.getVisibility() == View.VISIBLE){
                             historyChecksSendOkFragment.updateDelete();
                         }
+                        removeGeocerca();
                         Intent in = new Intent(HomeTW.this, MainActivity.class);
                         in.putExtra("ChangePassword", "true");
                         in.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
@@ -325,7 +354,7 @@ public class HomeTW extends AppCompatActivity{
                     public void onClick(DialogInterface dialogInterface, int i) {
                         dialogInterface.dismiss();
                         Intent in = new Intent(HomeTW.this, MainActivity.class);
-                        if(dbChecks.deleteAllChecks() && dbEmployees.deleteAllEmployees()){
+                        if(dbChecks.deleteAllChecks() && dbEmployees.deleteAllEmployees() && dbGeocercas.deleteAllGeocercas() && dbBitacoras.deleteAllBitacoras()){
                             authHome.signOut();
                             if(historyChecksLateSendFragment.deleteChecks.getVisibility() == View.VISIBLE){
                                 historyChecksLateSendFragment.updateDelete();
@@ -333,6 +362,7 @@ public class HomeTW extends AppCompatActivity{
                             if(historyChecksSendOkFragment.deleteChecks.getVisibility() == View.VISIBLE){
                                 historyChecksSendOkFragment.updateDelete();
                             }
+                            removeGeocerca();
                             in.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
                             startActivity(in);
                         }
@@ -358,6 +388,65 @@ public class HomeTW extends AppCompatActivity{
         startActivity(i);
     }
 
+    //Ir a geocercas
+    private void goToGeocercas() {
+        if(dbBitacoras.getBitacorasByIdUser(authHome.getId()).size()!=0){
+            if(historyChecksLateSendFragment.deleteChecks.getVisibility() == View.VISIBLE){
+                historyChecksLateSendFragment.updateDelete();
+            }
+            if(historyChecksSendOkFragment.deleteChecks.getVisibility() == View.VISIBLE){
+                historyChecksSendOkFragment.updateDelete();
+            }
+            mapFragment.firstReviewGeoface=true;
+            //mViewPager.setCurrentItem(0);
+            Intent i = new Intent(HomeTW.this, GeocercasActivity.class);
+            startActivity(i);
+        } else {
+            if(mapFragment.isOnlineNet()){
+                bitacoraProvider.getBitacorasByUser(authHome.getId()).get().addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
+                    @Override
+                    public void onComplete(@NonNull Task<QuerySnapshot> task) {
+                        if(task.isSuccessful()){
+                          if(task.getResult().size()!=0){
+                              if(historyChecksLateSendFragment.deleteChecks.getVisibility() == View.VISIBLE){
+                                  historyChecksLateSendFragment.updateDelete();
+                              }
+                              if(historyChecksSendOkFragment.deleteChecks.getVisibility() == View.VISIBLE){
+                                  historyChecksSendOkFragment.updateDelete();
+                              }
+                              mapFragment.firstReviewGeoface=true;
+                              //mViewPager.setCurrentItem(0);
+                              Intent i = new Intent(HomeTW.this, GeocercasActivity.class);
+                              startActivity(i);
+                          } else {
+                              removeGeocerca();
+                              Toast.makeText(HomeTW.this, "No cuentas con geocercas asignadas", Toast.LENGTH_SHORT).show();
+                          }
+                        }
+                    }
+                });
+            } else {
+               removeGeocerca();
+                Toast.makeText(this, "No cuentas con geocercas asignadas", Toast.LENGTH_SHORT).show();
+            }
+        }
+    }
+
+    public void removeGeocerca(){
+        if(mapFragment.mapCircle!=null){
+            mapFragment.mapCircle.remove();
+        }
+        SharedPreferences sharedPref = getSharedPreferences("geocerca", Context.MODE_PRIVATE);
+        SharedPreferences.Editor editor = sharedPref.edit();
+        editor.putFloat("geoLat", 0);
+        editor.putFloat("geoLong", 0);
+        editor.putFloat("geoRadio", 0);
+        editor.putString("idGeocerca", "");
+        editor.apply();
+        editor.commit();
+        geoRadio=0;
+        idGeocerca = "";
+    }
     //Ir a cambiar el password
     private void goToChangePassword() {
         if(historyChecksLateSendFragment.deleteChecks.getVisibility() == View.VISIBLE){
@@ -684,121 +773,120 @@ public class HomeTW extends AppCompatActivity{
 
     //Revisar checks pendientes, con mas de 30 dias y si no cuentas con checks pero se encuentran en firebase
     public void checkUpdateSend() {
-        Check ch= new Check();
-        ch.setIdUser(authHome.getId()+"100");
-        checksProvider.createCheck(ch).addOnSuccessListener(new OnSuccessListener<Void>() {
-            @Override
-            public void onSuccess(Void unused) {
-                if (linearLayoutLoadingHome.getVisibility() == View.GONE) {
-                    mapFragment.loadin(false);
-                    pdRevieData.show();
-                }
-                time1 = Calendar.getInstance().getTime();
-                //Eliminar mensajes de prueba internet
-                checksProvider.getChecksByUser(authHome.getId() + "100").get().addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
-                    @Override
-                    public void onComplete(@NonNull Task<QuerySnapshot> task) {
-                        if(task.isSuccessful()){
-                            for (DocumentSnapshot document : task.getResult()) {
-                                Check check = document.toObject(Check.class);
-                                checksProvider.deleteCheck(check);
+        if(reviewSettings){
+            goToSetings();
+            reviewSettings = false;
+        } else {
+            updateChecksNotSend = true;
+            updateData = true;
+            Check ch = new Check();
+            ch.setIdUser(authHome.getId() + "100");
+            checksProvider.createCheck(ch).addOnSuccessListener(new OnSuccessListener<Void>() {
+                @Override
+                public void onSuccess(Void unused) {
+                    if (linearLayoutLoadingHome.getVisibility() == View.GONE) {
+                        mapFragment.loadin(false);
+                        pdRevieData.show();
+                    }
+                    time1 = Calendar.getInstance().getTime();
+                    //Eliminar mensajes de prueba internet
+                    checksProvider.getChecksByUser(authHome.getId() + "100").get().addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
+                        @Override
+                        public void onComplete(@NonNull Task<QuerySnapshot> task) {
+                            if (task.isSuccessful()) {
+                                for (DocumentSnapshot document : task.getResult()) {
+                                    Check check = document.toObject(Check.class);
+                                    checksProvider.deleteCheck(check);
+                                }
                             }
                         }
-                    }
-                });
+                    });
 
-                //Actualizar enviados
-                checksProvider.deleteCheck(ch);
-                dbChecks.reviewChecks(2);
-                historyChecksLateSendFragment.updateChecks(2);
-                historyChecksLateSendFragment.notifyChangeAdapter();
+                    //Actualizar enviados
+                    checksProvider.deleteCheck(ch);
+                    dbChecks.reviewChecks(2);
+                    historyChecksLateSendFragment.updateChecks(2);
+                    historyChecksLateSendFragment.notifyChangeAdapter();
 
-                checksProvider.getChecksByUser(authHome.getId()).get().addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
-                    @Override
-                    public void onComplete(@NonNull Task<QuerySnapshot> task) {
-                        if(task.isSuccessful()){
-                            int numberChecksUser = task.getResult().size();
-                            if(numberChecksUser != 0){
-                                SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy");
-                                Date mDateD = Calendar.getInstance(TimeZone.getTimeZone(TimeZone.getDefault().getID()), Locale.getDefault()).getTime();
-                                String date = sdf.format(mDateD);
+                    checksProvider.getChecksByUser(authHome.getId()).get().addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
+                        @Override
+                        public void onComplete(@NonNull Task<QuerySnapshot> task) {
+                            if (task.isSuccessful()) {
+                                int numberChecksUser = task.getResult().size();
+                                if (numberChecksUser != 0) {
+                                    SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy");
+                                    Date mDateD = Calendar.getInstance(TimeZone.getTimeZone(TimeZone.getDefault().getID()), Locale.getDefault()).getTime();
+                                    String date = sdf.format(mDateD);
 
-                                SharedPreferences sharedPref = getSharedPreferences("datos", MODE_PRIVATE);
-                                String dateRevie = sharedPref.getString("dateReview","");
-                                dateRevie = "18/01/2023";
+                                    SharedPreferences sharedPref = getSharedPreferences("datos", MODE_PRIVATE);
+                                    String dateRevie = sharedPref.getString("dateReview", "");
+                                    dateRevie = "18/01/2023";
 
-                                if(dateRevie.equals("")){
-                                    reviewChecksOlderThan31Days(task.getResult());
-                                    savePreferenceReviewChecks(date);
-                                } else {
-                                    long dateSave = 0;
-                                    long dateThisMoment = 0;
-                                    try {
-                                        Date d = sdf.parse(dateRevie);
-                                        dateSave = d.getTime();
-                                        Date d1 = sdf.parse(date);
-                                        dateThisMoment = d1.getTime();
-                                        long diferencia = dateThisMoment - dateSave;
-                                        double diasD = Math.floor(diferencia / (1000 * 60 * 60 * 24));
-                                        int dias = (int) diasD;
-                                        if(dias != 0){
-                                            reviewChecksOlderThan31Days(task.getResult());
-                                            savePreferenceReviewChecks(date);
-                                        } else {
-                                            if(linearLayoutLoadingHome.getVisibility() == View.VISIBLE) {
-                                                linearLayoutLoadingHome.setVisibility(View.GONE);
+                                    if (dateRevie.equals("")) {
+                                        reviewChecksOlderThan31Days(task.getResult());
+                                        savePreferenceReviewChecks(date);
+                                    } else {
+                                        long dateSave = 0;
+                                        long dateThisMoment = 0;
+                                        try {
+                                            Date d = sdf.parse(dateRevie);
+                                            dateSave = d.getTime();
+                                            Date d1 = sdf.parse(date);
+                                            dateThisMoment = d1.getTime();
+                                            long diferencia = dateThisMoment - dateSave;
+                                            double diasD = Math.floor(diferencia / (1000 * 60 * 60 * 24));
+                                            int dias = (int) diasD;
+                                            if (dias != 0) {
+                                                reviewChecksOlderThan31Days(task.getResult());
+                                                savePreferenceReviewChecks(date);
+                                            } else {
+                                                if (linearLayoutLoadingHome.getVisibility() == View.VISIBLE) {
+                                                    linearLayoutLoadingHome.setVisibility(View.GONE);
+                                                }
                                             }
+                                        } catch (ParseException e) {
+                                            e.printStackTrace();
                                         }
-                                    } catch (ParseException e) {
-                                        e.printStackTrace();
                                     }
-                                }
 
-                                if (linearLayoutLoadingHome.getVisibility() == View.VISIBLE) {
-                                    linearLayoutLoadingHome.setVisibility(View.GONE);
+                                    if (linearLayoutLoadingHome.getVisibility() == View.VISIBLE) {
+                                        linearLayoutLoadingHome.setVisibility(View.GONE);
+                                    } else {
+                                        if (pdRevieData.isShowing()) {
+                                            pdRevieData.dismiss();
+                                        }
+                                    }
+
+
+                                    if (dbChecks.getChecksNotSendSucces(authHome.getId()).size() == 0 || dbChecks.getChecksSendSucces(authHome.getId()).size() == 0) {
+                                        mostrarUpdateChecks();
+                                    }
                                 } else {
-                                    if(pdRevieData.isShowing()){
-                                        pdRevieData.dismiss();
+                                    if (linearLayoutLoadingHome.getVisibility() == View.VISIBLE) {
+                                        linearLayoutLoadingHome.setVisibility(View.GONE);
+                                    } else {
+                                        if (pdRevieData.isShowing()) {
+                                            pdRevieData.dismiss();
+                                        }
                                     }
                                 }
-
-
-
-                                if(dbChecks.getChecksNotSendSucces(authHome.getId()).size() == 0 || dbChecks.getChecksSendSucces(authHome.getId()).size() == 0){
-                                    mostrarUpdateChecks();
-                                }
-
-
-                                /*historyChecksSendOkFragment.reviewData();
-                                historyChecksLateSendFragment.reviewData(historyChecksSendOkFragment.listChecks, historyChecksSendOkFragment.idDeleteChecks);
-                                historyChecksSendOkFragment.notifyChangeAdapter();
-                                historyChecksLateSendFragment.notifyChangeAdapter();
-                                */
                             } else {
                                 if (linearLayoutLoadingHome.getVisibility() == View.VISIBLE) {
                                     linearLayoutLoadingHome.setVisibility(View.GONE);
                                 } else {
-                                    if(pdRevieData.isShowing()){
+                                    if (pdRevieData.isShowing()) {
                                         pdRevieData.dismiss();
                                     }
-                                }
-                            }
-                        } else {
-                            if (linearLayoutLoadingHome.getVisibility() == View.VISIBLE) {
-                                linearLayoutLoadingHome.setVisibility(View.GONE);
-                            } else {
-                                if(pdRevieData.isShowing()){
-                                    pdRevieData.dismiss();
                                 }
                             }
                         }
-                    }
-                });
-            }
-        });
-        if(!mapFragment.isOnlineNet()){
-            if (linearLayoutLoadingHome.getVisibility() == View.VISIBLE) {
-                linearLayoutLoadingHome.setVisibility(View.GONE);
+                    });
+                }
+            });
+            if (!mapFragment.isOnlineNet()) {
+                if (linearLayoutLoadingHome.getVisibility() == View.VISIBLE) {
+                    linearLayoutLoadingHome.setVisibility(View.GONE);
+                }
             }
         }
     }
@@ -875,7 +963,6 @@ public class HomeTW extends AppCompatActivity{
 
     private void updateDataNet() {
         updateNet = 2;
-        if(dbChecks.getChecksSendSucces(authHome.getId()).size() == 0){
             checksProvider.getChecksByUserAndStatusSend(authHome.getId(), 1).get().addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
                 @Override
                 public void onComplete(@NonNull Task<QuerySnapshot> task) {
@@ -892,11 +979,7 @@ public class HomeTW extends AppCompatActivity{
                     }
                 }
             });
-        } else {
-            updateNet--;
-        }
 
-        if(dbChecks.getChecksNotSendSucces(authHome.getId()).size() == 0){
             checksProvider.getChecksByUserAndStatusSend(authHome.getId(), 2).get().addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
                 @Override
                 public void onComplete(@NonNull Task<QuerySnapshot> task) {
@@ -904,21 +987,14 @@ public class HomeTW extends AppCompatActivity{
                         for (DocumentSnapshot document : task.getResult()) {
                             dbChecks.insertCheck(document.toObject(Check.class));
                         }
-                        updateNet--;
                         historyChecksLateSendFragment.notifyChangeAdapter();
+                        updateNet--;
                         if(updateNet == 0){
                             constraintLayoutProgress.setVisibility(View.GONE);
                         }
                     }
                 }
             });
-        } else {
-            updateNet--;
-        }
-        if(updateNet == 0){
-            constraintLayoutProgress.setVisibility(View.GONE);
-        }
-
     }
 
 
@@ -971,8 +1047,10 @@ public class HomeTW extends AppCompatActivity{
                                 if (task.getResult() != null) {
                                     if (task.getResult().exists()) {
                                         employee = task.getResult().toObject(Employee.class);
-                                        if(dbEmployees.deleteAllEmployees() && dbChecks.deleteAllChecks()){
+                                        if(dbEmployees.deleteAllEmployees() && dbChecks.deleteAllChecks() && dbBitacoras.deleteAllBitacoras() && dbGeocercas.deleteAllGeocercas()){
+                                            removeGeocerca();
                                             dbEmployees.insertEmployye(employee);
+                                            reviewSettings = true;
                                             /*SharedPreferences sharedPref = getSharedPreferences("datos", Context.MODE_PRIVATE);
                                             SharedPreferences.Editor editor = sharedPref.edit();
                                             editor.putBoolean("takePhoto", false);

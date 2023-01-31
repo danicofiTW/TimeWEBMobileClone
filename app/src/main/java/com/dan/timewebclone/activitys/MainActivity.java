@@ -17,6 +17,7 @@ import android.view.View;
 import android.widget.Button;
 
 import com.dan.timewebclone.R;
+import com.dan.timewebclone.db.DbEmployees;
 import com.dan.timewebclone.fragments.LoginFragment;
 import com.dan.timewebclone.fragments.TermsAndConditionsFragment;
 import com.dan.timewebclone.fragments.RegisterFragment;
@@ -35,6 +36,7 @@ public class MainActivity extends AppCompatActivity {
     private FragmentTransaction fragmentTransaction;
     private FragmentManager fragmentManager;
     private DialogFragment termsAndConditionsFragment;
+    private DbEmployees dbEmployees;
 
     private AuthProvider mAuth = null;
 
@@ -50,6 +52,7 @@ public class MainActivity extends AppCompatActivity {
 
         loginFragment = new LoginFragment();
         registerFragment = new RegisterFragment();
+        dbEmployees = new DbEmployees(this);
         termsAndConditionsFragment = new TermsAndConditionsFragment();
         mAuth = new AuthProvider();
         builderDialogExit = new AlertDialog.Builder(this);
@@ -82,7 +85,7 @@ public class MainActivity extends AppCompatActivity {
     protected void onStart() {
         super.onStart();
         //Si el usuario ya inicio sesion ingresar al Home
-        if (mAuth.getId() != null) {
+        if (mAuth.getId() != null && dbEmployees.getEmployee(mAuth.getId()) != null) {
             Intent i = new Intent(MainActivity.this, HomeTW.class);
             i.putExtra("revieEmployee", false);
             i.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);

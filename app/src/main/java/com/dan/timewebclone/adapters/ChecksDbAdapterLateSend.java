@@ -130,17 +130,23 @@ public class ChecksDbAdapterLateSend extends RecyclerView.Adapter<ChecksDbAdapte
 
         setImage(holder, position);
 
-        try {
-            Geocoder geocoder = new Geocoder(context);
-            List<Address> addressList = geocoder.getFromLocation(checks.get(position).getCheckLat(), checks.get(position).getCheckLong(), 1);
-            String city = addressList.get(0).getLocality();
-            //String country = addressList.get(0).getCountryName();
-            String address = addressList.get(0).getAddressLine(0);
-            holder.textViewGeocerca.setText(address + " " + city);
-            openLocation(holder, checks.get(position));
 
-        } catch (IOException e) {
-            Log.d("Error:", "Mensaje de error: " + e.getMessage());
+        if(checks.get(position).getIdGeocerca()==null){
+            try {
+                Geocoder geocoder = new Geocoder(context);
+                List<Address> addressList = geocoder.getFromLocation(checks.get(position).getCheckLat(), checks.get(position).getCheckLong(), 1);
+                String city = addressList.get(0).getLocality();
+                //String country = addressList.get(0).getCountryName();
+                String address = addressList.get(0).getAddressLine(0);
+                holder.textViewGeocerca.setText(address + " " + city);
+                openLocation(holder, checks.get(position));
+
+            } catch (IOException e) {
+                Log.d("Error:", "Mensaje de error: " + e.getMessage());
+            }
+        } else {
+            holder.textViewGeocerca.setText(checks.get(position).getNameGeocerca());
+            openLocation(holder, checks.get(position));
         }
 
         if(checks.get(position).isDelete()){

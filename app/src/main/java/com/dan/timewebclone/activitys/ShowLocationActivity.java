@@ -108,16 +108,20 @@ public class ShowLocationActivity extends AppCompatActivity implements OnMapRead
         String date = sdf.format(aux);
         textViewDate.setText(date);
 
-        try {
-            Geocoder geocoder = new Geocoder(this);
-            List<Address> addressList = geocoder.getFromLocation(mExtraLatitud, mExtraLongitud, 1);
-            String city = addressList.get(0).getLocality();
-            //String country = addressList.get(0).getCountryName();
-            String address = addressList.get(0).getAddressLine(0);
-            textViewLocation.setText(address + " " + city);
+        if(check.getIdGeocerca() == null){
+            try {
+                Geocoder geocoder = new Geocoder(this);
+                List<Address> addressList = geocoder.getFromLocation(mExtraLatitud, mExtraLongitud, 1);
+                String city = addressList.get(0).getLocality();
+                //String country = addressList.get(0).getCountryName();
+                String address = addressList.get(0).getAddressLine(0);
+                textViewLocation.setText(address + " " + city);
 
-        } catch (IOException e) {
-            Log.d("Error:", "Mensaje de error: " + e.getMessage());
+            } catch (IOException e) {
+                Log.d("Error:", "Mensaje de error: " + e.getMessage());
+            }
+        } else {
+            textViewLocation.setText(check.getNameGeocerca());
         }
         DbEmployees dbEmployees = new DbEmployees(ShowLocationActivity.this);
         Employee employee = dbEmployees.getEmployee(check.getIdUser());

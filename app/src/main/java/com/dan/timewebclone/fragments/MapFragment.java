@@ -2,6 +2,7 @@ package com.dan.timewebclone.fragments;
 
 import android.Manifest;
 import android.app.AlertDialog;
+import android.app.PendingIntent;
 import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.DialogInterface;
@@ -30,18 +31,25 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.dan.timewebclone.activitys.GeocercasActivity;
 import com.dan.timewebclone.activitys.HomeTW;
 import com.dan.timewebclone.R;
+import com.dan.timewebclone.db.DbBitacoras;
 import com.dan.timewebclone.db.DbChecks;
 import com.dan.timewebclone.db.DbEmployees;
+import com.dan.timewebclone.db.DbGeocercas;
 import com.dan.timewebclone.models.Check;
 import com.dan.timewebclone.models.Employee;
 import com.dan.timewebclone.providers.AuthProvider;
+import com.dan.timewebclone.providers.BitacoraProvider;
 import com.dan.timewebclone.providers.ChecksProvider;
 import com.dan.timewebclone.providers.EmployeeProvider;
+import com.dan.timewebclone.providers.GeocercaProvider;
 import com.getbase.floatingactionbutton.FloatingActionButton;
 import com.getbase.floatingactionbutton.FloatingActionsMenu;
 import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.location.Geofence;
+import com.google.android.gms.location.GeofencingClient;
 import com.google.android.gms.location.LocationCallback;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationResult;
@@ -53,11 +61,15 @@ import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.CameraPosition;
+import com.google.android.gms.maps.model.Circle;
+import com.google.android.gms.maps.model.CircleOptions;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.firebase.firestore.QuerySnapshot;
 
+import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
@@ -71,7 +83,12 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
     private AuthProvider authProvider;
     private ChecksProvider checksProvider;
     private EmployeeProvider employeeProvider;
+    private GeocercaProvider geocercaProvider;
+    private BitacoraProvider bitacoraProvider;
     private DbChecks dbChecks;
+    private DbGeocercas dbGeocercas;
+    private DbBitacoras dbBitacoras;
+    public Circle mapCircle;
 
     public FloatingActionsMenu floatingActionsMenu;
     private FloatingActionButton sendStartWork, sendStartEating, sendFinishEating, sendFinishWork;
@@ -111,6 +128,14 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
     private String timezoneID;
     private SimpleDateFormat sdf1;
 
+    private boolean updateGeocerca = false;
+    public boolean firstReviewGeoface;
+    private Geofence geofencing;
+    private GeofencingClient geofencingClient;
+    private LatLng latLngGeoFence;
+
+    private PendingIntent geofencePendingIntent;
+
     public boolean secondsIsOver = false;
     public boolean takePhoto = false;
     Handler handler = new Handler();
@@ -128,15 +153,6 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                     if (textViewTime != null) {
                         textViewTime.setText(date1);
                     }
-                    //updateInfo(mDateD);
-                    /*if (myContext.time1 != null) {
-                        if (!evaluarLimite(mDateD, myContext.time1)) {
-                            if (myContext.pdRevieData.isShowing()) {
-                                myContext.pdRevieData.cancel();
-                                time1 = null;
-                            }
-                        }
-                    }*/
                 } else {
                     disconnect();
                     secondsIsOver = true;
@@ -147,7 +163,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                 }
             } else {
                 employee = dbEmployees.getEmployee(authProvider.getId());
-                if (employee != null){
+                if (employee != null) {
                     setGreeting();
                     reviewTakePhoto();
                 }
@@ -185,14 +201,16 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                     ));
                 }
 
-                if (myContext.updateData == false) {
-                    myContext.updateData = true;
+                if (myContext.geoRadio != 0 && updateGeocerca == false) {
+                    updateGeocerca = true;
+                    createGeofencig();
+                }
+
+                if (myContext.updateData == false && updateGeocerca == true) {
                     myContext.checkUpdateSend();
                 } else {
                     loadin(false);
                 }
-                //updateInfo(date);
-                //updateLocation();
             }
         }
     };
@@ -220,7 +238,13 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         authProvider = new AuthProvider();
         checksProvider = new ChecksProvider();
         employeeProvider = new EmployeeProvider();
+        geocercaProvider = new GeocercaProvider();
+        bitacoraProvider = new BitacoraProvider();
         dbChecks = new DbChecks(myContext);
+        dbGeocercas = new DbGeocercas(myContext);
+        dbBitacoras = new DbBitacoras(myContext);
+
+        firstReviewGeoface = false;
 
         fusedLocation = LocationServices.getFusedLocationProviderClient(mView.getContext());
 
@@ -238,7 +262,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         textViewState = mView.findViewById(R.id.textViewStatus);
         frameLayoutLoading = mView.findViewById(R.id.loading);
 
-
+        geofencingClient = LocationServices.getGeofencingClient(myContext);
         dbEmployees = new DbEmployees(myContext);
 
 
@@ -259,7 +283,15 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                     } else if (!secondsIsOver) {
                         startLocation();
                     } else {
-                        Toast.makeText(myContext, "No se cuenta con la hora correcta para enviar registros", Toast.LENGTH_SHORT).show();
+                        AlertDialog.Builder builder = new AlertDialog.Builder(myContext);
+                        builder.setMessage("Por favor activa la fecha y hora proporcionadas por la red")
+                                .setPositiveButton("Configuraciones", new DialogInterface.OnClickListener() {
+                                    @Override
+                                    public void onClick(DialogInterface dialogInterface, int i) {
+                                        startActivityForResult(new Intent(Settings.ACTION_DATE_SETTINGS), 0);
+                                    }
+                                }).create().show();
+                        //Toast.makeText(myContext, "No se cuenta con la hora correcta para enviar registros", Toast.LENGTH_SHORT).show();
                     }
                 }
             }
@@ -351,6 +383,85 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
 
         return mView;
     }
+
+    private float reviewDistance(Location location){
+        Location locationA = new Location("centerGeoface");
+        locationA.setLatitude(latLngGeoFence.latitude);
+        locationA.setLongitude(latLngGeoFence.longitude);
+
+        Location locationB = new Location("miLocation");
+        locationB.setLatitude(location.getLatitude());
+        locationB.setLongitude(location.getLongitude());
+
+        float distance = locationA.distanceTo(locationB)-myContext.geoRadio;
+
+        return distance;
+    }
+
+    private void createGeofencig() {
+        latLngGeoFence = new LatLng(myContext.geoLat, myContext.geoLong);
+        CircleOptions circleOptions = new CircleOptions();
+        circleOptions.center(latLngGeoFence);
+        circleOptions.radius(myContext.geoRadio);
+        circleOptions.strokeColor(R.color.colorGris);
+        circleOptions.fillColor(R.color.colorHomeTw2);
+        circleOptions.strokeWidth(4);
+
+        if(map!=null){
+            if(mapCircle!=null){
+                mapCircle.remove();
+                mapCircle = map.addCircle(circleOptions);
+            } else {
+                mapCircle = map.addCircle(circleOptions);
+            }
+        } else {
+            updateGeocerca = false;
+        }
+    }
+
+   /* private GeofencingRequest getGeofencingRequest() {
+        GeofencingRequest.Builder builder = new GeofencingRequest.Builder();
+        builder.setInitialTrigger(GeofencingRequest.INITIAL_TRIGGER_ENTER);
+        builder.addGeofence(geofencing);
+        return builder.build();
+    }
+
+    private PendingIntent getGeofencePendingIntent() {
+        if (geofencePendingIntent != null) {
+            return geofencePendingIntent;
+        }
+        Intent intent = new Intent(this, GeofenceBroadcastReceiver.class);
+        // We use FLAG_UPDATE_CURRENT so that we get the same pending intent back when
+        // calling addGeofences() and removeGeofences().
+        geofencePendingIntent = PendingIntent.getBroadcast(myContext, 0, intent, PendingIntent.
+                FLAG_UPDATE_CURRENT);
+        return geofencePendingIntent;
+    }*/
+
+    /*private void addGeofence() {
+        geofencingClient.addGeofences(getGeofencingRequest(), getGeofencePendingIntent())
+                .addOnSuccessListener(this, aVoid -> {
+                    Toast.makeText(getApplicationContext()
+                            , "Geofencing has started", Toast.LENGTH_SHORT).show();
+                })
+                .addOnFailureListener(this, e -> {
+                    Toast.makeText(getApplicationContext()
+                            , "Geofencing failed", Toast.LENGTH_SHORT).show();
+
+                });
+    }
+
+    private void removeGeofence() {
+        geofencingClient.removeGeofences(getGeofencePendingIntent())
+                .addOnSuccessListener(this, aVoid -> {
+                    Toast.makeText(getApplicationContext()
+                            , "Geofencing has been removed", Toast.LENGTH_SHORT).show();
+                })
+                .addOnFailureListener(this, e -> {
+                    Toast.makeText(getApplicationContext()
+                            , "Geofencing could not be removed", Toast.LENGTH_SHORT).show();
+                });
+    }*/
 
     private void reviewTakePhoto() {
         //SharedPreferences prefe = myContext.getSharedPreferences("datos", Context.MODE_PRIVATE);
@@ -454,89 +565,115 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
     }
 
     private void seendCheck(String tipe) {
-        //loadin(true);
         myContext.constraintLayoutProgress.setVisibility(View.VISIBLE);
         if (checkIfLocationOpened()) {
             if (ContextCompat.checkSelfPermission(myContext, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
                 fusedLocation.getLastLocation().addOnSuccessListener(new OnSuccessListener<Location>() {
                     @Override
                     public void onSuccess(Location location) {
-                        String timezoneID = TimeZone.getDefault().getID();
-                        Calendar calendar = Calendar.getInstance(TimeZone.getTimeZone(timezoneID), Locale.getDefault());
-                        time1 = calendar.getTime();
-
-                        Check check = new Check();
-                        check.setTipeCheck(tipe);
-                        check.setIdUser(authProvider.getId());
-                        check.setTime(time1.getTime());
-                        check.setCheckLat(location.getLatitude());
-                        check.setCheckLong(location.getLongitude());
-                        check.setStatusSend(0);
-                        if (myContext.imagetoBase64 != null) {
-                            if (myContext.imagetoBase64 != "") {
-                                check.setImage(myContext.imagetoBase64);
-                                myContext.imagetoBase64 = "";
-                            }
+                        float distance;
+                        if(updateGeocerca && myContext.geoRadio != 0){
+                           distance = reviewDistance(location);
+                        } else {
+                            distance=0;
                         }
-                        if (myContext.fotoUri != null) {
-                            check.setUrlImage(myContext.fotoUri.toString());
-                            myContext.fotoUri = null;
-                        }
+                        if(distance <= 0){
+                            String timezoneID = TimeZone.getDefault().getID();
+                            Calendar calendar = Calendar.getInstance(TimeZone.getTimeZone(timezoneID), Locale.getDefault());
+                            time1 = calendar.getTime();
 
-                        numberChecksSendLate++;
-
-                        checksProvider.createCheck(check).addOnSuccessListener(new OnSuccessListener<Void>() {
-                            @Override
-                            public void onSuccess(Void aVoid) {
-                                if(myContext.constraintLayoutProgress.getVisibility() == View.GONE){
-                                    myContext.constraintLayoutProgress.setVisibility(View.VISIBLE);
+                            Check check = new Check();
+                            check.setTipeCheck(tipe);
+                            check.setIdUser(authProvider.getId());
+                            check.setTime(time1.getTime());
+                            check.setCheckLat(location.getLatitude());
+                            check.setCheckLong(location.getLongitude());
+                            check.setStatusSend(0);
+                            if (myContext.imagetoBase64 != null) {
+                                if (myContext.imagetoBase64 != "") {
+                                    check.setImage(myContext.imagetoBase64);
+                                    myContext.imagetoBase64 = "";
                                 }
-                                int tipeSend;
-                                String timezoneID = TimeZone.getDefault().getID();
-                                Calendar calendar = Calendar.getInstance(TimeZone.getTimeZone(timezoneID), Locale.getDefault());
-                                Date time2 = calendar.getTime();
+                            }
+                            if (myContext.fotoUri != null) {
+                                check.setUrlImage(myContext.fotoUri.toString());
+                                myContext.fotoUri = null;
+                            }
+                            if(myContext.idGeocerca != null && !myContext.idGeocerca.equals("")){
+                                check.setIdGeocerca(myContext.idGeocerca);
+                                String geoName = dbGeocercas.getGeocerca(myContext.idGeocerca).getGeoNombre();
+                                if(geoName != null && !geoName.equals("")){
+                                    check.setNameGeocerca(geoName);
+                                }
+                            }
 
-                                if (time1 != null) {
-                                    if (withoutInternet == true) {
-                                        tipeSend = 1;
+                            myContext.numberChecksSendLate++;
+
+                            checksProvider.createCheck(check).addOnSuccessListener(new OnSuccessListener<Void>() {
+                                @Override
+                                public void onSuccess(Void aVoid) {
+                                    if(myContext.constraintLayoutProgress.getVisibility() == View.GONE){
+                                        myContext.constraintLayoutProgress.setVisibility(View.VISIBLE);
+                                    }
+                                    int tipeSend;
+                                    String timezoneID = TimeZone.getDefault().getID();
+                                    Calendar calendar = Calendar.getInstance(TimeZone.getTimeZone(timezoneID), Locale.getDefault());
+                                    Date time2 = calendar.getTime();
+
+                                    if (time1 != null) {
+                                        if (withoutInternet == true) {
+                                            tipeSend = 1;
+                                        } else {
+                                            tipeSend = 2;
+                                        }
                                     } else {
                                         tipeSend = 2;
                                     }
-                                } else {
-                                    tipeSend = 2;
+
+                                    time1 = null;
+                                    check.setStatusSend(tipeSend);
+
+                                    checksProvider.updateStatus(check.getIdCheck(), tipeSend, time2.getTime());
+                                    myContext.updateChecks(check.getIdCheck(), tipeSend, check.getTime(), time2.getTime());
+
+                                    //loadin(false);
+
+                                    myContext.constraintLayoutProgress.setVisibility(View.GONE);
+                                    if (myContext.numberChecksSendLate != 0 ) {
+                                        if (!myContext.updateChecksNotSend){
+                                            enviarToast(true);
+                                            myContext.numberChecksSendLate = 0;
+                                            withoutInternet = true;
+                                            myContext.updateChecksNotSend = false;
+                                        } else {
+                                            myContext.numberChecksSendLate = 0;
+                                            withoutInternet = true;
+                                        }
+                                    }
                                 }
+                            });
+                            long id = dbChecks.insertCheck(check);
+                            myContext.image = null;
+                            if (id > 0) {
+                                myContext.updateViewLateCheck();
+                                setImageDefault();
 
-                                time1 = null;
-                                check.setStatusSend(tipeSend);
-
-                                checksProvider.updateStatus(check.getIdCheck(), tipeSend, time2.getTime());
-                                myContext.updateChecks(check.getIdCheck(), tipeSend, check.getTime(), time2.getTime());
-
-                                //loadin(false);
-
-                                myContext.constraintLayoutProgress.setVisibility(View.GONE);
-                                if (numberChecksSendLate != 0) {
-                                    enviarToast(true);
-                                    numberChecksSendLate = 0;
-                                    withoutInternet = true;
+                                if (!isOnlineNet()) {
+                                    //loadin(false);
+                                    withoutInternet = false;
+                                    myContext.constraintLayoutProgress.setVisibility(View.GONE);
+                                    enviarToast(false);
                                 }
-                            }
-                        });
-                        long id = dbChecks.insertCheck(check);
-                        myContext.image = null;
-                        if (id > 0) {
-                            myContext.updateViewLateCheck();
-                            setImageDefault();
-
-                            if (!isOnlineNet()) {
-                                //loadin(false);
-                                withoutInternet = false;
+                            } else {
                                 myContext.constraintLayoutProgress.setVisibility(View.GONE);
-                                enviarToast(false);
+                                //loadin(false);
+                                Toast.makeText(myContext, "Error al registrar", Toast.LENGTH_SHORT).show();
                             }
                         } else {
-                            loadin(false);
-                            Toast.makeText(myContext, "Error al registrar", Toast.LENGTH_SHORT).show();
+                            //loadin(false);
+
+                            myContext.constraintLayoutProgress.setVisibility(View.GONE);
+                            Toast.makeText(myContext, "Te encuentras a "+getNumByDecimal(distance)+" m de distancia de la geocerca", Toast.LENGTH_SHORT).show();
                         }
                     }
                 });
@@ -551,15 +688,21 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         }
     }
 
+    private String getNumByDecimal(float valor){
+        DecimalFormat format = new DecimalFormat();
+        format.setMaximumFractionDigits(1); //Define decimales.
+        return format.format(valor);
+    }
+
 
     private void enviarToast(boolean b) {
         CharSequence text;
         int duration = Toast.LENGTH_SHORT;
         if (b) {
-            if (numberChecksSendLate == 1) {
+            if (myContext.numberChecksSendLate == 1) {
                 text = "Registro enviado";
             } else {
-                text = "Se enviaron " + numberChecksSendLate + " registros";
+                text = "Se enviaron " + myContext.numberChecksSendLate + " registros";
             }
         } else {
             text = "Registro pendiente, conectate a internet para enviar!!";
@@ -605,6 +748,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
     }
 
     private void startLocation() {
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             if (ContextCompat.checkSelfPermission(myContext, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
                 if (gpsActived()) {
@@ -808,11 +952,90 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
     public void onResume() {
         timezoneID = TimeZone.getDefault().getID();
         employee = dbEmployees.getEmployee(authProvider.getId());
+        updateGeocerca = false;
+        //if(myContext.geoRadio == 0){
+            reviewGeocerca();
+        //}
+
         if(employee!=null){
             setGreeting();
             reviewTakePhoto();
         }
         super.onResume();
+    }
+
+    private void reviewGeocerca() {
+        SharedPreferences sharedPref = myContext.getSharedPreferences("geocerca", Context.MODE_PRIVATE);
+        myContext.geoLat = sharedPref.getFloat("geoLat",0);
+        myContext.geoLong = sharedPref.getFloat("geoLong",0);
+        myContext.geoRadio = sharedPref.getFloat("geoRadio",0);
+        myContext.idGeocerca = sharedPref.getString("idGeocerca","");
+        if(myContext.geoRadio == 0){
+            if(dbBitacoras.getBitacorasByIdUser(authProvider.getId()).size() != 0){
+                myContext.updateData = true;
+                Intent i = new Intent(myContext, GeocercasActivity.class);
+                i.putExtra("notComeBack", true);
+                i.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
+                startActivity(i);
+            } else {
+                bitacoraProvider.getBitacorasByUser(authProvider.getId()).get().addOnSuccessListener(new OnSuccessListener<QuerySnapshot>() {
+                    @Override
+                    public void onSuccess(QuerySnapshot querySnapshot) {
+                        if(!querySnapshot.isEmpty()){
+                            if(querySnapshot.size() != 0){
+                                myContext.updateData = true;
+                                Intent i = new Intent(myContext, GeocercasActivity.class);
+                                i.putExtra("notComeBack", true);
+                                if(myContext.reviewSettings){
+                                    i.putExtra("reviewSettings", true);
+                                }
+                                i.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
+                                startActivity(i);
+                            } else {
+                                updateGeocerca = true;
+                            }
+                        } else {
+                           myContext.removeGeocerca();
+                            updateGeocerca = true;
+                        }
+                    }
+                });
+            }
+        } else {
+            if(!firstReviewGeoface && !myContext.getIntent().getBooleanExtra("notRevie",false)){
+                firstReviewGeoface = true;
+                bitacoraProvider.getBitacorasByUser(authProvider.getId()).get().addOnSuccessListener(new OnSuccessListener<QuerySnapshot>() {
+                    @Override
+                    public void onSuccess(QuerySnapshot querySnapshot) {
+                        if(!querySnapshot.isEmpty()){
+                            if(querySnapshot.size() != 0){
+                                myContext.updateData = true;
+                                Intent i = new Intent(myContext, GeocercasActivity.class);
+                                i.putExtra("notComeBack", true);
+                                if(myContext.reviewSettings){
+                                    i.putExtra("reviewSettings", true);
+                                }
+                                i.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
+                                startActivity(i);
+                            } else {
+                                updateGeocerca = true;
+                            }
+                        } else {
+                            myContext.removeGeocerca();
+                            dbBitacoras.deleteAllBitacoras();
+                            updateGeocerca = true;
+                        }
+                    }
+                });
+            }
+            if(dbBitacoras.getBitacorasByIdUser(authProvider.getId()).size() == 0){
+                myContext.removeGeocerca();
+            } else {
+                updateGeocerca = true;
+                createGeofencig();
+            }
+            //updateGeocerca = false;
+        }
     }
 
     @Override
@@ -821,6 +1044,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         if (locationCallback != null && fusedLocation != null) {
             fusedLocation.removeLocationUpdates(locationCallback);
         }
+        myContext.removeGeocerca();
         handler.removeCallbacks(runnable);
     }
 
@@ -834,11 +1058,17 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         map.getUiSettings().setAllGesturesEnabled(false);
         map.getUiSettings().setIndoorLevelPickerEnabled(false);
 
-        locationRequest = new com.google.android.gms.location.LocationRequest();
+        /*locationRequest = new LocationRequest.Builder(1000);
         locationRequest.setInterval(1000);
-        locationRequest.setFastestInterval(1000);
+        locationRequest.setFastestInterval(500);
         locationRequest.setPriority(Priority.PRIORITY_HIGH_ACCURACY);
-        locationRequest.setSmallestDisplacement(3);
+        locationRequest.setSmallestDisplacement(2);*/
+
+        locationRequest = new LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 100)
+                .setWaitForAccurateLocation(false)
+                .setMinUpdateIntervalMillis(500)
+                .setMaxUpdateDelayMillis(100)
+                .build();
 
         startLocation();
     }

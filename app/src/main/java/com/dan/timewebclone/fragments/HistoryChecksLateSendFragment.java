@@ -136,7 +136,6 @@ public class HistoryChecksLateSendFragment extends Fragment {
     }
 
     public void getChecksById() {
-
         if(checksProvider!=null){
         if(myContext!=null){
             ArrayList<Check> checks = dbChecks.getChecksNotSendSucces(authProvider.getId());
@@ -159,11 +158,9 @@ public class HistoryChecksLateSendFragment extends Fragment {
                     } else {
                         textViewNoChecks.setVisibility(View.GONE);
                     }
-
-                }
-            });
-
-        }
+                    }
+                });
+            }
         }
     }
 
@@ -341,22 +338,29 @@ public class HistoryChecksLateSendFragment extends Fragment {
             checksProvider.getChecksNotSend(authProvider.getId()).get().addOnSuccessListener(new OnSuccessListener<QuerySnapshot>() {
                 @Override
                 public void onSuccess(QuerySnapshot queryDocumentSnapshots) {
-                    Check check;
-                    int i = 0;
-                    String timezoneID = TimeZone.getDefault().getID();
-                    Calendar calendar = Calendar.getInstance(TimeZone.getTimeZone(timezoneID), Locale.getDefault());
-                    Date time2 = calendar.getTime();
-                    for (DocumentSnapshot document: queryDocumentSnapshots.getDocuments()) {
-                        check = document.toObject(Check.class);
-                        i++;
-                        checksProvider.updateStatus(check.getIdCheck(), tipeCheck, time2.getTime());
-                    }
-                    if(i != 0){
-                        if (i == 1) {
-                            Toast.makeText(myContext, "Registro enviado", Toast.LENGTH_SHORT).show();
-                        } else {
-                            Toast.makeText(myContext, "Se enviaron " + i + " registros", Toast.LENGTH_SHORT).show();
+                    if(queryDocumentSnapshots.getDocuments().size()!=0){
+                        Check check;
+                        int i = 0;
+                        String timezoneID = TimeZone.getDefault().getID();
+                        Calendar calendar = Calendar.getInstance(TimeZone.getTimeZone(timezoneID), Locale.getDefault());
+                        Date time2 = calendar.getTime();
+                        for (DocumentSnapshot document : queryDocumentSnapshots.getDocuments()) {
+                            check = document.toObject(Check.class);
+                            i++;
+                            checksProvider.updateStatus(check.getIdCheck(), tipeCheck, time2.getTime());
                         }
+                        if(myContext.numberChecksSendLate != 0 && myContext.numberChecksSendLate != i){
+                            i=i+myContext.numberChecksSendLate;
+                        }
+                        if (i == 1) {
+                                myContext.updateChecksNotSend = false;
+                                Toast.makeText(myContext, "Registro enviado", Toast.LENGTH_SHORT).show();
+                        } else {
+                                myContext.updateChecksNotSend = false;
+                                Toast.makeText(myContext, "Se enviaron " + i + " registros", Toast.LENGTH_SHORT).show();
+                        }
+                    } else {
+                        myContext.updateChecksNotSend = false;
                     }
                 }
             });

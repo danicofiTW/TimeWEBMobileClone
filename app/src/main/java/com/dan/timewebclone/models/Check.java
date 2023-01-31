@@ -7,6 +7,8 @@ public class Check {
     private String idCheck;
     private String idUser;
     private String idCompany;
+    private String idGeocerca;
+    private String nameGeocerca;
     private String tipeCheck;
     private String urlImage;
     private String image;
@@ -77,6 +79,40 @@ public class Check {
         this.statusSend = statusSend;
         this.isDelete = isDelete;
         this.semana = semana;
+    }
+
+    public Check(String idCheck, String idUser, String idCompany, String idGeocerca, String nameGeocerca, String tipeCheck, String urlImage, String image, long time, long timeSend, double checkLat, double checkLong, int statusSend, boolean isDelete, int semana) {
+        this.idCheck = idCheck;
+        this.idUser = idUser;
+        this.idCompany = idCompany;
+        this.idGeocerca = idGeocerca;
+        this.nameGeocerca = nameGeocerca;
+        this.tipeCheck = tipeCheck;
+        this.urlImage = urlImage;
+        this.image = image;
+        this.time = time;
+        this.timeSend = timeSend;
+        this.checkLat = checkLat;
+        this.checkLong = checkLong;
+        this.statusSend = statusSend;
+        this.isDelete = isDelete;
+        this.semana = semana;
+    }
+
+    public String getIdGeocerca() {
+        return idGeocerca;
+    }
+
+    public void setIdGeocerca(String idGeocerca) {
+        this.idGeocerca = idGeocerca;
+    }
+
+    public String getNameGeocerca() {
+        return nameGeocerca;
+    }
+
+    public void setNameGeocerca(String nameGeocerca) {
+        this.nameGeocerca = nameGeocerca;
     }
 
     public int getSemana() {

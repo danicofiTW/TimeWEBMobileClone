@@ -59,7 +59,10 @@ public class DbChecks extends DbHelper{
             values.put("checkLong", check.getCheckLong());
             values.put("statusSend", check.getStatusSend());
             values.put("dateSend", check.getTimeSend());
-
+            if(check.getIdGeocerca()!=null){
+                values.put("idGeocerca", check.getNameGeocerca());
+                values.put("nameGeocerca", check.getNameGeocerca());
+            }
             values.put("isDelete", String.valueOf(check.isDelete()));
 
             if(check.getImage()!=null){
@@ -98,6 +101,7 @@ public class DbChecks extends DbHelper{
                 check = new Check();
                 check.setIdCheck(cursorChecks.getString(1));
                 check.setIdUser(cursorChecks.getString(2));
+                check.setIdCompany(cursorChecks.getString(3));
                 check.setTipeCheck(cursorChecks.getString(4));
                 check.setTime(dateL);
                 check.setCheckLat(latD);
@@ -107,6 +111,8 @@ public class DbChecks extends DbHelper{
                 check.setDelete(bool);
                 check.setStatusSend(cursorChecks.getInt(11));
                 check.setTimeSend(cursorChecks.getInt(12));
+                check.setIdGeocerca(cursorChecks.getString(13));
+                check.setNameGeocerca(cursorChecks.getString(14));
                 listChecks.add(check);
             } while (cursorChecks.moveToNext());
         }
@@ -139,6 +145,7 @@ public class DbChecks extends DbHelper{
                 check = new Check();
                 check.setIdCheck(cursorChecks.getString(1));
                 check.setIdUser(cursorChecks.getString(2));
+                check.setIdCompany(cursorChecks.getString(3));
                 check.setTipeCheck(cursorChecks.getString(4));
                 check.setImage(cursorChecks.getString(6));
                 check.setUrlImage(cursorChecks.getString(5));
@@ -148,6 +155,8 @@ public class DbChecks extends DbHelper{
                 check.setDelete(bool);
                 check.setStatusSend(cursorChecks.getInt(11));
                 check.setTimeSend(cursorChecks.getInt(12));
+                check.setIdGeocerca(cursorChecks.getString(13));
+                check.setNameGeocerca(cursorChecks.getString(14));
                 listChecks.add(check);
             } while (cursorChecks.moveToNext());
         }
@@ -177,6 +186,7 @@ public class DbChecks extends DbHelper{
             check = new Check();
             check.setIdCheck(cursorChecks.getString(1));
             check.setIdUser(cursorChecks.getString(2));
+            check.setIdCompany(cursorChecks.getString(3));
             check.setTipeCheck(cursorChecks.getString(4));
             check.setImage(cursorChecks.getString(6));
             check.setUrlImage(cursorChecks.getString(5));
@@ -185,6 +195,8 @@ public class DbChecks extends DbHelper{
             check.setCheckLong(longD);
             check.setStatusSend(cursorChecks.getInt(11));
             check.setTimeSend(cursorChecks.getInt(12));
+            check.setIdGeocerca(cursorChecks.getString(13));
+            check.setNameGeocerca(cursorChecks.getString(14));
         }
         cursorChecks.close();
         dbChecks.close();

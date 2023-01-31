@@ -3,6 +3,7 @@ package com.dan.timewebclone.fragments;
 import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.os.Bundle;
 
 import androidx.annotation.NonNull;
@@ -23,11 +24,13 @@ import android.widget.Toast;
 import com.airbnb.lottie.LottieAnimationView;
 import com.dan.timewebclone.R;
 import com.dan.timewebclone.activitys.HomeTW;
+import com.dan.timewebclone.activitys.ShowLocationActivity;
 import com.dan.timewebclone.adapters.ChecksDbAdapter;
 import com.dan.timewebclone.db.DbChecks;
 import com.dan.timewebclone.models.Check;
 import com.dan.timewebclone.providers.AuthProvider;
 import com.dan.timewebclone.providers.ChecksProvider;
+import com.dan.timewebclone.utils.AdapterItemClickListener;
 import com.dan.timewebclone.utils.RelativeTime;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.OnSuccessListener;
@@ -38,7 +41,7 @@ import com.google.firebase.firestore.QuerySnapshot;
 import java.util.ArrayList;
 import java.util.Collections;
 
-public class HistoryChecksSendOkFragment extends Fragment {
+public class HistoryChecksSendOkFragment extends Fragment  {
 
 
     private View mView;
@@ -63,6 +66,8 @@ public class HistoryChecksSendOkFragment extends Fragment {
     private Check ch;
     public ArrayList<Check> listChecks;
     public ArrayList<String> idDeleteChecks;
+    private Check check;
+    private int post;
 
     public HistoryChecksSendOkFragment() {
         // Required empty public constructor
@@ -241,9 +246,10 @@ public class HistoryChecksSendOkFragment extends Fragment {
     public void getChecksById() {
         if(checksProvider!=null){
         if(myContext!=null){
-            ArrayList<Check> checks = dbChecks.getChecksNotSendSucces(authProvider.getId());
+            ArrayList<Check> checks = dbChecks.getChecksSendSucces(authProvider.getId());
             checksDbAdapter = new ChecksDbAdapter(checks, myContext);
             mReciclerView.setAdapter(checksDbAdapter);
+           // mReciclerView.setNestedScrollingEnabled(false);
             checksDbAdapter.notifyDataSetChanged();
             //mReciclerView.scrollToPosition(checksDbAdapter.checks.size());
             //mReciclerView.scrollToPosition(0);
@@ -314,6 +320,8 @@ public class HistoryChecksSendOkFragment extends Fragment {
     }
 
 
+
+
     /*public  int compareToDate(Long dateCheck) {
         Date fechaInicial = new Date(dateCheck);
         Long n = new Date().getTime();
@@ -323,6 +331,51 @@ public class HistoryChecksSendOkFragment extends Fragment {
     }*/
 
 
+    /*@Override
+    public void onItemClickListener(Check check1, int position) {
+        check = check1;
+        post = position;
+        if(myContext.isViewDeleteSendOk() == View.GONE){
+            Intent i = new Intent(myContext, ShowLocationActivity.class);
+            i.putExtra("lat", check.getCheckLat());
+            i.putExtra("lng", check.getCheckLong());
+            i.putExtra("date", check.getTime());
+            i.putExtra("tipe", check.getTipeCheck());
+            i.putExtra("idCheck", check.getIdCheck());
+            myContext.startActivity(i);
+        } else {
+            checksDbAdapter.notifyDataSetChanged();
+        }
+    } else {
+        // if(!longClick){
+        if(!check.isDelete()) {
+            checksDbAdapter.onBindViewHolder(checksDbAdapter.onCreateViewHolder(), post).viewDelete.setVisibility(View.VISIBLE);
+            checksDbAdapter.viewHolders.get(post).imageViewDelete.setVisibility(View.VISIBLE);
+            context.idChecksDelete.add(check.getIdCheck());
+            check.setDelete(true);
+            dbChecks.updateCheckDelete(true, check.getIdCheck());
+            if(context.idChecksDelete.size() == checks.size()){
+                context.updateDeleteAllChecksSeendOk(true);
+            }
+            notifyDataSetChanged();
+            //check.setDelete(true);
+        } else {
+            holder.viewDelete.setVisibility(View.GONE);
+            holder.imageViewDelete.setVisibility(View.GONE);
+            check.setDelete(false);
+            dbChecks.updateCheckDelete(false, check.getIdCheck());
+            context.updateDeleteAllChecksSeendOk(false);
+            for (int i = 0; i < context.idChecksDelete.size(); i++) {
+                if (context.idChecksDelete.get(i).equals(check.getIdCheck())) {
+                    context.idChecksDelete.remove(i);
+                    break;
+                }
+            }
+
+            notifyDataSetChanged();
+        }
+    }
+    }*/
 
 
 }

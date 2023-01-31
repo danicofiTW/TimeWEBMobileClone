@@ -2,19 +2,11 @@ package com.dan.timewebclone.adapters;
 
 import static com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions.withCrossFade;
 
-import android.annotation.SuppressLint;
-import android.content.ContentResolver;
-import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.graphics.Color;
-import android.graphics.ImageDecoder;
 import android.location.Address;
 import android.location.Geocoder;
-import android.net.Uri;
-import android.os.Build;
-import android.provider.MediaStore;
 import android.util.Base64;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -23,21 +15,13 @@ import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.cardview.widget.CardView;
-import androidx.collection.CircularArray;
-import androidx.coordinatorlayout.widget.CoordinatorLayout;
-import androidx.core.graphics.drawable.RoundedBitmapDrawable;
-import androidx.core.graphics.drawable.RoundedBitmapDrawableFactory;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.bumptech.glide.Glide;
-import com.bumptech.glide.load.engine.DiskCacheStrategy;
 import com.dan.timewebclone.R;
 import com.dan.timewebclone.activitys.HomeTW;
-import com.dan.timewebclone.activitys.ShowImageActivity;
 import com.dan.timewebclone.activitys.ShowLocationActivity;
 import com.dan.timewebclone.db.DbChecks;
 import com.dan.timewebclone.fragments.HistoryChecksSendOkFragment;
@@ -46,16 +30,10 @@ import com.dan.timewebclone.models.Employee;
 import com.dan.timewebclone.providers.AuthProvider;
 import com.dan.timewebclone.providers.ChecksProvider;
 import com.dan.timewebclone.providers.EmployeeProvider;
+import com.dan.timewebclone.utils.AdapterItemClickListener;
 import com.dan.timewebclone.utils.RelativeTime;
-import com.firebase.ui.firestore.FirestoreRecyclerOptions;
-import com.google.firebase.firestore.ListenerRegistration;
-import com.squareup.picasso.Picasso;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.File;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -80,12 +58,15 @@ public class ChecksDbAdapter extends RecyclerView.Adapter<ChecksDbAdapter.CheckV
     private SimpleDateFormat sdfDate;
     private DbChecks dbChecks;
 
+    private AdapterItemClickListener itemClickListener;
+
     HistoryChecksSendOkFragment historyChecksSendOkFragment;
 
 
 
     public ChecksDbAdapter(ArrayList<Check> listChecks, HomeTW context) {
         this.context = context;
+        //this.itemClickListener = itemClickListener;
         authP = new AuthProvider();
         employeeProvider = new EmployeeProvider();
         checksProvider = new ChecksProvider();
@@ -107,6 +88,7 @@ public class ChecksDbAdapter extends RecyclerView.Adapter<ChecksDbAdapter.CheckV
         View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.card_history_checks, parent, false);
         return new ChecksDbAdapter.CheckViewHolder(view);
     }
+
 
     @Override
     public void onBindViewHolder(@NonNull CheckViewHolder holder, int position) {
@@ -161,17 +143,25 @@ public class ChecksDbAdapter extends RecyclerView.Adapter<ChecksDbAdapter.CheckV
             holder.textViewTipeCheck.setTextColor(context.getColor(R.color.colorRedLigth));
         }
 
-        try {
-            Geocoder geocoder = new Geocoder(context);
-            List<Address> addressList = geocoder.getFromLocation(checks.get(position).getCheckLat(), checks.get(position).getCheckLong(), 1);
-            String city = addressList.get(0).getLocality();
-            //String country = addressList.get(0).getCountryName();
-            String address = addressList.get(0).getAddressLine(0);
-            holder.textViewGeocerca.setText(address + " " + city);
-            openLocation(holder, checks.get(position));
+        if(checks.get(position).getIdGeocerca() == null){
+            try {
+                Geocoder geocoder = new Geocoder(context);
+                List<Address> addressList = geocoder.getFromLocation(checks.get(position).getCheckLat(), checks.get(position).getCheckLong(), 1);
+                String city = addressList.get(0).getLocality();
+                //String country = addressList.get(0).getCountryName();
+                String address = addressList.get(0).getAddressLine(0);
+                holder.textViewGeocerca.setText(address + " " + city);
+                /*holder.itemView.setOnClickListener (v -> {
+                    itemClickListener.onItemClickListener(checks.get(position), position);
+                });*/
+                openLocation(holder, checks.get(position));
 
-        } catch (IOException e) {
-            Log.d("Error:", "Mensaje de error: " + e.getMessage());
+            } catch (IOException e) {
+                Log.d("Error:", "Mensaje de error: " + e.getMessage());
+            }
+        } else {
+            holder.textViewGeocerca.setText(checks.get(position).getNameGeocerca());
+            openLocation(holder, checks.get(position));
         }
 
         setImage(holder, position);
@@ -251,6 +241,7 @@ public class ChecksDbAdapter extends RecyclerView.Adapter<ChecksDbAdapter.CheckV
     }
 
     private void openLocation(ChecksDbAdapter.CheckViewHolder holder, Check check) {
+
         holder.myView.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {

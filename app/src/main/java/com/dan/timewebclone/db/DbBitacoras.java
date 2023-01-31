@@ -8,7 +8,11 @@ import android.database.sqlite.SQLiteDatabase;
 import androidx.annotation.Nullable;
 
 import com.dan.timewebclone.models.Bitacora;
+import com.dan.timewebclone.models.Check;
 import com.dan.timewebclone.models.Geocerca;
+
+import java.util.ArrayList;
+import java.util.Collections;
 
 public class DbBitacoras extends DbHelper{
 
@@ -89,6 +93,37 @@ public class DbBitacoras extends DbHelper{
         dbHelper.close();
         //Collections.reverse(listChecks);
         return bitacora;
+    }
+
+    public ArrayList<Bitacora> getBitacorasByIdUser(String idUser){
+        DbHelper dbHelper = new DbHelper(myContext);
+        SQLiteDatabase db = dbHelper.getWritableDatabase();
+
+        ArrayList<Bitacora> listBitacoras = new ArrayList<>();
+        Bitacora bitacora = null;
+        Cursor cursorChecks = null;
+
+
+        cursorChecks = db.rawQuery("SELECT * FROM " +TABLE_BITACORA+ " WHERE idUser='"+idUser+"' ", null);
+        if(cursorChecks.moveToFirst()){
+            do{
+                bitacora = new Bitacora();
+                bitacora.setIdBitacora(cursorChecks.getString(1));
+                bitacora.setIdGeocerca(cursorChecks.getString(2));
+                bitacora.setIdUser(cursorChecks.getString(3));
+
+                if(cursorChecks.getInt(4) == 1){
+                    bitacora.setStateActivated(true);
+                } else {
+                    bitacora.setStateActivated(false);
+                }
+                listBitacoras.add(bitacora);
+            } while (cursorChecks.moveToNext());
+        }
+        dbHelper.close();
+        cursorChecks.close();
+        //Collections.reverse(listBitacoras);
+        return listBitacoras;
     }
 
     //Eliminar todas las geocercas

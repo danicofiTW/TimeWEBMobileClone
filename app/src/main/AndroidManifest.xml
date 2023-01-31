@@ -29,6 +29,9 @@
         tools:replace="android:theme"
         tools:targetApi="31">
         <activity
+            android:name=".activitys.GeocercasActivity"
+            android:exported="false" />
+        <activity
             android:name=".activitys.SettingsActivity"
             android:exported="false" />
         <activity

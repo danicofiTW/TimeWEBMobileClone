@@ -46,6 +46,7 @@
         android:orientation="vertical"
         android:background="@color/colorOrangeTime"
         android:gravity="center"
+        android:clickable="true"
         android:visibility="gone">
 
         <ImageView

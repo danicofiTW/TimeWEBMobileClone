@@ -13,7 +13,7 @@ public class DbHelper extends SQLiteOpenHelper {
 
     Context myContext;
 
-    private static final int DATABASE_VERSION=14;
+    private static final int DATABASE_VERSION=15;
     private static final String DATABASE_NAME="timeWEBMobile.db";
     public static final String TABLE_CHECKS="checks";
     public static final String TABLE_EMPLOYEES="employees";
@@ -58,7 +58,9 @@ public class DbHelper extends SQLiteOpenHelper {
                 "checkLong TEXT NOT NULL," +
                 "isDelete TEXT NOT NULL," +
                 "statusSend INTEGER NOT NULL," +
-                "dateSend TEXT NOT NULL)");
+                "dateSend TEXT NOT NULL,"+
+                "idGeocerca TEXT,"+
+                "nameGeocerca TEXT)");
 
         sqLiteDatabase.execSQL("CREATE TABLE " + TABLE_GEOCERCA + "(" +
                 "id INTEGER PRIMARY KEY AUTOINCREMENT," +
@@ -88,6 +90,8 @@ public class DbHelper extends SQLiteOpenHelper {
         //eliminarTabla
         sqLiteDatabase.execSQL("DROP TABLE IF EXISTS " + TABLE_EMPLOYEES);
         sqLiteDatabase.execSQL("DROP TABLE IF EXISTS " + TABLE_CHECKS);
+        sqLiteDatabase.execSQL("DROP TABLE IF EXISTS " + TABLE_BITACORA);
+        sqLiteDatabase.execSQL("DROP TABLE IF EXISTS " + TABLE_GEOCERCA);
         onCreate(sqLiteDatabase);
     }
 }

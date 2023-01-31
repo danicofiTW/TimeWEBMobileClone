@@ -98,7 +98,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="FECHA"
-                android:textColor="@color/colorBlueDate"
+                android:textColor="@color/colorBlueLigth"
                 android:textSize="20sp"
                 android:layout_marginTop="2dp"
                 android:layout_gravity="center"

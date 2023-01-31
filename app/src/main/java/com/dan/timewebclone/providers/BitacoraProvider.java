@@ -19,8 +19,12 @@ public class BitacoraProvider {
     }
 
     //Obtener registros por usuario
-    public Query getBitacoraByUser(String idUser) {
-        return collection.whereEqualTo("idUser", idUser).orderBy("alta", Query.Direction.ASCENDING);
+    public Query getBitacorasByUser(String idUser) {
+        return collection.whereEqualTo("idUser", idUser);
+    }
+
+    public Query getBitacorasByUserAndState(String idUser) {
+        return collection.whereEqualTo("idUser", idUser);
     }
 
 }
