@@ -97,6 +97,11 @@ public class GeocercasDbAdapter extends RecyclerView.Adapter<GeocercasDbAdapter.
         notifyDataSetChanged();
     }
 
+    public void filtrar(ArrayList<Geocerca> geocercas) {
+        this.geocercas = geocercas;
+        notifyDataSetChanged();
+    }
+
     @Override
     public int getItemCount() {
         return geocercas.size();

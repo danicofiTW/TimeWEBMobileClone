@@ -20,7 +20,8 @@
         android:layout_height="match_parent"
         android:layout_marginTop="34dp"
         android:layout_marginBottom="5dp"
-        android:background="@color/colorRV"/>
+        android:background="@color/colorRV"
+        tools:listitem="@layout/card_history_checks"/>
 
     <TextView
         android:id="@+id/textViewNoChecks"
@@ -32,7 +33,7 @@
         android:textStyle="italic"
         android:text="Sin registros enviados"
         android:textColor="@color/white"
-        android:visibility="visible"/>
+        android:visibility="gone"/>
 
 </FrameLayout>
 

@@ -5,10 +5,7 @@ import static com.bumptech.glide.load.resource.drawable.DrawableTransitionOption
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.location.Address;
-import android.location.Geocoder;
 import android.util.Base64;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -30,15 +27,12 @@ import com.dan.timewebclone.models.Employee;
 import com.dan.timewebclone.providers.AuthProvider;
 import com.dan.timewebclone.providers.ChecksProvider;
 import com.dan.timewebclone.providers.EmployeeProvider;
-import com.dan.timewebclone.utils.AdapterItemClickListener;
 import com.dan.timewebclone.utils.RelativeTime;
 
-import java.io.IOException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.List;
 
 public class ChecksDbAdapter extends RecyclerView.Adapter<ChecksDbAdapter.CheckViewHolder> {
 
@@ -58,7 +52,6 @@ public class ChecksDbAdapter extends RecyclerView.Adapter<ChecksDbAdapter.CheckV
     private SimpleDateFormat sdfDate;
     private DbChecks dbChecks;
 
-    private AdapterItemClickListener itemClickListener;
 
     HistoryChecksSendOkFragment historyChecksSendOkFragment;
 
@@ -66,7 +59,6 @@ public class ChecksDbAdapter extends RecyclerView.Adapter<ChecksDbAdapter.CheckV
 
     public ChecksDbAdapter(ArrayList<Check> listChecks, HomeTW context) {
         this.context = context;
-        //this.itemClickListener = itemClickListener;
         authP = new AuthProvider();
         employeeProvider = new EmployeeProvider();
         checksProvider = new ChecksProvider();
@@ -144,24 +136,25 @@ public class ChecksDbAdapter extends RecyclerView.Adapter<ChecksDbAdapter.CheckV
         }
 
         if(checks.get(position).getIdGeocerca() == null){
-            try {
+            holder.textViewGeocerca.setText("Sin geocerca asignada");
+           /* try {
                 Geocoder geocoder = new Geocoder(context);
                 List<Address> addressList = geocoder.getFromLocation(checks.get(position).getCheckLat(), checks.get(position).getCheckLong(), 1);
                 String city = addressList.get(0).getLocality();
                 //String country = addressList.get(0).getCountryName();
                 String address = addressList.get(0).getAddressLine(0);
                 holder.textViewGeocerca.setText(address + " " + city);
-                /*holder.itemView.setOnClickListener (v -> {
+                holder.itemView.setOnClickListener (v -> {
                     itemClickListener.onItemClickListener(checks.get(position), position);
-                });*/
+                });
                 openLocation(holder, checks.get(position));
 
             } catch (IOException e) {
                 Log.d("Error:", "Mensaje de error: " + e.getMessage());
-            }
+            }*/
         } else {
             holder.textViewGeocerca.setText(checks.get(position).getNameGeocerca());
-            openLocation(holder, checks.get(position));
+            //openLocation(holder, checks.get(position));
         }
 
         setImage(holder, position);
@@ -178,9 +171,8 @@ public class ChecksDbAdapter extends RecyclerView.Adapter<ChecksDbAdapter.CheckV
 
         }
 
-
+        openLocation(holder, checks.get(position));
         longCLickCheck(holder,checks.get(position));
-
         reviewDate(holder, checks, position);
     }
 

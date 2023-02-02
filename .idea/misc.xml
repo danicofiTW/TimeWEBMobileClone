@@ -5,6 +5,7 @@
       <map>
         <entry key="..\:/Users/HPUser/AndroidStudioProjects/TimeWebClone/app/src/main/res/drawable-v24/circular_view.xml" value="0.1935" />
         <entry key="..\:/Users/HPUser/AndroidStudioProjects/TimeWebClone/app/src/main/res/drawable-v24/ic_edit_grey.xml" value="0.1135" />
+        <entry key="..\:/Users/HPUser/AndroidStudioProjects/TimeWebClone/app/src/main/res/drawable-v24/ic_launcher_foreground.xml" value="0.147" />
         <entry key="..\:/Users/HPUser/AndroidStudioProjects/TimeWebClone/app/src/main/res/drawable-v24/ic_person_white.xml" value="0.176" />
         <entry key="..\:/Users/HPUser/AndroidStudioProjects/TimeWebClone/app/src/main/res/drawable/circle_background.xml" value="0.1945" />
         <entry key="..\:/Users/HPUser/AndroidStudioProjects/TimeWebClone/app/src/main/res/drawable/custom_checkbox.xml" value="0.1625" />
@@ -17,11 +18,33 @@
         <entry key="..\:/Users/HPUser/AndroidStudioProjects/TimeWebClone/app/src/main/res/drawable/ic_delete_white.xml" value="0.1645" />
         <entry key="..\:/Users/HPUser/AndroidStudioProjects/TimeWebClone/app/src/main/res/drawable/ic_edit_grey.xml" value="0.1135" />
         <entry key="..\:/Users/HPUser/AndroidStudioProjects/TimeWebClone/app/src/main/res/drawable/ic_image_white.xml" value="0.1645" />
+        <entry key="..\:/Users/HPUser/AndroidStudioProjects/TimeWebClone/app/src/main/res/drawable/ic_launcher_background.xml" value="0.147" />
         <entry key="..\:/Users/HPUser/AndroidStudioProjects/TimeWebClone/app/src/main/res/drawable/ic_refresh_white.xml" value="0.19" />
         <entry key="..\:/Users/HPUser/AndroidStudioProjects/TimeWebClone/app/src/main/res/drawable/ic_search.xml" value="0.1945" />
         <entry key="..\:/Users/HPUser/AndroidStudioProjects/TimeWebClone/app/src/main/res/drawable/ic_time_orange.xml" value="0.105" />
         <entry key="..\:/Users/HPUser/AndroidStudioProjects/TimeWebClone/app/src/main/res/drawable/rounded_button.xml" value="0.1" />
         <entry key="..\:/Users/HPUser/AndroidStudioProjects/TimeWebClone/app/src/main/res/drawable/splash_screen.xml" value="0.1925" />
+        <entry key="..\:/Users/HPUser/AndroidStudioProjects/TimeWebClone/app/src/main/res/layout-hdpi/fragment_register.xml" value="0.33" />
+        <entry key="..\:/Users/HPUser/AndroidStudioProjects/TimeWebClone/app/src/main/res/layout-long/fragment_register.xml" value="0.4475" />
+        <entry key="..\:/Users/HPUser/AndroidStudioProjects/TimeWebClone/app/src/main/res/layout-mdpi/fragment_register.xml" value="0.18645833333333334" />
+        <entry key="..\:/Users/HPUser/AndroidStudioProjects/TimeWebClone/app/src/main/res/layout-notlong/fragment_register.xml" value="0.18645833333333334" />
+        <entry key="..\:/Users/HPUser/AndroidStudioProjects/TimeWebClone/app/src/main/res/layout-small/fragment_register.xml" value="0.5972803347280334" />
+        <entry key="..\:/Users/HPUser/AndroidStudioProjects/TimeWebClone/app/src/main/res/layout-sw240dp/fragment_register.xml" value="0.18645833333333334" />
+        <entry key="..\:/Users/HPUser/AndroidStudioProjects/TimeWebClone/app/src/main/res/layout-sw320dp/fragment_register.xml" value="0.18645833333333334" />
+        <entry key="..\:/Users/HPUser/AndroidStudioProjects/TimeWebClone/app/src/main/res/layout-sw480dp/fragment_register.xml" value="0.15" />
+        <entry key="..\:/Users/HPUser/AndroidStudioProjects/TimeWebClone/app/src/main/res/layout-sw500dp/fragment_register.xml" value="0.15784832451499117" />
+        <entry key="..\:/Users/HPUser/AndroidStudioProjects/TimeWebClone/app/src/main/res/layout-sw600dp/activity_change_password.xml" value="0.2" />
+        <entry key="..\:/Users/HPUser/AndroidStudioProjects/TimeWebClone/app/src/main/res/layout-sw600dp/activity_geocercas.xml" value="0.13984375" />
+        <entry key="..\:/Users/HPUser/AndroidStudioProjects/TimeWebClone/app/src/main/res/layout-sw600dp/activity_profile.xml" value="0.16" />
+        <entry key="..\:/Users/HPUser/AndroidStudioProjects/TimeWebClone/app/src/main/res/layout-sw600dp/activity_settings.xml" value="0.14" />
+        <entry key="..\:/Users/HPUser/AndroidStudioProjects/TimeWebClone/app/src/main/res/layout-sw600dp/activity_show_location.xml" value="0.34305555555555556" />
+        <entry key="..\:/Users/HPUser/AndroidStudioProjects/TimeWebClone/app/src/main/res/layout-sw600dp/fragment_login.xml" value="0.13984375" />
+        <entry key="..\:/Users/HPUser/AndroidStudioProjects/TimeWebClone/app/src/main/res/layout-sw600dp/fragment_map.xml" value="0.304421768707483" />
+        <entry key="..\:/Users/HPUser/AndroidStudioProjects/TimeWebClone/app/src/main/res/layout-sw600dp/fragment_register.xml" value="0.13984375" />
+        <entry key="..\:/Users/HPUser/AndroidStudioProjects/TimeWebClone/app/src/main/res/layout-w320dp/fragment_register.xml" value="0.18645833333333334" />
+        <entry key="..\:/Users/HPUser/AndroidStudioProjects/TimeWebClone/app/src/main/res/layout-xhdpi/fragment_register.xml" value="0.10914855072463768" />
+        <entry key="..\:/Users/HPUser/AndroidStudioProjects/TimeWebClone/app/src/main/res/layout-xxhdpi/fragment_register.xml" value="0.18645833333333334" />
+        <entry key="..\:/Users/HPUser/AndroidStudioProjects/TimeWebClone/app/src/main/res/layout-xxxhdpi/fragment_register.xml" value="0.18645833333333334" />
         <entry key="..\:/Users/HPUser/AndroidStudioProjects/TimeWebClone/app/src/main/res/layout/action_bar_toolbar.xml" value="0.18541666666666667" />
         <entry key="..\:/Users/HPUser/AndroidStudioProjects/TimeWebClone/app/src/main/res/layout/action_bar_toolbar_geocercas.xml" value="0.3489583333333333" />
         <entry key="..\:/Users/HPUser/AndroidStudioProjects/TimeWebClone/app/src/main/res/layout/activity_change_password.xml" value="0.2" />
@@ -32,7 +55,7 @@
         <entry key="..\:/Users/HPUser/AndroidStudioProjects/TimeWebClone/app/src/main/res/layout/activity_settings.xml" value="0.18645833333333334" />
         <entry key="..\:/Users/HPUser/AndroidStudioProjects/TimeWebClone/app/src/main/res/layout/activity_show_image.xml" value="0.16458333333333333" />
         <entry key="..\:/Users/HPUser/AndroidStudioProjects/TimeWebClone/app/src/main/res/layout/activity_show_location.xml" value="0.18645833333333334" />
-        <entry key="..\:/Users/HPUser/AndroidStudioProjects/TimeWebClone/app/src/main/res/layout/card_geocerca.xml" value="0.3489583333333333" />
+        <entry key="..\:/Users/HPUser/AndroidStudioProjects/TimeWebClone/app/src/main/res/layout/card_geocerca.xml" value="0.25" />
         <entry key="..\:/Users/HPUser/AndroidStudioProjects/TimeWebClone/app/src/main/res/layout/card_history_checks.xml" value="0.33" />
         <entry key="..\:/Users/HPUser/AndroidStudioProjects/TimeWebClone/app/src/main/res/layout/content_home_tw.xml" value="0.1" />
         <entry key="..\:/Users/HPUser/AndroidStudioProjects/TimeWebClone/app/src/main/res/layout/custom_checkbox.xml" value="0.18645833333333334" />

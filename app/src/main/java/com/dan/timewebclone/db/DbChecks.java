@@ -60,7 +60,7 @@ public class DbChecks extends DbHelper{
             values.put("statusSend", check.getStatusSend());
             values.put("dateSend", check.getTimeSend());
             if(check.getIdGeocerca()!=null){
-                values.put("idGeocerca", check.getNameGeocerca());
+                values.put("idGeocerca", check.getIdGeocerca());
                 values.put("nameGeocerca", check.getNameGeocerca());
             }
             values.put("isDelete", String.valueOf(check.isDelete()));

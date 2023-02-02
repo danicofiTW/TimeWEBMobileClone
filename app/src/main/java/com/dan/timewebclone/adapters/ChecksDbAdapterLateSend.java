@@ -132,7 +132,9 @@ public class ChecksDbAdapterLateSend extends RecyclerView.Adapter<ChecksDbAdapte
 
 
         if(checks.get(position).getIdGeocerca()==null){
-            try {
+
+            holder.textViewGeocerca.setText("Sin geocerca asignada");
+            /*try {
                 Geocoder geocoder = new Geocoder(context);
                 List<Address> addressList = geocoder.getFromLocation(checks.get(position).getCheckLat(), checks.get(position).getCheckLong(), 1);
                 String city = addressList.get(0).getLocality();
@@ -143,11 +145,13 @@ public class ChecksDbAdapterLateSend extends RecyclerView.Adapter<ChecksDbAdapte
 
             } catch (IOException e) {
                 Log.d("Error:", "Mensaje de error: " + e.getMessage());
-            }
+            }*/
         } else {
             holder.textViewGeocerca.setText(checks.get(position).getNameGeocerca());
-            openLocation(holder, checks.get(position));
+            //openLocation(holder, checks.get(position));
         }
+
+
 
         if(checks.get(position).isDelete()){
             holder.viewDelete.setVisibility(View.VISIBLE);
@@ -158,8 +162,8 @@ public class ChecksDbAdapterLateSend extends RecyclerView.Adapter<ChecksDbAdapte
         }
 
 
+        openLocation(holder, checks.get(position));
         longCLickCheck(holder, checks.get(position));
-
         reviewDate(holder, checks, position);
     }
 

@@ -118,33 +118,35 @@ public class DbGeocercas extends DbHelper{
         Geocerca geocerca = null;
         Cursor cursorGeocerca = null;
 
-        cursorGeocerca = db.rawQuery("SELECT * FROM " + TABLE_CHECKS + "", null);
+        cursorGeocerca = db.rawQuery("SELECT * FROM " + TABLE_GEOCERCA, null);
 
-        if(cursorGeocerca.moveToFirst()){
-            do{
-                float latD = Float.parseFloat(cursorGeocerca.getString(6));
-                float lngD = Float.parseFloat(cursorGeocerca.getString(7));
-                float radioD = Float.parseFloat(cursorGeocerca.getString(8));
-                long altaD = Long.parseLong(cursorGeocerca.getString(10));
-                geocerca = new Geocerca();
-                geocerca.setIdGeocerca(cursorGeocerca.getString(1));
-                geocerca.setIdCompany(cursorGeocerca.getString(2));
-                geocerca.setClave(cursorGeocerca.getString(3));
-                geocerca.setGeoNombre(cursorGeocerca.getString(4));
-                geocerca.setDescripcion(cursorGeocerca.getString(5));
-                geocerca.setGeoLat(latD);
-                geocerca.setGeoLong(lngD);
-                geocerca.setRadio(radioD);
-                geocerca.setDireccion(cursorGeocerca.getString(9));
-                geocerca.setAlta(altaD);
+        if(cursorGeocerca.getCount() != 0){
+            if(cursorGeocerca.moveToFirst()){
+                do{
+                    float latD = Float.parseFloat(cursorGeocerca.getString(6));
+                    float lngD = Float.parseFloat(cursorGeocerca.getString(7));
+                    float radioD = Float.parseFloat(cursorGeocerca.getString(8));
+                    long altaD = Long.parseLong(cursorGeocerca.getString(10));
+                    geocerca = new Geocerca();
+                    geocerca.setIdGeocerca(cursorGeocerca.getString(1));
+                    geocerca.setIdCompany(cursorGeocerca.getString(2));
+                    geocerca.setClave(cursorGeocerca.getString(3));
+                    geocerca.setGeoNombre(cursorGeocerca.getString(4));
+                    geocerca.setDescripcion(cursorGeocerca.getString(5));
+                    geocerca.setGeoLat(latD);
+                    geocerca.setGeoLong(lngD);
+                    geocerca.setRadio(radioD);
+                    geocerca.setDireccion(cursorGeocerca.getString(9));
+                    geocerca.setAlta(altaD);
 
-                if(cursorGeocerca.getInt(11) == 1){
-                    geocerca.setStatus(true);
-                } else {
-                    geocerca.setStatus(false);
-                }
-                geocercas.add(geocerca);
-            } while (cursorGeocerca.moveToNext());
+                    if(cursorGeocerca.getInt(11) == 1){
+                        geocerca.setStatus(true);
+                    } else {
+                        geocerca.setStatus(false);
+                    }
+                    geocercas.add(geocerca);
+                } while (cursorGeocerca.moveToNext());
+            }
         }
         cursorGeocerca.close();
         dbHelper.close();

@@ -101,7 +101,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
     private Toast mToast = null;
     int numberChecksSendLate = 0;
 
-    private final static int LOCATION_REQUEST_CODE = 1;
+    public final static int LOCATION_REQUEST_CODE = 1;
     private final static int SETTINGS_REQUEST_CODE = 2;
 
     private Marker marker;
@@ -193,7 +193,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                             .title("Tu posicion")
                             .icon(BitmapDescriptorFactory.fromResource(R.drawable.icon_employee_48)));
 
-                    map.moveCamera(CameraUpdateFactory.newCameraPosition(
+                    map.animateCamera(CameraUpdateFactory.newCameraPosition(
                             new CameraPosition.Builder()
                                     .target(new LatLng(location.getLatitude(), location.getLongitude()))
                                     .zoom(17f)
@@ -379,6 +379,13 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                 takePhoto();
             }
         });
+
+        circleImageViewMap.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                takePhoto();
+            }
+        });
         runnable.run();
 
         return mView;
@@ -468,9 +475,11 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         takePhoto = employee.isStateCamera();
         if (takePhoto) {
             imageViewPhotoMap.setVisibility(View.VISIBLE);
+            circleImageViewMap.setClickable(true);
             setImageDefault();
         } else {
             imageViewPhotoMap.setVisibility(View.GONE);
+            circleImageViewMap.setClickable(false);
             circleImageViewMap.setImageResource(R.drawable.ic_time_orange);
         }
     }
@@ -784,7 +793,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         }
     }
 
-    private void startLocation2() {
+    public void startLocation2() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             if (ContextCompat.checkSelfPermission(myContext, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
                 if (gpsActived()) {
@@ -812,7 +821,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         }
     }
 
-    private boolean gpsActived() {
+    public boolean gpsActived() {
         boolean isActive = false;
         LocationManager locationManager = (LocationManager) myContext.getSystemService(Context.LOCATION_SERVICE);
 
@@ -822,7 +831,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         return isActive;
     }
 
-    private void showAlertDialogNOGPS() {
+    public void showAlertDialogNOGPS() {
         //myContext.pdRevieData.dismiss();
         if (myContext.linearLayoutLoadingHome.getVisibility() == View.VISIBLE ) {
             myContext.linearLayoutLoadingHome.setVisibility(View.GONE);
@@ -839,7 +848,9 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
 
     }
 
-    private void checkLocationPermissions() {
+
+
+    public void checkLocationPermissions() {
         //myContext.pdRevieData.dismiss();
         if (myContext.linearLayoutLoadingHome.getVisibility() == View.VISIBLE) {
             myContext.linearLayoutLoadingHome.setVisibility(View.GONE);
@@ -1070,7 +1081,12 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                 .setMaxUpdateDelayMillis(100)
                 .build();
 
-        startLocation();
+
+        if(dbBitacoras.getBitacorasByIdUser(authProvider.getId()).size() == 0){
+            startLocation();
+        } else if(myContext.geoRadio != 0){
+            startLocation();
+        }
     }
 
     public void setGreeting(){

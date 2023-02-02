@@ -21,6 +21,7 @@ import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
+import android.widget.Switch;
 import android.widget.Toast;
 
 import com.dan.timewebclone.activitys.HomeTW;
@@ -43,15 +44,16 @@ import de.hdodenhof.circleimageview.CircleImageView;
 
 public class RegisterFragment extends Fragment{
 
-    View mView;
+
     private MainActivity myContext;
-    TextInputEditText textInputName, textInputClaveUser, textInputRFCCompany, textInputEmail, textInputPassword, textInputConfimPassword;
-    EditText editTextPhone;
-    Button btnRegister;
-    ProgressDialog mDialog;
-    CountryCodePicker countryCode;
-    CircleImageView imageViewBack;
-    LinearLayout linearLayoutRegister;
+    private TextInputEditText textInputName, textInputClaveUser, textInputRFCCompany, textInputEmail, textInputPassword, textInputConfimPassword;
+    private EditText editTextPhone;
+    private Button btnRegister;
+    private ProgressDialog mDialog;
+    private CountryCodePicker countryCode;
+    private CircleImageView imageViewBack;
+    private LinearLayout linearLayoutRegister;
+    private Switch switchAceptPerms;
 
     FragmentTransaction fragmentTransaction;
     FragmentManager fragmentManager;
@@ -90,6 +92,7 @@ public class RegisterFragment extends Fragment{
         editTextPhone = view.findViewById(R.id.editTextPhone);
         countryCode = view.findViewById(R.id.ccp);
         linearLayoutRegister = view.findViewById(R.id.linearLayoutRegister);
+        switchAceptPerms = view.findViewById(R.id.switch1);
 
         /*loginFragment = new LoginFragment();
         loginFragment.setViewLoginFragment(false);
@@ -153,8 +156,12 @@ public class RegisterFragment extends Fragment{
             //mAuth.sendCodeVerification(mPhone, mCallbacks);
             if(mPassword.length() >= 6){
                 if(Integer.parseInt(mPassword) == Integer.parseInt(mConfirmPassword)){
-                    mDialog.show();
+                    if(switchAceptPerms.isChecked()){
+                        mDialog.show();
                         register(mName, mClave, mRFC, mEmail, mPhone, mPassword);
+                    } else {
+                        Toast.makeText(myContext, "Acepta los permisos para continuar", Toast.LENGTH_LONG).show();
+                    }
                 } else{
                     Toast.makeText(myContext, "La contraseña debe conincidir", Toast.LENGTH_LONG).show();
                 }

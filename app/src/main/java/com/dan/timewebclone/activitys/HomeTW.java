@@ -44,6 +44,7 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.os.Environment;
+import android.os.Looper;
 import android.provider.MediaStore;
 import android.util.Base64;
 import android.util.Log;
@@ -490,18 +491,13 @@ public class HomeTW extends AppCompatActivity{
                 if(tipeCheck.toLowerCase().contains(textSearch.toLowerCase())){
                     checksFilterSend.add(checksSend.get(i));
                 } else {
-                    String location = null;
-                    try {
-                        Geocoder geocoder = new Geocoder(HomeTW.this);
-                        List<Address> addressList = geocoder.getFromLocation(checksSend.get(i).getCheckLat(), checksSend.get(i).getCheckLong(), 1);
-                        String city = addressList.get(0).getLocality();
-                        String address = addressList.get(0).getAddressLine(0);
-                        location = address+" "+city;
-                    }  catch (IOException e) {
-                        Log.d("Error:", "Mensaje de error: " + e.getMessage());
-                    }
-                    if(location!= null){
-                        if(location.toLowerCase().contains(textSearch.toLowerCase())){
+                    if(checksSend.get(i).getNameGeocerca() != null){
+                        if(checksSend.get(i).getNameGeocerca().toLowerCase().contains(textSearch.toLowerCase())){
+                            checksFilterSend.add(checksSend.get(i));
+                        }
+                    } else {
+                        String sinGeo = "Sin geocerca asignada";
+                        if(sinGeo.toLowerCase().contains(textSearch.toLowerCase())){
                             checksFilterSend.add(checksSend.get(i));
                         }
                     }
@@ -521,18 +517,13 @@ public class HomeTW extends AppCompatActivity{
                 if(tipeCheck1.toLowerCase().contains(textSearch.toLowerCase())){
                     checksFilterLateSend.add(checksLateSend.get(i));
                 } else {
-                    String location1 = null;
-                    try {
-                        Geocoder geocoder = new Geocoder(HomeTW.this);
-                        List<Address> addressList = geocoder.getFromLocation(checksLateSend.get(i).getCheckLat(), checksLateSend.get(i).getCheckLong(), 1);
-                        String city = addressList.get(0).getLocality();
-                        String address = addressList.get(0).getAddressLine(0);
-                        location1 = address+" "+city;
-                    }  catch (IOException e) {
-                        Log.d("Error:", "Mensaje de error: " + e.getMessage());
-                    }
-                    if(location1 != null){
-                        if(location1.toLowerCase().contains(textSearch.toLowerCase())){
+                    if(checksLateSend.get(i).getNameGeocerca() != null){
+                        if(checksLateSend.get(i).getNameGeocerca().toLowerCase().contains(textSearch.toLowerCase())){
+                            checksFilterLateSend.add(checksLateSend.get(i));
+                        }
+                    } else {
+                        String sinGeo = "Sin geocerca asignada";
+                        if(sinGeo.toLowerCase().contains(textSearch.toLowerCase())){
                             checksFilterLateSend.add(checksLateSend.get(i));
                         }
                     }
@@ -588,9 +579,19 @@ public class HomeTW extends AppCompatActivity{
             if(permissions.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED){
                 takePhoto();
             }
-        } else if(requestCode == REQUEST_PERMISSION_WRITE_STORAGE){
-            if(permissions.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED){
-                takePhoto();
+        } else if (requestCode == mapFragment.LOCATION_REQUEST_CODE) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+                    if (mapFragment.gpsActived()) {
+                        mapFragment.startLocation2();
+                    } else {
+                        mapFragment.showAlertDialogNOGPS();
+                    }
+                } else {
+                    mapFragment.checkLocationPermissions();
+                }
+            } else {
+                mapFragment.checkLocationPermissions();
             }
         }
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
@@ -605,7 +606,7 @@ public class HomeTW extends AppCompatActivity{
                ){
                    takePhoto();
                } else {
-                   ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE, Manifest.permission.CAMERA}, 0);
+                   ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE, Manifest.permission.CAMERA}, REQUEST_PERMISSION_CAMERA);
                }
            } else {
                takePhoto();

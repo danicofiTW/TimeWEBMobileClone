@@ -47,12 +47,17 @@
         android:background="@color/colorOrangeTime"
         android:gravity="center"
         android:clickable="true"
-        android:visibility="gone">
+        android:visibility="visible">
 
-        <ImageView
+        <com.airbnb.lottie.LottieAnimationView
             android:layout_width="150dp"
             android:layout_height="150dp"
-            android:src="@drawable/ic_time_white"/>
+            app:lottie_imageAssetsFolder="assets"
+            app:lottie_fileName="timeweb-mobile-white.json"
+            android:layout_gravity="center"
+            android:layout_marginBottom="70dp"
+            app:lottie_loop="true"
+            app:lottie_autoPlay="true"/>
 
         <com.airbnb.lottie.LottieAnimationView
             android:id="@+id/animation"

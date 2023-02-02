@@ -3,7 +3,6 @@ package com.dan.timewebclone.fragments;
 import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
-import android.content.Intent;
 import android.os.Bundle;
 
 import androidx.annotation.NonNull;
@@ -24,16 +23,13 @@ import android.widget.Toast;
 import com.airbnb.lottie.LottieAnimationView;
 import com.dan.timewebclone.R;
 import com.dan.timewebclone.activitys.HomeTW;
-import com.dan.timewebclone.activitys.ShowLocationActivity;
 import com.dan.timewebclone.adapters.ChecksDbAdapter;
 import com.dan.timewebclone.db.DbChecks;
 import com.dan.timewebclone.models.Check;
 import com.dan.timewebclone.providers.AuthProvider;
 import com.dan.timewebclone.providers.ChecksProvider;
-import com.dan.timewebclone.utils.AdapterItemClickListener;
 import com.dan.timewebclone.utils.RelativeTime;
 import com.google.android.gms.tasks.OnCompleteListener;
-import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.QuerySnapshot;
@@ -102,10 +98,12 @@ public class HistoryChecksSendOkFragment extends Fragment  {
         textViewTitleHistory = mView.findViewById(R.id.textViewTitleHistoryChecks);
         imageViewCancelDelete = mView.findViewById(R.id.imageViewCancelDelete);
         textViewNoChecks = mView.findViewById(R.id.textViewNoChecks);
+        builderDialogUpdateChecks = new AlertDialog.Builder(myContext);
+
         linearLayoutManager = new LinearLayoutManager(myContext);
         mReciclerView.setLayoutManager(linearLayoutManager);
         mReciclerView.setHasFixedSize(true);
-        builderDialogUpdateChecks = new AlertDialog.Builder(myContext);
+
         authProvider = new AuthProvider();
         checksProvider = new ChecksProvider();
         dbChecks = new DbChecks(myContext);

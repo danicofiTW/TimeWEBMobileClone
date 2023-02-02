@@ -266,11 +266,11 @@ public class ProfileActivity extends AppCompatActivity {
             Bitmap mImage = BitmapFactory.decodeFile(mImageFile.getAbsolutePath());
             Bitmap mImageReview = reviewOrientationImage(mImage);
 
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            /*ByteArrayOutputStream baos = new ByteArrayOutputStream();
             mImageReview.compress(Bitmap.CompressFormat.JPEG, 85, baos);
             byte[] image = baos.toByteArray();
             imagetoBase64 = Base64.encodeToString(image,Base64.DEFAULT);
-            dbEmployees.saveImage(authProvider.getId(),imagetoBase64);
+            dbEmployees.saveImage(authProvider.getId(),imagetoBase64);*/
             circleImageProfile.setImageBitmap(mImageReview);
             saveImage(imagetoBase64);
         }

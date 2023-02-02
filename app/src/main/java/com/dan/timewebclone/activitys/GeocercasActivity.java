@@ -330,6 +330,20 @@ public class GeocercasActivity extends AppCompatActivity {
     }
 
     private void filterTextSearchView(String newText) {
+        ArrayList<Geocerca> mGeocercas = dbGeocercas.getAllGeocercas();
+        ArrayList<Geocerca> mGeocercasFilter = new ArrayList<>();
+        for (int i = 0; i < mGeocercas.size(); i++) {
+            String nameGeo = mGeocercas.get(i).getGeoNombre();
+            if (nameGeo.toLowerCase().contains(newText.toLowerCase())) {
+                mGeocercasFilter.add(mGeocercas.get(i));
+            } else {
+                String directGeo = mGeocercas.get(i).getDireccion();
+                if(directGeo.toLowerCase().contains(newText.toLowerCase())){
+                    mGeocercasFilter.add(mGeocercas.get(i));
+                }
+            }
+        }
+        geocercasDbAdapter.filtrar(mGeocercasFilter);
     }
 
     public boolean isOnlineNet() {
