@@ -244,9 +244,9 @@ public class GeocercasActivity extends AppCompatActivity {
             in.putExtra("geoLong", geoLong);*/
             in.putExtra("geoRadio", geoRadio);
             in.putExtra("notRevie", true);
-            if(reviewSettings){
+            //if(reviewSettings){
                 in.putExtra("reviewSettings", true);
-            }
+            //}
             in.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
             startActivity(in);
         } else {

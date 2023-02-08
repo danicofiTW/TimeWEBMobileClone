@@ -102,7 +102,18 @@
                     android:src="@drawable/icon_delete_check_green"
                     android:scaleType="centerCrop"
                     android:layout_gravity="bottom|right"
+                    android:visibility="gone"
+                    android:animateLayoutChanges="true"/>
+
+                <com.airbnb.lottie.LottieAnimationView
+                    android:id="@+id/animationDeleteCheck"
+                    android:layout_width="30dp"
+                    android:layout_height="30dp"
+                    app:lottie_imageAssetsFolder="assets"
+                    android:layout_gravity="bottom|right"
+                    app:lottie_fileName="delete-check.json"
                     android:visibility="gone"/>
+
             </FrameLayout>
 
             <LinearLayout

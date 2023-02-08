@@ -266,11 +266,11 @@ public class ProfileActivity extends AppCompatActivity {
             Bitmap mImage = BitmapFactory.decodeFile(mImageFile.getAbsolutePath());
             Bitmap mImageReview = reviewOrientationImage(mImage);
 
-            /*ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
             mImageReview.compress(Bitmap.CompressFormat.JPEG, 85, baos);
             byte[] image = baos.toByteArray();
             imagetoBase64 = Base64.encodeToString(image,Base64.DEFAULT);
-            dbEmployees.saveImage(authProvider.getId(),imagetoBase64);*/
+            dbEmployees.saveImage(authProvider.getId(),imagetoBase64);
             circleImageProfile.setImageBitmap(mImageReview);
             saveImage(imagetoBase64);
         }
@@ -284,25 +284,27 @@ public class ProfileActivity extends AppCompatActivity {
             try {
                 InputStream fi = getContentResolver().openInputStream(Uri.fromFile(mImageFile));
                 ei = new ExifInterface(fi);
+                int orientation = ei.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_UNDEFINED);
+                switch(orientation) {
+                    case ExifInterface.ORIENTATION_ROTATE_90:
+                        rotatedBitmap = rotateImage(compressImage, 90);
+                        break;
+                    case ExifInterface.ORIENTATION_ROTATE_180:
+                        rotatedBitmap = rotateImage(compressImage, 180);
+                        break;
+                    case ExifInterface.ORIENTATION_ROTATE_270:
+                        rotatedBitmap = rotateImage(compressImage, 270);
+                        break;
+                    case ExifInterface.ORIENTATION_NORMAL:
+                    default:
+                        rotatedBitmap = compressImage;
+                }
             } catch (IOException e) {
+                rotatedBitmap = compressImage;
                 e.printStackTrace();
             }
-            int orientation = ei.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_UNDEFINED);
-
-            switch(orientation) {
-                case ExifInterface.ORIENTATION_ROTATE_90:
-                    rotatedBitmap = rotateImage(compressImage, 90);
-                    break;
-                case ExifInterface.ORIENTATION_ROTATE_180:
-                    rotatedBitmap = rotateImage(compressImage, 180);
-                    break;
-                case ExifInterface.ORIENTATION_ROTATE_270:
-                    rotatedBitmap = rotateImage(compressImage, 270);
-                    break;
-                case ExifInterface.ORIENTATION_NORMAL:
-                default:
-                    rotatedBitmap = compressImage;
-            }
+        } else {
+            rotatedBitmap = compressImage;
         }
         return rotatedBitmap;
     }

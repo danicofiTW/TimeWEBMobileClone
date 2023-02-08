@@ -45,7 +45,9 @@ public class HistoryChecksSendOkFragment extends Fragment  {
     public ImageView deleteChecks, imageViewCancelDelete;
     private LottieAnimationView animation;
     public CheckBox deleteAllChecks;
-    private TextView textViewNumberChecksDelete, textViewTitleHistory, textViewNoChecks;
+    public TextView textViewNumberChecksDelete;
+    private TextView textViewTitleHistory;
+    private TextView textViewNoChecks;
     private FrameLayout frameLayoutNumberChecksDelete;
     private LinearLayout linearLayoutDeleteChecks;
 
@@ -117,6 +119,8 @@ public class HistoryChecksSendOkFragment extends Fragment  {
         //checksDbAdapter.updateChecks(dbChecks.getChecksSendSucces(authProvider.getId()));
         if(checksDbAdapter.checks.size() != 0){
             textViewNoChecks.setVisibility(View.GONE);
+        } else {
+            textViewNoChecks.setVisibility(View.VISIBLE);
         }
         return mView;
     }

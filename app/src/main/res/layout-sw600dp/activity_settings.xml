@@ -67,13 +67,19 @@
             android:textStyle="italic"
             android:layout_marginTop="40dp"/>
 
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:layout_marginLeft="5dp"
+        android:layout_marginRight="5dp"
+        android:layout_marginTop="80dp"
+        android:layout_gravity="center">
+
         <LinearLayout
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:layout_marginTop="80dp"
-            android:layout_marginLeft="5dp"
-            android:layout_marginRight="5dp"
             android:layout_gravity="center">
 
             <FrameLayout
@@ -116,6 +122,67 @@
 
         </LinearLayout>
 
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="45dp"
+            android:layout_gravity="center">
+
+            <FrameLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:visibility="visible">
+
+                <View
+                    android:layout_width="70dp"
+                    android:layout_height="70dp"
+                    android:background="@drawable/circular_view"/>
+
+                <ImageView
+                    android:layout_width="60dp"
+                    android:layout_height="60dp"
+                    android:src="@drawable/ic_biometrics_white"
+                    android:layout_gravity="center"/>
+
+            </FrameLayout>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Validación con biometria"
+                android:textSize="18sp"
+                android:textColor="@color/black"
+                android:layout_gravity="center"
+                android:layout_marginLeft="8dp"/>
+
+            <androidx.appcompat.widget.SwitchCompat
+                android:id="@+id/switchBiometrics"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center|right"
+                app:trackTint="@color/switch_track_selector"
+                app:thumbTint="@color/switch_thumb_selector"
+                android:layout_marginLeft="15dp"
+                />
+
+        </LinearLayout>
+
     </LinearLayout>
+
+    </LinearLayout>
+
+    <Button
+        android:id="@+id/btnSaveSettings"
+        android:layout_width="220dp"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center|bottom"
+        android:background="@drawable/rounded_button"
+        android:backgroundTint="@color/colorOrangeTimeBlackLight"
+        android:text="GUARDAR"
+        android:layout_marginBottom="25dp"
+        android:textColor="@color/white"
+        android:shadowColor="@color/colorOrangeTimeAccent"
+        android:shadowRadius="5"/>
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

@@ -127,7 +127,7 @@ public class HomeTW extends AppCompatActivity{
     public Bitmap imagenBitmap;
     public Uri fotoUri;
     public String imagetoBase64 = "";
-    private boolean revieEmployee;
+    private boolean revieUpdateRegisters;
     private int updateNet;
     public int semanasSendOk;
     public int semanasSendLate;
@@ -201,16 +201,10 @@ public class HomeTW extends AppCompatActivity{
         mViewPager.setOffscreenPageLimit(3);
         viewPagerAdapter = new ViewPagerAdapter(getSupportFragmentManager());
 
-        /*geoLat = getIntent().getFloatExtra("geoLat",0);
-        geoLong = getIntent().getFloatExtra("geoLong",0);*/
         geoRadio = getIntent().getFloatExtra("geoRadio",0);
         reviewSettings = getIntent().getBooleanExtra("reviewSettings", false);
 
-        //Revisar el empleado
-        //revieEmployee = getIntent().getBooleanExtra("revieEmployee", true);
-        //if (revieEmployee) {
         if(geoRadio == 0){
-            //reviewSettings = false;
             reviewEmployee();
         }
 
@@ -242,7 +236,7 @@ public class HomeTW extends AppCompatActivity{
                 }else if(item.getItemId() == R.id.itemChangePassword){
                     goToChangePassword();
                 } else if(item.getItemId() == R.id.itemSettings){
-                    goToSetings();
+                    goToSettings();
                 } else if(item.getItemId() == R.id.itemGeocercas){
                     goToGeocercas();
                 }
@@ -378,7 +372,7 @@ public class HomeTW extends AppCompatActivity{
     }
 
     //Ir a configuracion
-    private void goToSetings() {
+    public void goToSettings() {
         if(historyChecksLateSendFragment.deleteChecks.getVisibility() == View.VISIBLE){
             historyChecksLateSendFragment.updateDelete();
         }
@@ -774,9 +768,9 @@ public class HomeTW extends AppCompatActivity{
 
     //Revisar checks pendientes, con mas de 30 dias y si no cuentas con checks pero se encuentran en firebase
     public void checkUpdateSend() {
-        if(reviewSettings){
-            goToSetings();
-            reviewSettings = false;
+        if(!reviewSettings){
+            goToSettings();
+            reviewSettings = true;
         } else {
             updateChecksNotSend = true;
             updateData = true;
@@ -859,10 +853,39 @@ public class HomeTW extends AppCompatActivity{
                                     }
 
 
-                                    if (dbChecks.getChecksNotSendSucces(authHome.getId()).size() == 0 || dbChecks.getChecksSendSucces(authHome.getId()).size() == 0) {
-                                        mostrarUpdateChecks();
+                                    revieUpdateRegisters = false;
+                                    if (dbChecks.getChecksNotSendSucces(authHome.getId()).size() == 0 ) {
+                                        checksProvider.getChecksByUserAndStatusSend(authHome.getId(),2).get().addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
+                                            @Override
+                                            public void onComplete(@NonNull Task<QuerySnapshot> task) {
+                                                if(task.isSuccessful()){
+                                                    if(task.getResult().size() != 0){
+                                                        if(revieUpdateRegisters == false){
+                                                            mostrarUpdateChecks();
+                                                            revieUpdateRegisters = true;
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        });
                                     }
-                                } else {
+                                    if (dbChecks.getChecksSendSucces(authHome.getId()).size() == 0) {
+                                        checksProvider.getChecksByUserAndStatusSend(authHome.getId(), 1).get().addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
+                                            @Override
+                                            public void onComplete(@NonNull Task<QuerySnapshot> task) {
+                                                if(task.isSuccessful()){
+                                                    if(task.getResult().size() != 0){
+                                                        if(revieUpdateRegisters == false){
+                                                            mostrarUpdateChecks();
+                                                            revieUpdateRegisters = true;
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        });
+                                    }
+
+                                    } else {
                                     if (linearLayoutLoadingHome.getVisibility() == View.VISIBLE) {
                                         linearLayoutLoadingHome.setVisibility(View.GONE);
                                     } else {
@@ -1000,100 +1023,104 @@ public class HomeTW extends AppCompatActivity{
 
 
             //Actualizar la vista al eliminar
-            public void updateDeleteAllChecksSeendOk(boolean b) {
-                if(historyChecksSendOkFragment.deleteAllChecks != null){
-                    if(b){
-                        historyChecksSendOkFragment.deleteAllChecks.setChecked(true);
-                    } else{
-                        historyChecksSendOkFragment.deleteAllChecks.setChecked(false);
-                        if(idChecksDelete.size()==0){
-                            historyChecksSendOkFragment.showImageDelete(false);
-                        }
+        public void updateDeleteAllChecksSeendOk(boolean b) {
+            if(historyChecksSendOkFragment.deleteAllChecks != null){
+                if(b){
+                    historyChecksSendOkFragment.deleteAllChecks.setChecked(true);
+                } else{
+                    historyChecksSendOkFragment.deleteAllChecks.setChecked(false);
+                    if(idChecksDelete.size()==0){
+                        historyChecksSendOkFragment.showImageDelete(false);
                     }
                 }
             }
+        }
 
 
-            //Actualizar la vista al eliminar
-            public void updateDeleteAllChecksLate(boolean b) {
-                if(historyChecksLateSendFragment.deleteAllChecks != null){
-                    if(b){
-                        historyChecksLateSendFragment.deleteAllChecks.setChecked(true);
-                    } else{
-                        historyChecksLateSendFragment.deleteAllChecks.setChecked(false);
-                        if(idChecksLateDelete.size()==0){
-                            historyChecksLateSendFragment.showImageDelete(false);
-                        }
+        //Actualizar la vista al eliminar
+        public void updateDeleteAllChecksLate(boolean b) {
+            if(historyChecksLateSendFragment.deleteAllChecks != null){
+                if(b){
+                    historyChecksLateSendFragment.deleteAllChecks.setChecked(true);
+                } else{
+                    historyChecksLateSendFragment.deleteAllChecks.setChecked(false);
+                    if(idChecksLateDelete.size()==0){
+                        historyChecksLateSendFragment.showImageDelete(false);
                     }
                 }
             }
+        }
 
-            public int isViewDeleteSendOk(){
-                return historyChecksSendOkFragment.deleteChecks.getVisibility();
-            }
+        public int isViewDeleteSendOk(){
+            return historyChecksSendOkFragment.deleteChecks.getVisibility();
+        }
 
-            public int isViewDeleteSendLate() {
-                return historyChecksLateSendFragment.deleteChecks.getVisibility();
-            }
+        public int isViewDeleteSendLate() {
+            return historyChecksLateSendFragment.deleteChecks.getVisibility();
+        }
 
-            //Revisar el empleado que inicio sesion
-            private void reviewEmployee() {
-                employee = dbEmployees.getEmployee(authHome.getId());
-                //Si el usuario logeado no existe en db se actualiza la informacion
-                if(employee == null){
-                    employeeProvider.getUserInfo(authHome.getId()).get().addOnCompleteListener(new OnCompleteListener<DocumentSnapshot>() {
-                        @Override
-                        public void onComplete(@NonNull Task<DocumentSnapshot> task) {
-                            if(task.isSuccessful()){
-                                if (task.getResult() != null) {
-                                    if (task.getResult().exists()) {
-                                        employee = task.getResult().toObject(Employee.class);
-                                        if(dbEmployees.deleteAllEmployees() && dbChecks.deleteAllChecks() && dbBitacoras.deleteAllBitacoras() && dbGeocercas.deleteAllGeocercas()){
-                                            removeGeocerca();
-                                            dbEmployees.insertEmployye(employee);
-                                            reviewSettings = true;
-                                            /*SharedPreferences sharedPref = getSharedPreferences("datos", Context.MODE_PRIVATE);
-                                            SharedPreferences.Editor editor = sharedPref.edit();
-                                            editor.putBoolean("takePhoto", false);
-                                            editor.commit();*/
-                                        }
+        public void showNumberDelete(){
+            if(idChecksDelete.size() != 0)
+                historyChecksSendOkFragment.textViewNumberChecksDelete.setText(""+idChecksDelete.size());
+            if(idChecksLateDelete.size() != 0)
+                historyChecksLateSendFragment.textViewNumberChecksDelete.setText(""+idChecksLateDelete.size());
+        }
+
+        //Revisar el empleado que inicio sesion
+        private void reviewEmployee() {
+            employee = dbEmployees.getEmployee(authHome.getId());
+            //Si el usuario logeado no existe en db se actualiza la informacion
+            if(employee == null){
+                employeeProvider.getUserInfo(authHome.getId()).get().addOnCompleteListener(new OnCompleteListener<DocumentSnapshot>() {
+                    @Override
+                    public void onComplete(@NonNull Task<DocumentSnapshot> task) {
+                        if(task.isSuccessful()){
+                            if (task.getResult() != null) {
+                                if (task.getResult().exists()) {
+                                    employee = task.getResult().toObject(Employee.class);
+                                    if(dbEmployees.deleteAllEmployees() && dbChecks.deleteAllChecks() && dbBitacoras.deleteAllBitacoras() && dbGeocercas.deleteAllGeocercas()){
+                                        removeGeocerca();
+                                        dbEmployees.insertEmployye(employee);
                                     }
                                 }
                             }
                         }
-                    });
-                }
+                    }
+                });
+            } else {
+                reviewSettings = true;
             }
-
-            @Override
-            protected void onSaveInstanceState(Bundle outState) {
-                super.onSaveInstanceState(outState);
-                //Clear the Activity's bundle of the subsidiary fragments' bundles.
-                outState.clear();
-            }
-
-            //Accion hacia atras del dispositivo
-            @Override
-            public void onBackPressed() {
-                mostrarSalida();
-                //super.onBackPressed();
-            }
-
-    @Override
-    protected void onStop() {
-        super.onStop();
-    }
-
-    @Override
-    protected void onPause() {
-        super.onPause();
-        if(historyChecksLateSendFragment.deleteChecks.getVisibility() == View.VISIBLE){
-            historyChecksLateSendFragment.updateDelete();
         }
-        if(historyChecksSendOkFragment.deleteChecks.getVisibility() == View.VISIBLE){
-            historyChecksSendOkFragment.updateDelete();
+
+        @Override
+        protected void onSaveInstanceState(Bundle outState) {
+            super.onSaveInstanceState(outState);
+            //Clear the Activity's bundle of the subsidiary fragments' bundles.
+            outState.clear();
         }
-    }
+
+        //Accion hacia atras del dispositivo
+        @Override
+        public void onBackPressed() {
+            mostrarSalida();
+            //super.onBackPressed();
+        }
+
+        @Override
+        protected void onStop() {
+            super.onStop();
+        }
+
+        @Override
+        protected void onPause() {
+            super.onPause();
+            if(historyChecksLateSendFragment.deleteChecks.getVisibility() == View.VISIBLE){
+                historyChecksLateSendFragment.updateDelete();
+            }
+            if(historyChecksSendOkFragment.deleteChecks.getVisibility() == View.VISIBLE){
+                historyChecksSendOkFragment.updateDelete();
+            }
+        }
 
 
     //Mensaje de salida de la app

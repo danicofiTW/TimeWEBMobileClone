@@ -92,22 +92,17 @@ public class ChecksDbAdapterLateSend extends RecyclerView.Adapter<ChecksDbAdapte
 
     @Override
     public void onBindViewHolder(@NonNull CheckViewHolder holder, int position) {
-        //int post = position;
 
         Date aux = new Date(checks.get(position).getTime());
         String date = sdfLongDate.format(aux);
         holder.textViewFecha.setText(date);
 
-        //holder.myView.setEnabled(true);
-
         if(checks.get(position).getStatusSend() == 2){
             holder.imageViewSendCheck.setImageResource(R.drawable.icon_double_check_gray);
             holder.open = true;
-            //holder.myView.setEnabled(true);
         } else if(checks.get(position).getStatusSend() == 0){
             holder.imageViewSendCheck.setImageResource(R.drawable.ic_check_gray);
             holder.open = false;
-            //holder.myView.setEnabled(false);
         }
 
         if(checks.get(position).getTipeCheck().equals("startWork")){
@@ -128,30 +123,11 @@ public class ChecksDbAdapterLateSend extends RecyclerView.Adapter<ChecksDbAdapte
             holder.textViewTipeCheck.setTextColor(context.getColor(R.color.colorRedLigth));
         }
 
-        setImage(holder, position);
-
-
         if(checks.get(position).getIdGeocerca()==null){
-
             holder.textViewGeocerca.setText("Sin geocerca asignada");
-            /*try {
-                Geocoder geocoder = new Geocoder(context);
-                List<Address> addressList = geocoder.getFromLocation(checks.get(position).getCheckLat(), checks.get(position).getCheckLong(), 1);
-                String city = addressList.get(0).getLocality();
-                //String country = addressList.get(0).getCountryName();
-                String address = addressList.get(0).getAddressLine(0);
-                holder.textViewGeocerca.setText(address + " " + city);
-                openLocation(holder, checks.get(position));
-
-            } catch (IOException e) {
-                Log.d("Error:", "Mensaje de error: " + e.getMessage());
-            }*/
         } else {
             holder.textViewGeocerca.setText(checks.get(position).getNameGeocerca());
-            //openLocation(holder, checks.get(position));
         }
-
-
 
         if(checks.get(position).isDelete()){
             holder.viewDelete.setVisibility(View.VISIBLE);
@@ -161,7 +137,7 @@ public class ChecksDbAdapterLateSend extends RecyclerView.Adapter<ChecksDbAdapte
             holder.imageViewDelete.setVisibility(View.GONE);
         }
 
-
+        setImage(holder, position);
         openLocation(holder, checks.get(position));
         longCLickCheck(holder, checks.get(position));
         reviewDate(holder, checks, position);
@@ -235,9 +211,6 @@ public class ChecksDbAdapterLateSend extends RecyclerView.Adapter<ChecksDbAdapte
                             }
                                 notifyDataSetChanged();
                         }
-                    //} else {
-                   //    longClick = false;
-                  //  }
                     }
                 }
             }
@@ -353,7 +326,7 @@ public class ChecksDbAdapterLateSend extends RecyclerView.Adapter<ChecksDbAdapte
                         holder.textViewLineDate.setText("Hace 1 semana");
                         holder.linearLayoutCheck.setPadding(0,35,0,0);
                     } else{
-                        if(days >= 14){
+                        if(checks.get(position).getSemana() > 1){
                             if (checks.get(position-1).getSemana() != checks.get(position).getSemana()) {
                                 holder.linearLayoutLineDate.setVisibility(View.VISIBLE);
                                 holder.textViewLineDate.setText("Hace " + checks.get(position).getSemana() + " semanas");
@@ -362,6 +335,9 @@ public class ChecksDbAdapterLateSend extends RecyclerView.Adapter<ChecksDbAdapte
                                 holder.linearLayoutLineDate.setVisibility(View.GONE);
                                 holder.linearLayoutCheck.setPadding(0,0,0,0);
                             }
+                        } else {
+                            holder.linearLayoutLineDate.setVisibility(View.GONE);
+                            holder.linearLayoutCheck.setPadding(0,0,0,0);
                         }
                     }
                 }

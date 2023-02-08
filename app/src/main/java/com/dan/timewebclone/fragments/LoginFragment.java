@@ -21,10 +21,13 @@ import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.Toast;
 
+import com.dan.timewebclone.activitys.GeocercasActivity;
 import com.dan.timewebclone.activitys.HomeTW;
 import com.dan.timewebclone.activitys.MainActivity;
 import com.dan.timewebclone.R;
 import com.dan.timewebclone.activitys.ProfileActivity;
+import com.dan.timewebclone.activitys.SettingsActivity;
+import com.dan.timewebclone.db.DbBitacoras;
 import com.dan.timewebclone.db.DbEmployees;
 import com.dan.timewebclone.models.Employee;
 import com.dan.timewebclone.providers.AuthProvider;
@@ -53,6 +56,8 @@ public class LoginFragment extends Fragment {
     //DatabaseReference mDatabase;
     private ProgressDialog mDialog;
     private MainActivity myContext;
+    private DbEmployees dbEmployees;
+    private DbBitacoras dbBitacoras;
 
     Employee employee;
 
@@ -81,12 +86,12 @@ public class LoginFragment extends Fragment {
         mCircleImageBack = view.findViewById(R.id.circleImageBack);
         linearLayoutLogin = view.findViewById(R.id.linearLayoutLogin);
         authProvider = new AuthProvider();
-        //registerFragment = new RegisterFragment();
-        //registerFragment.setViewRegisterFragment(false);
-        //setViewLoginFragment(true);
-        //mDatabase = FirebaseDatabase.getInstance().getReference();
+        dbEmployees = new DbEmployees(myContext);
+        dbBitacoras = new DbBitacoras(myContext);
 
-        employeeProvider = new EmployeeProvider();
+        if (authProvider.getId() != null && dbEmployees.getEmployee(authProvider.getId()) != null) {
+            textInputEmailLogin.setText(dbEmployees.getEmployee(authProvider.getId()).getEmail());
+        }
 
         mDialog = new ProgressDialog(myContext);
         mDialog.setTitle("ESPERE UN MOMENTO");
@@ -127,6 +132,11 @@ public class LoginFragment extends Fragment {
         fragmentTransaction.hide(this).commit();
     }
 
+    public void setTextEmail(String text){
+        if(textInputEmailLogin!=null){}
+       // textInputEmailLogin.setText(text);
+    }
+
     private void checkLogin() {
         String mEmail = textInputEmailLogin.getText().toString();
         String mPassword = textInputPasswordLogin.getText().toString();
@@ -151,7 +161,7 @@ public class LoginFragment extends Fragment {
                 public void onComplete(@NonNull Task<AuthResult> task) {
                     if(task.isSuccessful()){
                         mDialog.dismiss();
-                        goToHome();
+                            goToHome();
                     } else {
                         mDialog.dismiss();
                         Toast.makeText(myContext, "La contraseña o el email son incorrectos", Toast.LENGTH_SHORT).show();
@@ -163,6 +173,7 @@ public class LoginFragment extends Fragment {
             Toast.makeText(myContext, "No cuentas con internet", Toast.LENGTH_SHORT).show();
         }
     }
+
 
     public boolean isOnlineNet() {
         try {
@@ -183,10 +194,31 @@ public class LoginFragment extends Fragment {
     }
 
     private void goToHome() {
+        if(dbEmployees.getEmployee(authProvider.getId()) != null){
+            if(dbBitacoras.getBitacorasByIdUser(authProvider.getId()).size() != 0){
+                Intent intent = new Intent(myContext, GeocercasActivity.class);
+                intent.putExtra("notComeBack", true);
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                startActivity(intent);
+            } else {
+                Intent intent = new Intent(myContext, HomeTW.class);
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                startActivity(intent);
+            }
+        } else {
+            Intent intent = new Intent(myContext, SettingsActivity.class);
+            intent.putExtra("loginNotData", true);
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+            startActivity(intent);
+        }
+    }
+
+
+    /*private void goToSettings() {
         Intent intent = new Intent(myContext, HomeTW.class);
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
         startActivity(intent);
-    }
+    }*/
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,

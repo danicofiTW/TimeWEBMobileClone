@@ -1,7 +1,15 @@
 package com.dan.timewebclone.activitys;
 
+import static androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_STRONG;
+import static androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_WEAK;
+import static androidx.biometric.BiometricManager.Authenticators.DEVICE_CREDENTIAL;
+
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.biometric.BiometricManager;
+import androidx.biometric.BiometricPrompt;
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.DialogFragment;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
@@ -13,10 +21,14 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Build;
 import android.os.Bundle;
+import android.provider.Settings;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
+import android.widget.Toast;
 
 import com.dan.timewebclone.R;
+import com.dan.timewebclone.db.DbBitacoras;
 import com.dan.timewebclone.db.DbEmployees;
 import com.dan.timewebclone.fragments.LoginFragment;
 import com.dan.timewebclone.fragments.TermsAndConditionsFragment;
@@ -24,6 +36,8 @@ import com.dan.timewebclone.fragments.RegisterFragment;
 import com.dan.timewebclone.models.Employee;
 import com.dan.timewebclone.providers.AuthProvider;
 import com.google.firebase.auth.FirebaseAuth;
+
+import java.util.concurrent.Executor;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -37,10 +51,16 @@ public class MainActivity extends AppCompatActivity {
     private FragmentManager fragmentManager;
     private DialogFragment termsAndConditionsFragment;
     private DbEmployees dbEmployees;
+    private DbBitacoras dbBitacoras;
 
     private AuthProvider mAuth = null;
 
     private String changePassword;
+    private Executor executor;
+    private BiometricPrompt biometricPrompt;
+    private BiometricPrompt.PromptInfo promptInfo;
+    private int canUseBiometrics;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -53,6 +73,7 @@ public class MainActivity extends AppCompatActivity {
         loginFragment = new LoginFragment();
         registerFragment = new RegisterFragment();
         dbEmployees = new DbEmployees(this);
+        dbBitacoras = new DbBitacoras(this);
         termsAndConditionsFragment = new TermsAndConditionsFragment();
         mAuth = new AuthProvider();
         builderDialogExit = new AlertDialog.Builder(this);
@@ -61,6 +82,8 @@ public class MainActivity extends AppCompatActivity {
         changePassword = getIntent().getStringExtra("ChangePassword");
         if (changePassword != null) {
             moveFragment(loginFragment);
+            if(dbEmployees.getEmployee(mAuth.getId())!=null)
+            loginFragment.setTextEmail(dbEmployees.getEmployee(mAuth.getId()).getEmail());
         }
 
         //Ir a registrarte
@@ -79,6 +102,83 @@ public class MainActivity extends AppCompatActivity {
                 moveFragment(loginFragment);
             }
         });
+
+
+        executor = ContextCompat.getMainExecutor(this);
+        biometricPrompt = new BiometricPrompt(MainActivity.this,
+                executor, new BiometricPrompt.AuthenticationCallback() {
+            @Override
+            public void onAuthenticationError(int errorCode,
+                                              @NonNull CharSequence errString) {
+                super.onAuthenticationError(errorCode, errString);
+                moveFragment(loginFragment);
+                loginFragment.setTextEmail(dbEmployees.getEmployee(mAuth.getId()).getEmail());
+                //Toast.makeText(getApplicationContext(), "Authentication error: " + errString, Toast.LENGTH_SHORT).show();
+            }
+
+            @Override
+            public void onAuthenticationSucceeded(
+                    @NonNull BiometricPrompt.AuthenticationResult result) {
+                super.onAuthenticationSucceeded(result);
+                //Toast.makeText(getApplicationContext(), "Authentication succeeded!", Toast.LENGTH_SHORT).show();
+                if(dbBitacoras.getBitacorasByIdUser(mAuth.getId()).size() != 0){
+                    Intent intent = new Intent(MainActivity.this, GeocercasActivity.class);
+                    intent.putExtra("notComeBack", true);
+                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                    startActivity(intent);
+                } else {
+                    Intent intent = new Intent(MainActivity.this, HomeTW.class);
+                    intent.putExtra("revieEmployee", false);
+                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                    startActivity(intent);
+                }
+            }
+
+            @Override
+            public void onAuthenticationFailed() {
+                super.onAuthenticationFailed();
+                moveFragment(loginFragment);
+                loginFragment.setTextEmail(dbEmployees.getEmployee(mAuth.getId()).getEmail());
+                //Toast.makeText(getApplicationContext(), "Authentication failed", Toast.LENGTH_SHORT).show();
+            }
+        });
+
+        promptInfo = new BiometricPrompt.PromptInfo.Builder()
+                .setTitle("Iniciar sesión")
+                .setSubtitle("Verifique su identidad para iniciar sesión")
+                //.setNegativeButtonText("Usar contraseña")
+                .setConfirmationRequired(true)
+                .setAllowedAuthenticators(BIOMETRIC_STRONG|BIOMETRIC_WEAK|DEVICE_CREDENTIAL)
+                .build();
+
+        BiometricManager biometricManager = BiometricManager.from(this);
+        switch (biometricManager.canAuthenticate(BIOMETRIC_STRONG |BIOMETRIC_WEAK| DEVICE_CREDENTIAL)) {
+            case BiometricManager.BIOMETRIC_SUCCESS:
+                //Log.d("MY_APP_TAG", "App can authenticate using biometrics.");
+                canUseBiometrics = 0;
+                break;
+            case BiometricManager.BIOMETRIC_ERROR_NO_HARDWARE:
+                //Log.e("MY_APP_TAG", "No biometric features available on this device.");
+                canUseBiometrics = 1;
+                break;
+            case BiometricManager.BIOMETRIC_ERROR_HW_UNAVAILABLE:
+                //Log.e("MY_APP_TAG", "Biometric features are currently unavailable.");
+                canUseBiometrics = 1;
+                break;
+            case BiometricManager.BIOMETRIC_ERROR_NONE_ENROLLED:
+                // Prompts the user to create credentials that your app accepts.
+                canUseBiometrics = 2;
+                break;
+        }
+
+        // Prompt appears when user clicks "Log in".
+        // Consider integrating with the keystore to unlock cryptographic operations,
+        // if needed by your app.
+        /*Button biometricLoginButton = findViewById(R.id.biometric_login);
+        biometricLoginButton.setOnClickListener(view -> {
+        });*/
+
+
     }
 
     @Override
@@ -86,10 +186,32 @@ public class MainActivity extends AppCompatActivity {
         super.onStart();
         //Si el usuario ya inicio sesion ingresar al Home
         if (mAuth.getId() != null && dbEmployees.getEmployee(mAuth.getId()) != null) {
-            Intent i = new Intent(MainActivity.this, HomeTW.class);
-            i.putExtra("revieEmployee", false);
-            i.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
-            startActivity(i);
+            if(canUseBiometrics == 0){
+                if(dbEmployees.getEmployee(mAuth.getId()).isStateBiometrics()){
+                    biometricPrompt.authenticate(promptInfo);
+                } else {
+                    moveFragment(loginFragment);
+                    loginFragment.setTextEmail(dbEmployees.getEmployee(mAuth.getId()).getName());
+                }
+            } else {
+                /*if(dbBitacoras.getBitacorasByIdUser(mAuth.getId()).size() != 0){
+                    Intent intent = new Intent(MainActivity.this, GeocercasActivity.class);
+                    intent.putExtra("notComeBack", true);
+                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                    startActivity(intent);
+                } else {
+                    Intent intent = new Intent(MainActivity.this, HomeTW.class);
+                    intent.putExtra("revieEmployee", false);
+                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                    startActivity(intent);
+                }
+                Intent i = new Intent(MainActivity.this, HomeTW.class);
+                i.putExtra("revieEmployee", false);
+                i.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
+                startActivity(i);*/
+                moveFragment(loginFragment);
+                loginFragment.setTextEmail(dbEmployees.getEmployee(mAuth.getId()).getName());
+            }
         }
     }
 
@@ -150,24 +272,6 @@ public class MainActivity extends AppCompatActivity {
             btnGoToRegister.setEnabled(false);
         }
     }
-
-
-    /*public void saveInfoUser(Employee employee) {
-        SharedPreferences sharedPref = getSharedPreferences("Employee", Context.MODE_PRIVATE);
-        //sharedPref = getPreferences(Context.MODE_PRIVATE);
-        SharedPreferences.Editor editor = sharedPref.edit();
-
-        editor.putString("nameUser", employee.getName());
-        editor.putString("idUser", employee.getIdUser());
-        editor.putString("rfc", employee.getRfcCompany());
-        editor.putString("company", employee.getCompany());
-        editor.putString("phone", employee.getPhone());
-        editor.putString("email", employee.getEmail());
-        editor.putString("url", employee.getImage());
-        editor.apply();
-        editor.commit();
-    }*/
-
 
     //Cambiar el color de la barra de notificaciones
     private void setStatusBarColor() {

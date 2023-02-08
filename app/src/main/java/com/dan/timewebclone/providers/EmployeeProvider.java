@@ -91,4 +91,10 @@ public class EmployeeProvider {
         return collection.document(id).update(map);
     }
 
+    public Task<Void> updateStateBiometrics(String id, boolean stateBiometrics){
+        Map<String, Object> map = new HashMap<>();
+        map.put("stateBiometrics", stateBiometrics);
+        return collection.document(id).update(map);
+    }
+
 }

@@ -60,7 +60,9 @@ public class HistoryChecksLateSendFragment extends Fragment {
     public CheckBox deleteAllChecks;
     public ImageView deleteChecks, imageViewCancelDelete;
     private LottieAnimationView animation;
-    private TextView textViewNumberChecksDelete, textViewTitleHistory, textViewNoChecks;
+    public TextView textViewNumberChecksDelete;
+    private TextView textViewTitleHistory;
+    private TextView textViewNoChecks;
     private FrameLayout frameLayoutNumberChecksDelete;
     private LinearLayout linearLayoutDeleteChecks;
 

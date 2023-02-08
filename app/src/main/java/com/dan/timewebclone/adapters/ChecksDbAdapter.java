@@ -2,13 +2,18 @@ package com.dan.timewebclone.adapters;
 
 import static com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions.withCrossFade;
 
+import android.animation.Animator;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.transition.Fade;
+import android.transition.Transition;
+import android.transition.TransitionManager;
 import android.util.Base64;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.animation.Animation;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -17,6 +22,7 @@ import androidx.annotation.NonNull;
 import androidx.cardview.widget.CardView;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.airbnb.lottie.LottieAnimationView;
 import com.dan.timewebclone.R;
 import com.dan.timewebclone.activitys.HomeTW;
 import com.dan.timewebclone.activitys.ShowLocationActivity;
@@ -51,6 +57,8 @@ public class ChecksDbAdapter extends RecyclerView.Adapter<ChecksDbAdapter.CheckV
 
     private SimpleDateFormat sdfDate;
     private DbChecks dbChecks;
+    private boolean noReviewDelete;
+    //private Animation.AnimationListener animLis;
 
 
     HistoryChecksSendOkFragment historyChecksSendOkFragment;
@@ -68,8 +76,9 @@ public class ChecksDbAdapter extends RecyclerView.Adapter<ChecksDbAdapter.CheckV
         sdfLongDate = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
         sdfDate = new SimpleDateFormat("dd/MM/yyyy");
         dbChecks = new DbChecks(context);
+        noReviewDelete = false;
         historyChecksSendOkFragment = new HistoryChecksSendOkFragment();
-
+        //context.semanasSendOk=0;
         checks = listChecks;
         idChecksDelete = new ArrayList<>();
     }
@@ -92,22 +101,6 @@ public class ChecksDbAdapter extends RecyclerView.Adapter<ChecksDbAdapter.CheckV
         if(checks.get(position).getStatusSend() == 1){
             holder.imageViewSendCheck.setImageResource(R.drawable.icon_double_check);
         }
-
-        /*else if(checks.get(position).getStatusSend() == 2){
-            holder.imageViewSendCheck.setImageResource(R.drawable.double_check_gray);
-        } else if(checks.get(position).getStatusSend() == 0){
-            holder.imageViewSendCheck.setImageResource(R.drawable.ic_check_gray);
-        }*/
-
-        /*if(check.getTipeCheck().equals("startWork")){
-            holder.imageViewHistoryCheck.setImageResource(R.drawable.icon_int);
-        } else if(check.getTipeCheck().equals("startEating")){
-            holder.imageViewHistoryCheck.setImageResource(R.drawable.icon_comer);
-        } else if(check.getTipeCheck().equals("finishEating")){
-            holder.imageViewHistoryCheck.setImageResource(R.drawable.icon_termincomer);
-        } else if(check.getTipeCheck().equals("finishWork")){
-            holder.imageViewHistoryCheck.setImageResource(R.drawable.icon_out);
-        }*/
 
         if(checks.get(position).getTipeCheck().equals("startWork")){
             //holder.imageViewHistoryCheck.setImageResource(R.drawable.icon_entrar);
@@ -137,40 +130,44 @@ public class ChecksDbAdapter extends RecyclerView.Adapter<ChecksDbAdapter.CheckV
 
         if(checks.get(position).getIdGeocerca() == null){
             holder.textViewGeocerca.setText("Sin geocerca asignada");
-           /* try {
-                Geocoder geocoder = new Geocoder(context);
-                List<Address> addressList = geocoder.getFromLocation(checks.get(position).getCheckLat(), checks.get(position).getCheckLong(), 1);
-                String city = addressList.get(0).getLocality();
-                //String country = addressList.get(0).getCountryName();
-                String address = addressList.get(0).getAddressLine(0);
-                holder.textViewGeocerca.setText(address + " " + city);
-                holder.itemView.setOnClickListener (v -> {
-                    itemClickListener.onItemClickListener(checks.get(position), position);
-                });
-                openLocation(holder, checks.get(position));
-
-            } catch (IOException e) {
-                Log.d("Error:", "Mensaje de error: " + e.getMessage());
-            }*/
         } else {
             holder.textViewGeocerca.setText(checks.get(position).getNameGeocerca());
-            //openLocation(holder, checks.get(position));
         }
+
+        /*holder.imageViewDelete.animate().setListener(new Animator.AnimatorListener() {
+            @Override
+            public void onAnimationStart(Animator animator) {}
+            @Override
+            public void onAnimationEnd(Animator animator) {
+                //holder.imageViewDelete.setVisibility(View.GONE);
+            }
+            @Override
+            public void onAnimationCancel(Animator animator) {}
+            @Override
+            public void onAnimationRepeat(Animator animator) {}
+        });*/
+
+        //if(context.idChecksDelete.size() > 0){
+            if(checks.get(position).isDelete()){
+                holder.viewDelete.setVisibility(View.VISIBLE);
+                holder.imageViewDelete.setVisibility(View.VISIBLE);
+            } else {
+                    holder.viewDelete.setVisibility(View.GONE);
+                    holder.imageViewDelete.setVisibility(View.GONE);
+                }
+       /* } else {
+            if(!noReviewDelete){
+                checks.get(position).setDelete(false);
+                holder.viewDelete.setVisibility(View.GONE);
+                holder.imageViewDelete.setVisibility(View.GONE);
+                if(position == checks.size()-1){
+                    noReviewDelete = true;
+                }
+            }
+        }*/
+
 
         setImage(holder, position);
-
-        if(checks.get(position).isDelete()){
-            holder.viewDelete.setVisibility(View.VISIBLE);
-            holder.imageViewDelete.setVisibility(View.VISIBLE);
-            //isDelete=true;
-            //context.idChecksDelete.add(checks.get(post).getIdCheck());
-        } else {
-            holder.viewDelete.setVisibility(View.GONE);
-            holder.imageViewDelete.setVisibility(View.GONE);
-            //isDelete=false;
-
-        }
-
         openLocation(holder, checks.get(position));
         longCLickCheck(holder,checks.get(position));
         reviewDate(holder, checks, position);
@@ -192,6 +189,8 @@ public class ChecksDbAdapter extends RecyclerView.Adapter<ChecksDbAdapter.CheckV
                     e.getMessage();
                 }
             }
+
+
             /*else {
                 defaultImage(holder, checks.get(position));
             }*/
@@ -204,28 +203,35 @@ public class ChecksDbAdapter extends RecyclerView.Adapter<ChecksDbAdapter.CheckV
                 if(!check.isDelete()){
                     holder.viewDelete.setVisibility(View.VISIBLE);
                     holder.imageViewDelete.setVisibility(View.VISIBLE);
+                    //holder.imageViewDelete.animate().alpha(1.0f);
                     context.idChecksDelete.add(check.getIdCheck());
                     check.setDelete(true);
                     dbChecks.updateCheckDelete(true, check.getIdCheck());
                     if(context.idChecksDelete.size() == checks.size()){
                         context.updateDeleteAllChecksSeendOk(true);
+                        notifyDataSetChanged();
+                    } else if(context.idChecksDelete.size() == 1){
+                        notifyDataSetChanged();
                     }
-                    notifyDataSetChanged();
+                    context.showNumberDelete();
                 } else {
                     holder.viewDelete.setVisibility(View.GONE);
                     holder.imageViewDelete.setVisibility(View.GONE);
+                    //holder.imageViewDelete.animate().alpha(0.0f).setDuration(1000);
                     check.setDelete(false);
                     dbChecks.updateCheckDelete(false, check.getIdCheck());
                     context.updateDeleteAllChecksSeendOk(false);
-                    if(context.idChecksDelete.size()!=0){
-                        for(int i = 0; i<context.idChecksDelete.size(); i++){
-                            if (context.idChecksDelete.get(i).equals(check.getIdCheck())) {
-                                context.idChecksDelete.remove(i);
-                                break;
-                            }
+
+                    for(int i = 0; i<context.idChecksDelete.size(); i++){
+                        if (context.idChecksDelete.get(i).equals(check.getIdCheck())) {
+                            context.idChecksDelete.remove(i);
+                            break;
                         }
                     }
+                    if(context.idChecksDelete.size() == 0)
                     notifyDataSetChanged();
+
+                    context.showNumberDelete();
                 }
                 return false;
             }
@@ -254,17 +260,20 @@ public class ChecksDbAdapter extends RecyclerView.Adapter<ChecksDbAdapter.CheckV
                     if(!check.isDelete()) {
                         holder.viewDelete.setVisibility(View.VISIBLE);
                         holder.imageViewDelete.setVisibility(View.VISIBLE);
+                        //holder.imageViewDelete.animate().alpha(1.0f);
                         context.idChecksDelete.add(check.getIdCheck());
                         check.setDelete(true);
                         dbChecks.updateCheckDelete(true, check.getIdCheck());
                         if(context.idChecksDelete.size() == checks.size()){
                             context.updateDeleteAllChecksSeendOk(true);
+                            notifyDataSetChanged();
                         }
-                        notifyDataSetChanged();
-                        //check.setDelete(true);
+
+                        context.showNumberDelete();
                     } else {
                         holder.viewDelete.setVisibility(View.GONE);
                         holder.imageViewDelete.setVisibility(View.GONE);
+                        //holder.imageViewDelete.animate().alpha(0.0f).setDuration(500);
                         check.setDelete(false);
                         dbChecks.updateCheckDelete(false, check.getIdCheck());
                         context.updateDeleteAllChecksSeendOk(false);
@@ -274,8 +283,11 @@ public class ChecksDbAdapter extends RecyclerView.Adapter<ChecksDbAdapter.CheckV
                                 break;
                             }
                         }
-
+                        if(context.idChecksDelete.size() == 0)
                         notifyDataSetChanged();
+
+
+                        context.showNumberDelete();
                     }
                     }
                 }
@@ -316,8 +328,9 @@ public class ChecksDbAdapter extends RecyclerView.Adapter<ChecksDbAdapter.CheckV
                         holder.textViewLineDate.setText("Hace 1 semana");
                         holder.linearLayoutCheck.setPadding(0, 35, 0, 0);
                     } else {
-                        if (days >= 14) {
+                        if (checks.get(position).getSemana() > 1) {
                             if (checks.get(position-1).getSemana() != checks.get(position).getSemana()) {
+                                //context.semanasSendOk=checks.get(position).getSemana();
                                 holder.linearLayoutLineDate.setVisibility(View.VISIBLE);
                                 holder.textViewLineDate.setText("Hace " + checks.get(position).getSemana() + " semanas");
                                 holder.linearLayoutCheck.setPadding(0, 35, 0, 0);
@@ -325,6 +338,9 @@ public class ChecksDbAdapter extends RecyclerView.Adapter<ChecksDbAdapter.CheckV
                                 holder.linearLayoutLineDate.setVisibility(View.GONE);
                                 holder.linearLayoutCheck.setPadding(0,0,0,0);
                             }
+                        } else {
+                            holder.linearLayoutLineDate.setVisibility(View.GONE);
+                            holder.linearLayoutCheck.setPadding(0,0,0,0);
                         }
                     }
                 }
@@ -366,6 +382,7 @@ public class ChecksDbAdapter extends RecyclerView.Adapter<ChecksDbAdapter.CheckV
         TextView textViewGeocerca, textViewTipeCheck, textViewFecha, textViewLineDate;
         ImageView imageViewSendCheck, imageViewHistoryCheck, imageViewDelete;
         LinearLayout linearLayoutOpenLocation, linearLayoutLineDate, linearLayoutCheck;
+        LottieAnimationView lottieAnimationViewDeleteCheck;
         CardView cardViewCheck;
         View myView, viewDelete;
 
@@ -384,8 +401,8 @@ public class ChecksDbAdapter extends RecyclerView.Adapter<ChecksDbAdapter.CheckV
             imageViewDelete = view.findViewById(R.id.imageViewDelete);
             textViewLineDate = view.findViewById(R.id.textViewLineDate);
             linearLayoutLineDate = view.findViewById(R.id.lineDate);
-            imageViewDelete = view.findViewById(R.id.imageViewDelete);
             viewDelete = view.findViewById(R.id.viewDelete);
+            lottieAnimationViewDeleteCheck = view.findViewById(R.id.animationDeleteCheck);
         }
     }
 }

@@ -1,5 +1,6 @@
 package com.dan.timewebclone.adapters;
 
+import android.animation.Animator;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.graphics.Bitmap;
@@ -20,6 +21,7 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.cardview.widget.CardView;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.airbnb.lottie.LottieAnimationView;
 import com.dan.timewebclone.R;
 import com.dan.timewebclone.activitys.GeocercasActivity;
 import com.dan.timewebclone.activitys.HomeTW;
@@ -78,6 +80,7 @@ public class GeocercasDbAdapter extends RecyclerView.Adapter<GeocercasDbAdapter.
     public void onBindViewHolder(@NonNull GeocercaViewHolder holder, int position) {
         holder.textViewAdrressGeocerca.setText(geocercas.get(position).getDireccion());
         holder.textViewNameGeocerca.setText(geocercas.get(position).getGeoNombre());
+        
         selectGeofencing(holder, geocercas.get(position));
     }
 
@@ -85,8 +88,22 @@ public class GeocercasDbAdapter extends RecyclerView.Adapter<GeocercasDbAdapter.
         holder.myView.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+                holder.lottieAnimationViewGeo.addAnimatorListener(new Animator.AnimatorListener() {
+                    @Override
+                    public void onAnimationStart(Animator animator) {}
+                    @Override
+                    public void onAnimationEnd(Animator animator) {
+                        context.goToHome(geocerca.getGeoLat(), geocerca.getGeoLong(), geocerca.getRadio(), geocerca.getIdGeocerca());
+                        holder.lottieAnimationViewGeo.removeAllAnimatorListeners();
+                    }
+                    @Override
+                    public void onAnimationCancel(Animator animator) {}
+                    @Override
+                    public void onAnimationRepeat(Animator animator) {}
+                });
                 //LatLng latLng = new LatLng(geocerca.getGeoLat(), geocerca.getGeoLong());
-                context.goToHome(geocerca.getGeoLat(), geocerca.getGeoLong(), geocerca.getRadio(), geocerca.getIdGeocerca());
+                holder.lottieAnimationViewGeo.playAnimation();
+                
             }
         });
     }
@@ -110,6 +127,7 @@ public class GeocercasDbAdapter extends RecyclerView.Adapter<GeocercasDbAdapter.
     public class GeocercaViewHolder extends RecyclerView.ViewHolder{
         TextView textViewAdrressGeocerca, textViewNameGeocerca;
         View myView;
+        LottieAnimationView lottieAnimationViewGeo;
 
 
         public GeocercaViewHolder(View view){
@@ -117,6 +135,7 @@ public class GeocercasDbAdapter extends RecyclerView.Adapter<GeocercasDbAdapter.
             myView = view;
             textViewNameGeocerca = view.findViewById(R.id.textViewGeoName);
             textViewAdrressGeocerca = view.findViewById(R.id.textViewDireccion);
+            lottieAnimationViewGeo = view.findViewById(R.id.animationGeo);
         }
     }
 

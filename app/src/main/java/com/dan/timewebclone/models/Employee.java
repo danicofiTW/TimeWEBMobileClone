@@ -16,6 +16,7 @@ public class Employee {
     private String image;
     private String url;
     private boolean stateCamera = false;
+    private boolean stateBiometrics = false;
     //private String configuracion;
 
 
@@ -60,6 +61,32 @@ public class Employee {
         this.image = image;
         this.url = url;
         this.stateCamera = stateCamera;
+    }
+
+    public Employee(String name, String claveUser, String company, String rfcCompany, String email, String phone, String password, String token, String idUser, String idCompany, String departamento, String image, String url, boolean stateCamera, boolean stateBiometrics) {
+        this.name = name;
+        this.claveUser = claveUser;
+        this.company = company;
+        this.rfcCompany = rfcCompany;
+        this.email = email;
+        this.phone = phone;
+        this.password = password;
+        this.token = token;
+        this.idUser = idUser;
+        this.idCompany = idCompany;
+        this.departamento = departamento;
+        this.image = image;
+        this.url = url;
+        this.stateCamera = stateCamera;
+        this.stateBiometrics = stateBiometrics;
+    }
+
+    public boolean isStateBiometrics() {
+        return stateBiometrics;
+    }
+
+    public void setStateBiometrics(boolean stateBiometrics) {
+        this.stateBiometrics = stateBiometrics;
     }
 
     public String getIdCompany() {

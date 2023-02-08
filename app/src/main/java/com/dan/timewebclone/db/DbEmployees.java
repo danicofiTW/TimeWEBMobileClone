@@ -41,6 +41,11 @@ public class DbEmployees extends DbHelper{
             } else{
                 values.put("stateCamera", 0);
             }
+            if(employee.isStateBiometrics()){
+                values.put("stateBiometrics", 1);
+            } else {
+                values.put("stateBiometrics", 0);
+            }
             if(employee.getImage()!=null){
                 values.put("image", employee.getImage());
             }
@@ -105,19 +110,24 @@ public class DbEmployees extends DbHelper{
 
         cursorChecks = db.rawQuery("SELECT * FROM " +TABLE_EMPLOYEES+ " WHERE idUser='"+idUser+"'", null);
         if(cursorChecks.moveToFirst()){
-                employee = new Employee();
-                employee.setName(cursorChecks.getString(2));
-                employee.setIdUser(cursorChecks.getString(1));
-                employee.setCompany(cursorChecks.getString(4));
-                employee.setPhone(cursorChecks.getString(7));
-                employee.setEmail(cursorChecks.getString(6));
-                employee.setPassword(cursorChecks.getString(8));
-                employee.setImage(cursorChecks.getString(11));
-                if(cursorChecks.getInt(13) == 1){
-                    employee.setStateCamera(true);
-                } else {
-                    employee.setStateCamera(false);
-                }
+            employee = new Employee();
+            employee.setName(cursorChecks.getString(2));
+            employee.setIdUser(cursorChecks.getString(1));
+            employee.setCompany(cursorChecks.getString(4));
+            employee.setPhone(cursorChecks.getString(7));
+            employee.setEmail(cursorChecks.getString(6));
+            employee.setPassword(cursorChecks.getString(8));
+            employee.setImage(cursorChecks.getString(11));
+            if(cursorChecks.getInt(13) == 1){
+                employee.setStateCamera(true);
+            } else {
+                employee.setStateCamera(false);
+            }
+            if(cursorChecks.getInt(15) == 1){
+                employee.setStateBiometrics(true);
+            } else {
+                employee.setStateBiometrics(false);
+            }
         }
         cursorChecks.close();
         dbEmploye.close();
@@ -214,15 +224,34 @@ public class DbEmployees extends DbHelper{
         boolean save = false;
         DbHelper dbEmployee = new DbHelper(myContext);
         SQLiteDatabase db = dbEmployee.getWritableDatabase();
-        Employee employee = null;
-        Cursor cursorChecks = null;
-        //String dateS = String.valueOf(date);
 
         try{
             if(stateCamera){
                 db.execSQL("UPDATE " + TABLE_EMPLOYEES + " SET stateCamera = '"+1+"'WHERE idUser = '"+idUser+"'");
             } else{
                 db.execSQL("UPDATE " + TABLE_EMPLOYEES + " SET stateCamera = '"+0+"'WHERE idUser = '"+idUser+"'");
+            }
+            save = true;
+        } catch (Exception ex){
+            ex.toString();
+            save = false;
+        } finally {
+            dbEmployee.close();
+        }
+        return save;
+    }
+
+    public boolean updateStateBiometrics(String idUser, boolean stateBiometrics){
+        boolean save = false;
+        DbHelper dbEmployee = new DbHelper(myContext);
+        SQLiteDatabase db = dbEmployee.getWritableDatabase();
+        //String dateS = String.valueOf(date);
+
+        try{
+            if(stateBiometrics){
+                db.execSQL("UPDATE " + TABLE_EMPLOYEES + " SET stateBiometrics = '"+1+"'WHERE idUser = '"+idUser+"'");
+            } else{
+                db.execSQL("UPDATE " + TABLE_EMPLOYEES + " SET stateBiometrics = '"+0+"'WHERE idUser = '"+idUser+"'");
             }
             save = true;
         } catch (Exception ex){

@@ -1,5 +1,9 @@
 package com.dan.timewebclone.fragments;
 
+import static androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_STRONG;
+import static androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_WEAK;
+import static androidx.biometric.BiometricManager.Authenticators.DEVICE_CREDENTIAL;
+
 import android.Manifest;
 import android.app.AlertDialog;
 import android.app.PendingIntent;
@@ -15,6 +19,8 @@ import android.os.Build;
 import android.os.Bundle;
 
 import androidx.annotation.NonNull;
+import androidx.biometric.BiometricManager;
+import androidx.biometric.BiometricPrompt;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
@@ -34,6 +40,7 @@ import android.widget.Toast;
 import com.dan.timewebclone.activitys.GeocercasActivity;
 import com.dan.timewebclone.activitys.HomeTW;
 import com.dan.timewebclone.R;
+import com.dan.timewebclone.activitys.MainActivity;
 import com.dan.timewebclone.db.DbBitacoras;
 import com.dan.timewebclone.db.DbChecks;
 import com.dan.timewebclone.db.DbEmployees;
@@ -75,6 +82,7 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.Locale;
 import java.util.TimeZone;
+import java.util.concurrent.Executor;
 
 import de.hdodenhof.circleimageview.CircleImageView;
 
@@ -134,10 +142,16 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
     private GeofencingClient geofencingClient;
     private LatLng latLngGeoFence;
 
-    private PendingIntent geofencePendingIntent;
+    private Executor executor;
+    private BiometricPrompt biometricPrompt;
+    private BiometricPrompt.PromptInfo promptInfo;
+    private int canUseBiometrics = 0;
+    private Location mLocation;
+    private String mTipe;
 
     public boolean secondsIsOver = false;
     public boolean takePhoto = false;
+    public boolean biometria = false;
     Handler handler = new Handler();
 
     Runnable runnable = new Runnable() {
@@ -264,7 +278,6 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
 
         geofencingClient = LocationServices.getGeofencingClient(myContext);
         dbEmployees = new DbEmployees(myContext);
-
 
         //employee = dbEmployees.getEmployee(authProvider.getId());
         //employee = dbEmployees.getEmployee(authProvider.getId());
@@ -573,8 +586,60 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         }
     }
 
+    private void reviewBiometrics(){
+        executor = ContextCompat.getMainExecutor(myContext);
+        biometricPrompt = new BiometricPrompt(myContext, executor, new BiometricPrompt.AuthenticationCallback() {
+            @Override
+            public void onAuthenticationError(int errorCode, @NonNull CharSequence errString) {
+                super.onAuthenticationError(errorCode, errString);
+                myContext.constraintLayoutProgress.setVisibility(View.GONE);
+                Toast.makeText(myContext, "Error al validar biometria!!", Toast.LENGTH_SHORT).show();
+            }
+            @Override
+            public void onAuthenticationSucceeded(
+                    @NonNull BiometricPrompt.AuthenticationResult result) {
+                super.onAuthenticationSucceeded(result);
+                messageSend(mTipe,mLocation);
+                //Toast.makeText(getApplicationContext(), "Authentication succeeded!", Toast.LENGTH_SHORT).show();
+            }
+            @Override
+            public void onAuthenticationFailed() {
+                super.onAuthenticationFailed();
+                myContext.constraintLayoutProgress.setVisibility(View.GONE);
+                Toast.makeText(myContext, "No es posible validar", Toast.LENGTH_SHORT).show();
+            }
+        });
+
+        promptInfo = new BiometricPrompt.PromptInfo.Builder()
+                .setTitle("Enviar registro")
+                .setSubtitle("Verifique su identidad para continuar")
+                //.setNegativeButtonText("Usar contraseña")
+                .setConfirmationRequired(true)
+                .setAllowedAuthenticators(BIOMETRIC_STRONG|BIOMETRIC_WEAK|DEVICE_CREDENTIAL)
+                .build();
+
+        BiometricManager biometricManager = BiometricManager.from(myContext);
+        switch (biometricManager.canAuthenticate(BIOMETRIC_STRONG |BIOMETRIC_WEAK| DEVICE_CREDENTIAL)) {
+            case BiometricManager.BIOMETRIC_SUCCESS:
+                //Log.d("MY_APP_TAG", "App can authenticate using biometrics.");
+                canUseBiometrics = 0;
+                break;
+            case BiometricManager.BIOMETRIC_ERROR_NO_HARDWARE:
+                //Log.e("MY_APP_TAG", "No biometric features available on this device.");
+                canUseBiometrics = 1;
+                break;
+            case BiometricManager.BIOMETRIC_ERROR_HW_UNAVAILABLE:
+                //Log.e("MY_APP_TAG", "Biometric features are currently unavailable.");
+                canUseBiometrics = 1;
+                break;
+            case BiometricManager.BIOMETRIC_ERROR_NONE_ENROLLED:
+                // Prompts the user to create credentials that your app accepts.
+                canUseBiometrics = 2;
+                break;
+        }
+    }
+
     private void seendCheck(String tipe) {
-        myContext.constraintLayoutProgress.setVisibility(View.VISIBLE);
         if (checkIfLocationOpened()) {
             if (ContextCompat.checkSelfPermission(myContext, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
                 fusedLocation.getLastLocation().addOnSuccessListener(new OnSuccessListener<Location>() {
@@ -587,96 +652,17 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                             distance=0;
                         }
                         if(distance <= 0){
-                            String timezoneID = TimeZone.getDefault().getID();
-                            Calendar calendar = Calendar.getInstance(TimeZone.getTimeZone(timezoneID), Locale.getDefault());
-                            time1 = calendar.getTime();
-
-                            Check check = new Check();
-                            check.setTipeCheck(tipe);
-                            check.setIdUser(authProvider.getId());
-                            check.setTime(time1.getTime());
-                            check.setCheckLat(location.getLatitude());
-                            check.setCheckLong(location.getLongitude());
-                            check.setStatusSend(0);
-                            if (myContext.imagetoBase64 != null) {
-                                if (myContext.imagetoBase64 != "") {
-                                    check.setImage(myContext.imagetoBase64);
-                                    myContext.imagetoBase64 = "";
-                                }
-                            }
-                            if (myContext.fotoUri != null) {
-                                check.setUrlImage(myContext.fotoUri.toString());
-                                myContext.fotoUri = null;
-                            }
-                            if(myContext.idGeocerca != null && !myContext.idGeocerca.equals("")){
-                                check.setIdGeocerca(myContext.idGeocerca);
-                                String geoName = dbGeocercas.getGeocerca(myContext.idGeocerca).getGeoNombre();
-                                if(geoName != null && !geoName.equals("")){
-                                    check.setNameGeocerca(geoName);
-                                }
-                            }
-
-                            myContext.numberChecksSendLate++;
-
-                            checksProvider.createCheck(check).addOnSuccessListener(new OnSuccessListener<Void>() {
-                                @Override
-                                public void onSuccess(Void aVoid) {
-                                    if(myContext.constraintLayoutProgress.getVisibility() == View.GONE){
-                                        myContext.constraintLayoutProgress.setVisibility(View.VISIBLE);
-                                    }
-                                    int tipeSend;
-                                    String timezoneID = TimeZone.getDefault().getID();
-                                    Calendar calendar = Calendar.getInstance(TimeZone.getTimeZone(timezoneID), Locale.getDefault());
-                                    Date time2 = calendar.getTime();
-
-                                    if (time1 != null) {
-                                        if (withoutInternet == true) {
-                                            tipeSend = 1;
-                                        } else {
-                                            tipeSend = 2;
-                                        }
-                                    } else {
-                                        tipeSend = 2;
-                                    }
-
-                                    time1 = null;
-                                    check.setStatusSend(tipeSend);
-
-                                    checksProvider.updateStatus(check.getIdCheck(), tipeSend, time2.getTime());
-                                    myContext.updateChecks(check.getIdCheck(), tipeSend, check.getTime(), time2.getTime());
-
-                                    //loadin(false);
-
+                            if(biometria){
+                                if(canUseBiometrics == 0){
+                                    mLocation = location;
+                                    mTipe = tipe;
+                                    biometricPrompt.authenticate(promptInfo);
+                                } else {
                                     myContext.constraintLayoutProgress.setVisibility(View.GONE);
-                                    if (myContext.numberChecksSendLate != 0 ) {
-                                        if (!myContext.updateChecksNotSend){
-                                            enviarToast(true);
-                                            myContext.numberChecksSendLate = 0;
-                                            withoutInternet = true;
-                                            myContext.updateChecksNotSend = false;
-                                        } else {
-                                            myContext.numberChecksSendLate = 0;
-                                            withoutInternet = true;
-                                        }
-                                    }
-                                }
-                            });
-                            long id = dbChecks.insertCheck(check);
-                            myContext.image = null;
-                            if (id > 0) {
-                                myContext.updateViewLateCheck();
-                                setImageDefault();
-
-                                if (!isOnlineNet()) {
-                                    //loadin(false);
-                                    withoutInternet = false;
-                                    myContext.constraintLayoutProgress.setVisibility(View.GONE);
-                                    enviarToast(false);
+                                    Toast.makeText(myContext, "No se puede usar biometria", Toast.LENGTH_SHORT).show();
                                 }
                             } else {
-                                myContext.constraintLayoutProgress.setVisibility(View.GONE);
-                                //loadin(false);
-                                Toast.makeText(myContext, "Error al registrar", Toast.LENGTH_SHORT).show();
+                                messageSend(tipe, location);
                             }
                         } else {
                             //loadin(false);
@@ -694,6 +680,101 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
             myContext.constraintLayoutProgress.setVisibility(View.GONE);
             //loadin(false);
             disconnect();
+        }
+    }
+
+    private void messageSend(String tipe, Location location){
+        myContext.constraintLayoutProgress.setVisibility(View.VISIBLE);
+        String timezoneID = TimeZone.getDefault().getID();
+        Calendar calendar = Calendar.getInstance(TimeZone.getTimeZone(timezoneID), Locale.getDefault());
+        time1 = calendar.getTime();
+
+        Check check = new Check();
+        check.setTipeCheck(tipe);
+        check.setIdUser(authProvider.getId());
+        check.setTime(time1.getTime());
+        check.setCheckLat(location.getLatitude());
+        check.setCheckLong(location.getLongitude());
+        check.setStatusSend(0);
+        if (myContext.imagetoBase64 != null) {
+            if (myContext.imagetoBase64 != "") {
+                check.setImage(myContext.imagetoBase64);
+                myContext.imagetoBase64 = "";
+            }
+        }
+        if (myContext.fotoUri != null) {
+            check.setUrlImage(myContext.fotoUri.toString());
+            myContext.fotoUri = null;
+        }
+        if(myContext.idGeocerca != null && !myContext.idGeocerca.equals("")){
+            check.setIdGeocerca(myContext.idGeocerca);
+            String geoName = dbGeocercas.getGeocerca(myContext.idGeocerca).getGeoNombre();
+            if(geoName != null && !geoName.equals("")){
+                check.setNameGeocerca(geoName);
+            }
+        }
+
+        myContext.numberChecksSendLate++;
+
+        checksProvider.createCheck(check).addOnSuccessListener(new OnSuccessListener<Void>() {
+            @Override
+            public void onSuccess(Void aVoid) {
+                if(myContext.constraintLayoutProgress.getVisibility() == View.GONE){
+                    myContext.constraintLayoutProgress.setVisibility(View.VISIBLE);
+                }
+                int tipeSend;
+                String timezoneID = TimeZone.getDefault().getID();
+                Calendar calendar = Calendar.getInstance(TimeZone.getTimeZone(timezoneID), Locale.getDefault());
+                Date time2 = calendar.getTime();
+
+                if (time1 != null) {
+                    if (withoutInternet == true) {
+                        tipeSend = 1;
+                    } else {
+                        tipeSend = 2;
+                    }
+                } else {
+                    tipeSend = 2;
+                }
+
+                time1 = null;
+                check.setStatusSend(tipeSend);
+
+                checksProvider.updateStatus(check.getIdCheck(), tipeSend, time2.getTime());
+                myContext.updateChecks(check.getIdCheck(), tipeSend, check.getTime(), time2.getTime());
+
+                //loadin(false);
+
+                myContext.constraintLayoutProgress.setVisibility(View.GONE);
+                if (myContext.numberChecksSendLate != 0 ) {
+                    if (!myContext.updateChecksNotSend){
+                        enviarToast(true);
+                        myContext.numberChecksSendLate = 0;
+                        withoutInternet = true;
+                        myContext.updateChecksNotSend = false;
+                    } else {
+                        myContext.numberChecksSendLate = 0;
+                        withoutInternet = true;
+                    }
+                }
+            }
+        });
+        long id = dbChecks.insertCheck(check);
+        myContext.image = null;
+        if (id > 0) {
+            myContext.updateViewLateCheck();
+            setImageDefault();
+
+            if (!isOnlineNet()) {
+                //loadin(false);
+                withoutInternet = false;
+                myContext.constraintLayoutProgress.setVisibility(View.GONE);
+                enviarToast(false);
+            }
+        } else {
+            myContext.constraintLayoutProgress.setVisibility(View.GONE);
+            //loadin(false);
+            Toast.makeText(myContext, "Error al registrar", Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -872,6 +953,8 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         }
     }
 
+
+
     public static boolean isMockLocationOn(Location location, Context context) {
         if (android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR2) {
             if (location != null) {
@@ -965,15 +1048,23 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         employee = dbEmployees.getEmployee(authProvider.getId());
         updateGeocerca = false;
         //if(myContext.geoRadio == 0){
+        if(myContext.reviewSettings){
             reviewGeocerca();
-        //}
-
+        } else{
+            myContext.goToSettings();
+            myContext.reviewSettings = true;
+        }
         if(employee!=null){
             setGreeting();
             reviewTakePhoto();
+            biometria = employee.isStateBiometrics();
+            if(biometria){
+                reviewBiometrics();
+            }
         }
         super.onResume();
     }
+
 
     private void reviewGeocerca() {
         SharedPreferences sharedPref = myContext.getSharedPreferences("geocerca", Context.MODE_PRIVATE);

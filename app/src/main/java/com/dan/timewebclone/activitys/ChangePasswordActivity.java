@@ -19,6 +19,7 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.airbnb.lottie.LottieAnimationView;
 import com.dan.timewebclone.R;
 import com.dan.timewebclone.db.DbChecks;
 import com.dan.timewebclone.db.DbEmployees;
@@ -41,6 +42,7 @@ public class ChangePasswordActivity extends AppCompatActivity {
     private ImageView imageViewBack;
     private LinearLayout linearLayoutEmail;
     private ProgressDialog changePasswordProgress;
+    private LottieAnimationView animationView;
 
     private AuthProvider authProvider;
     private EmployeeProvider employeeProvider;
