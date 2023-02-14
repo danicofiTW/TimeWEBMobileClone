@@ -130,7 +130,27 @@ public class ShowLocationActivity extends AppCompatActivity implements OnMapRead
 
     //Mostrar imagen
     private void mostrarImagen() {
-        if(check.getUrlImage() != null){
+
+        if(check.getImage90() != null){
+            try{
+                byte[] decodedString = Base64.decode(check.getImage90(), Base64.DEFAULT);
+                Bitmap decodedByte = BitmapFactory.decodeByteArray(decodedString, 0, decodedString.length);
+                if(decodedByte != null){
+                    circleImageViewPhotoShow.setImageBitmap(decodedByte);
+                    viewTipeCheck();
+                    openImageView();
+                } else {
+                    defaultImage();
+                }
+            }
+            catch(Exception e){
+                e.getMessage();
+            }
+        } else {
+            defaultImage();
+        }
+
+        /*if(check.getUrlImage() != null){
             Uri uri;
             uri = Uri.parse(check.getUrlImage());
             ContentResolver contentResolver = getContentResolver();
@@ -177,7 +197,7 @@ public class ShowLocationActivity extends AppCompatActivity implements OnMapRead
             }
         } else {
             defaultImage();
-        }
+        }*/
     }
 
     //Mostrar imagen por defecto cuando el registro no cuenta con imagen

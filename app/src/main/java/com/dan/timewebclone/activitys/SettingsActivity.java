@@ -53,7 +53,6 @@ public class SettingsActivity extends AppCompatActivity {
     private DbBitacoras dbBitacoras;
     private AuthProvider authProvider;
     private EmployeeProvider employeeProvider;
-    private BitacoraProvider bitacoraProvider;
     private Employee employee;
     private AlertDialog.Builder builderDialogSettingsLock;
     private int canUseBiometrics;
@@ -77,10 +76,10 @@ public class SettingsActivity extends AppCompatActivity {
         dbChecks = new DbChecks(this);
         dbGeocercas = new DbGeocercas(this);
         dbBitacoras = new DbBitacoras(this);
-        bitacoraProvider = new BitacoraProvider();
         builderDialogSettingsLock = new AlertDialog.Builder(this);
 
         loginNotData = getIntent().getBooleanExtra("loginNotData",false);
+        geocercas = getIntent().getBooleanExtra("geocercas",false);
 
         employee = dbEmployees.getEmployee(authProvider.getId());
         //Si el usuario logeado no existe en db se actualiza la informacion
@@ -92,7 +91,6 @@ public class SettingsActivity extends AppCompatActivity {
         }
 
         reviewBiometrics();
-        reviewGeocercas();
 
 
         if(takePhoto){
@@ -173,19 +171,6 @@ public class SettingsActivity extends AppCompatActivity {
 
     }
 
-    private void reviewGeocercas() {
-        geocercas = false;
-        bitacoraProvider.getBitacorasByUser(authProvider.getId()).get().addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
-            @Override
-            public void onComplete(@NonNull Task<QuerySnapshot> task) {
-                if(task.isSuccessful()){
-                    if(task.getResult().size() != 0){
-                        geocercas = true;
-                    }
-                }
-            }
-        });
-    }
 
     private void reviewBiometrics() {
         BiometricManager biometricManager = BiometricManager.from(this);

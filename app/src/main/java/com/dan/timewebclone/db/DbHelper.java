@@ -13,7 +13,7 @@ public class DbHelper extends SQLiteOpenHelper {
 
     Context myContext;
 
-    private static final int DATABASE_VERSION=16;
+    private static final int DATABASE_VERSION=17;
     private static final String DATABASE_NAME="timeWEBMobile.db";
     public static final String TABLE_CHECKS="checks";
     public static final String TABLE_EMPLOYEES="employees";
@@ -61,7 +61,8 @@ public class DbHelper extends SQLiteOpenHelper {
                 "statusSend INTEGER NOT NULL," +
                 "dateSend TEXT NOT NULL,"+
                 "idGeocerca TEXT,"+
-                "nameGeocerca TEXT)");
+                "nameGeocerca TEXT,"+
+                "image90 TEXT)");
 
         sqLiteDatabase.execSQL("CREATE TABLE " + TABLE_GEOCERCA + "(" +
                 "id INTEGER PRIMARY KEY AUTOINCREMENT," +

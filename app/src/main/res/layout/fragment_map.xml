@@ -183,6 +183,75 @@
 
 
     <FrameLayout
+        android:id="@+id/frameLayoutGoToGoogleMaps"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:visibility="gone"
+        android:layout_marginTop="10dp"
+        android:layout_marginLeft="10dp">
+
+        <View
+            android:layout_width="50dp"
+            android:layout_height="50dp"
+            android:background="@drawable/circular_view_blue"/>
+
+        <ImageView
+            android:layout_width="50dp"
+            android:layout_height="50dp"
+            android:src="@drawable/icon_googlemaps"
+            android:layout_gravity="center"/>
+
+    </FrameLayout>
+
+    <FrameLayout
+        android:id="@+id/frameLayoutViewRout"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:visibility="gone"
+        android:layout_gravity="right"
+        android:layout_marginTop="75dp"
+        android:layout_marginRight="10dp">
+
+        <View
+            android:id="@+id/viewRout"
+            android:layout_width="50dp"
+            android:layout_height="50dp"
+            android:background="@drawable/circular_view_blue"/>
+
+        <ImageView
+            android:id="@+id/imageViewRout"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:src="@drawable/ic_move_location"
+            android:layout_gravity="center"/>
+
+    </FrameLayout>
+
+    <FrameLayout
+        android:id="@+id/frameLayoutMoveLocation"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:visibility="visible"
+        android:layout_gravity="right"
+        android:layout_marginTop="10dp"
+        android:layout_marginRight="10dp">
+
+        <View
+            android:id="@+id/viewMoveLocation"
+            android:layout_width="50dp"
+            android:layout_height="50dp"
+            android:background="@drawable/circular_view_blue"/>
+
+        <ImageView
+            android:id="@+id/imageViewMoveLocation"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:src="@drawable/icon_dont_move"
+            android:layout_gravity="center"/>
+
+    </FrameLayout>
+
+    <FrameLayout
         android:id="@+id/loading"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
@@ -211,6 +280,5 @@
         </LinearLayout>
 
     </FrameLayout>
-
 
 </FrameLayout>

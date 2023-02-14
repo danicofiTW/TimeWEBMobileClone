@@ -13,8 +13,10 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.graphics.Color;
 import android.location.Location;
 import android.location.LocationManager;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 
@@ -52,6 +54,8 @@ import com.dan.timewebclone.providers.BitacoraProvider;
 import com.dan.timewebclone.providers.ChecksProvider;
 import com.dan.timewebclone.providers.EmployeeProvider;
 import com.dan.timewebclone.providers.GeocercaProvider;
+import com.dan.timewebclone.providers.GoogleApiProvider;
+import com.dan.timewebclone.utils.DecodePoints;
 import com.getbase.floatingactionbutton.FloatingActionButton;
 import com.getbase.floatingactionbutton.FloatingActionsMenu;
 import com.google.android.gms.location.FusedLocationProviderClient;
@@ -62,6 +66,7 @@ import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.location.Priority;
+import com.google.android.gms.maps.CameraUpdate;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
@@ -70,28 +75,40 @@ import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.Circle;
 import com.google.android.gms.maps.model.CircleOptions;
+import com.google.android.gms.maps.model.JointType;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.android.gms.maps.model.Polyline;
+import com.google.android.gms.maps.model.PolylineOptions;
+import com.google.android.gms.maps.model.SquareCap;
+import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.android.gms.tasks.Task;
 import com.google.firebase.firestore.QuerySnapshot;
+
+import org.json.JSONArray;
+import org.json.JSONObject;
 
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.List;
 import java.util.Locale;
 import java.util.TimeZone;
 import java.util.concurrent.Executor;
 
 import de.hdodenhof.circleimageview.CircleImageView;
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
 
 public class MapFragment extends Fragment implements OnMapReadyCallback {
 
     private AuthProvider authProvider;
     private ChecksProvider checksProvider;
-    private EmployeeProvider employeeProvider;
-    private GeocercaProvider geocercaProvider;
     private BitacoraProvider bitacoraProvider;
     private DbChecks dbChecks;
     private DbGeocercas dbGeocercas;
@@ -102,10 +119,11 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
     private FloatingActionButton sendStartWork, sendStartEating, sendFinishEating, sendFinishWork;
 
     private GoogleMap map;
-    private View mView;
+    private GoogleApiProvider googleApiProvider;
+    private View mView, viewMoveLocation, viewViewRout;
     private TextView textViewGoodTime, textViewTime, textViewName, textViewState;
     private SupportMapFragment mapFragment;
-    public FrameLayout frameLayoutLoading;
+    public FrameLayout frameLayoutLoading, frameLayoutMoveLocation, frameLayoutGoToGoogleMaps, frameLayoutViewRout;
     private Toast mToast = null;
     int numberChecksSendLate = 0;
 
@@ -117,7 +135,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
     private boolean isConnect = false;
     private boolean withoutInternet = true;
     public static CircleImageView circleImageViewMap;
-    private ImageView imageViewPhotoMap;
+    private ImageView imageViewPhotoMap, imageViewMoveLocation, imageViewRout;
 
     private LatLng currentLatLng;
     private HomeTW myContext;
@@ -141,17 +159,23 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
     private Geofence geofencing;
     private GeofencingClient geofencingClient;
     private LatLng latLngGeoFence;
+    private Marker markerDestination;
+    private List<LatLng> polyLineList;
+    private PolylineOptions polylineOptions;
+    private Polyline routPolyLine;
 
     private Executor executor;
     private BiometricPrompt biometricPrompt;
     private BiometricPrompt.PromptInfo promptInfo;
     private int canUseBiometrics = 0;
-    private Location mLocation;
+    private Location mLocation, mLocation2;
     private String mTipe;
 
     public boolean secondsIsOver = false;
     public boolean takePhoto = false;
     public boolean biometria = false;
+    private boolean viewRout = false;
+    private boolean moveLocation = false;
     Handler handler = new Handler();
 
     Runnable runnable = new Runnable() {
@@ -190,7 +214,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         @Override
         public void onLocationResult(LocationResult locationResult) {
             for (Location location : locationResult.getLocations()) {
-                //mLocation = location;
+                mLocation2 = location;
                 //Log.d("UBICACION", "Location: " + mLocation.getLatitude()+ ", " + mLocation.getLongitude());
                 if (isMockLocationOn(location, myContext)) {
                     disconnect();
@@ -207,6 +231,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                             .title("Tu posicion")
                             .icon(BitmapDescriptorFactory.fromResource(R.drawable.icon_employee_48)));
 
+                    if(!moveLocation && !viewRout)
                     map.animateCamera(CameraUpdateFactory.newCameraPosition(
                             new CameraPosition.Builder()
                                     .target(new LatLng(location.getLatitude(), location.getLongitude()))
@@ -251,14 +276,14 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
 
         authProvider = new AuthProvider();
         checksProvider = new ChecksProvider();
-        employeeProvider = new EmployeeProvider();
-        geocercaProvider = new GeocercaProvider();
         bitacoraProvider = new BitacoraProvider();
         dbChecks = new DbChecks(myContext);
         dbGeocercas = new DbGeocercas(myContext);
         dbBitacoras = new DbBitacoras(myContext);
+        googleApiProvider = new GoogleApiProvider(myContext);
 
         firstReviewGeoface = false;
+        //viewRout = true;
 
         fusedLocation = LocationServices.getFusedLocationProviderClient(mView.getContext());
 
@@ -275,9 +300,17 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         textViewName = mView.findViewById(R.id.textViewName);
         textViewState = mView.findViewById(R.id.textViewStatus);
         frameLayoutLoading = mView.findViewById(R.id.loading);
+        frameLayoutMoveLocation = mView.findViewById(R.id.frameLayoutMoveLocation);
+        frameLayoutGoToGoogleMaps = mView.findViewById(R.id.frameLayoutGoToGoogleMaps);
+        imageViewMoveLocation = mView.findViewById(R.id.imageViewMoveLocation);
+        viewMoveLocation = mView.findViewById(R.id.viewMoveLocation);
+        frameLayoutViewRout = mView.findViewById(R.id.frameLayoutViewRout);
+        imageViewRout = mView.findViewById(R.id.imageViewRout);
+        viewViewRout = mView.findViewById(R.id.viewRout);
 
         geofencingClient = LocationServices.getGeofencingClient(myContext);
         dbEmployees = new DbEmployees(myContext);
+        //markerDestination = new Marker()
 
         //employee = dbEmployees.getEmployee(authProvider.getId());
         //employee = dbEmployees.getEmployee(authProvider.getId());
@@ -372,7 +405,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
             public void onClick(View view) {
                 if (currentLatLng != null && isConnect) {
                     if (takePhoto) {
-                        if (!myContext.imagetoBase64.equals("")) {
+                        if (!myContext.imagetoBase64.equals("") || !myContext.image90.equals("")) {
                             seendCheck("finishWork");
                         } else {
                             Toast.makeText(myContext, "La fotografia es necesaria para el registro", Toast.LENGTH_SHORT).show();
@@ -399,9 +432,160 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                 takePhoto();
             }
         });
-        runnable.run();
 
+
+        frameLayoutGoToGoogleMaps.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                if(myContext.geoRadio == 0) {
+                    Toast.makeText(myContext, "No se puede realizar la busqueda en mapa", Toast.LENGTH_SHORT).show();
+                }else{
+                    String uri = "geo:<" + myContext.geoLat + ">,<" + myContext.geoLong + ">?q=<" + myContext.geoLat + ">,<" + myContext.geoLong + ">(" + dbGeocercas.getGeocerca(myContext.idGeocerca).getGeoNombre() + ")";
+                    Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(uri));
+                    startActivity(intent);
+                }
+            }
+        });
+
+        frameLayoutViewRout.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                reviewRoutLocation();
+            }
+        });
+
+        frameLayoutMoveLocation.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+               selectMoveLocation();
+            }
+        });
+
+
+        runnable.run();
         return mView;
+    }
+
+    private void selectMoveLocation(){
+        if(moveLocation){
+            moveLocation = false;
+            imageViewMoveLocation.setImageResource(R.drawable.icon_dont_move);
+            viewMoveLocation.setBackground(ContextCompat.getDrawable(myContext, R.drawable.circular_view_blue));
+            map.getUiSettings().setScrollGesturesEnabled(false);
+            map.getUiSettings().setZoomControlsEnabled(false);
+            map.getUiSettings().setAllGesturesEnabled(false);
+            if(mLocation2!=null){
+                map.animateCamera(CameraUpdateFactory.newCameraPosition(
+                        new CameraPosition.Builder()
+                                .target(new LatLng(mLocation2.getLatitude(), mLocation2.getLongitude()))
+                                .zoom(17f)
+                                .build()
+                ));
+            }
+        } else {
+            moveLocation = true;
+            imageViewMoveLocation.setImageResource(R.drawable.icon_move_location);
+            viewMoveLocation.setBackground(ContextCompat.getDrawable(myContext, R.drawable.circular_view));
+            map.getUiSettings().setScrollGesturesEnabled(true);
+            map.getUiSettings().setZoomControlsEnabled(true);
+            map.getUiSettings().setAllGesturesEnabled(true);
+        }
+    }
+
+    private void drawRoute(LatLng originLatLng, LatLng destinationLatLng){
+        googleApiProvider.getDirections(originLatLng,destinationLatLng).enqueue(new Callback<String>() {
+            @Override
+            public void onResponse(Call<String> call, Response<String> response) {
+                try{
+                    JSONObject jsonObject = new JSONObject(response.body());
+                    JSONArray jsonArray = jsonObject.getJSONArray("routes");
+                    JSONObject route = jsonArray.getJSONObject(0);
+                    JSONObject polyLines = route.getJSONObject("overview_polyline");
+                    String points = polyLines.getString("points");
+                    polyLineList = DecodePoints.decodePoly(points);
+                    polylineOptions = new PolylineOptions();
+                    polylineOptions.color(Color.DKGRAY);
+                    polylineOptions.width(13f);
+                    polylineOptions.startCap(new SquareCap());
+                    polylineOptions.jointType(JointType.ROUND);
+                    polylineOptions.addAll(polyLineList);
+                    routPolyLine = map.addPolyline(polylineOptions);
+
+                } catch (Exception e){
+                    Toast.makeText(myContext, "Error encontrado: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                }
+            }
+
+            @Override
+            public void onFailure(Call<String> call, Throwable t) {
+
+            }
+        });
+    }
+
+    private void reviewRoutLocation( ){
+        if(!viewRout){
+            //fusedLocation.removeLocationUpdates(locationCallback);
+            if(isOnlineNet()){
+                viewRout = true;
+                imageViewRout.setImageResource(R.drawable.ic_route_white);
+                viewViewRout.setBackground(ContextCompat.getDrawable(myContext, R.drawable.circular_view));
+                if (checkIfLocationOpened()) {
+                    if (ContextCompat.checkSelfPermission(myContext, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+                        fusedLocation.getLastLocation().addOnCompleteListener(new OnCompleteListener<Location>() {
+                            @Override
+                            public void onComplete(@NonNull Task<Location> task) {
+                                if(task.isSuccessful()){
+                                    LatLng originLatLng = new LatLng(task.getResult().getLatitude(), task.getResult().getLongitude());
+                                    LatLng destinationLatLng = new LatLng(myContext.geoLat, myContext.geoLong);
+                                    //map.addMarker(new MarkerOptions().position(originLatLng).title("Origen").icon(BitmapDescriptorFactory.fromResource(R.drawable.icon_map_marker_red)));
+                                    markerDestination = map.addMarker(new MarkerOptions().position(destinationLatLng).title("Destino").icon(BitmapDescriptorFactory.fromResource(R.drawable.icon_map_marker_blue)));
+
+                                    LatLngBounds.Builder builder = new LatLngBounds.Builder();
+                                    builder.include(originLatLng);
+                                    builder.include(markerDestination.getPosition());
+                                    LatLngBounds bounds = builder.build();
+                                    int width = getResources().getDisplayMetrics().widthPixels;
+                                    int height = getResources().getDisplayMetrics().heightPixels;
+                                    int padding = (int) (width * 0.20); // offset from edges of the map 10% of screen
+
+                                    CameraUpdate cu = CameraUpdateFactory.newLatLngBounds(bounds, width, height, padding);
+
+                                    map.animateCamera(cu);
+                                   /* map.animateCamera(CameraUpdateFactory.newCameraPosition(
+                                            new CameraPosition.Builder()
+                                                    .target(originLatLng)
+                                                    .zoom(14f)
+                                                    .build()
+                                    ));*/
+                                    drawRoute(originLatLng, destinationLatLng);
+                                }
+                            }
+                        });
+                    }
+                }
+            } else {
+                Toast.makeText(myContext, "No cuentas con internet para poder trazar la ruta", Toast.LENGTH_SHORT).show();
+            }
+        } else {
+            imageViewRout.setImageResource(R.drawable.ic_move_location);
+            viewViewRout.setBackground(ContextCompat.getDrawable(myContext, R.drawable.circular_view_blue));
+            viewRout = false;
+            if(mLocation2!=null){
+                map.animateCamera(CameraUpdateFactory.newCameraPosition(
+                        new CameraPosition.Builder()
+                                .target(new LatLng(mLocation2.getLatitude(), mLocation2.getLongitude()))
+                                .zoom(17f)
+                                .build()
+                ));
+            }
+            if(markerDestination != null){
+                markerDestination.remove();
+            }
+            if(routPolyLine != null){
+                routPolyLine.remove();
+            }
+        }
     }
 
     private float reviewDistance(Location location){
@@ -414,7 +598,6 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         locationB.setLongitude(location.getLongitude());
 
         float distance = locationA.distanceTo(locationB)-myContext.geoRadio;
-
         return distance;
     }
 
@@ -426,6 +609,8 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         circleOptions.strokeColor(R.color.colorGris);
         circleOptions.fillColor(R.color.colorHomeTw2);
         circleOptions.strokeWidth(4);
+        frameLayoutGoToGoogleMaps.setVisibility(View.VISIBLE);
+        frameLayoutViewRout.setVisibility(View.VISIBLE);
 
         if(map!=null){
             if(mapCircle!=null){
@@ -702,6 +887,14 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                 myContext.imagetoBase64 = "";
             }
         }
+
+        if (myContext.image90 != null) {
+            if (myContext.image90 != "") {
+                check.setImage90(myContext.image90);
+                myContext.image90 = "";
+            }
+        }
+
         if (myContext.fotoUri != null) {
             check.setUrlImage(myContext.fotoUri.toString());
             myContext.fotoUri = null;
@@ -1048,12 +1241,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         employee = dbEmployees.getEmployee(authProvider.getId());
         updateGeocerca = false;
         //if(myContext.geoRadio == 0){
-        if(myContext.reviewSettings){
             reviewGeocerca();
-        } else{
-            myContext.goToSettings();
-            myContext.reviewSettings = true;
-        }
         if(employee!=null){
             setGreeting();
             reviewTakePhoto();
@@ -1088,9 +1276,6 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                                 myContext.updateData = true;
                                 Intent i = new Intent(myContext, GeocercasActivity.class);
                                 i.putExtra("notComeBack", true);
-                                if(myContext.reviewSettings){
-                                    i.putExtra("reviewSettings", true);
-                                }
                                 i.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
                                 startActivity(i);
                             } else {
@@ -1114,9 +1299,6 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                                 myContext.updateData = true;
                                 Intent i = new Intent(myContext, GeocercasActivity.class);
                                 i.putExtra("notComeBack", true);
-                                if(myContext.reviewSettings){
-                                    i.putExtra("reviewSettings", true);
-                                }
                                 i.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
                                 startActivity(i);
                             } else {

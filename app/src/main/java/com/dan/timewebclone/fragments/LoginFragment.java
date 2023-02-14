@@ -31,6 +31,7 @@ import com.dan.timewebclone.db.DbBitacoras;
 import com.dan.timewebclone.db.DbEmployees;
 import com.dan.timewebclone.models.Employee;
 import com.dan.timewebclone.providers.AuthProvider;
+import com.dan.timewebclone.providers.BitacoraProvider;
 import com.dan.timewebclone.providers.EmployeeProvider;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
@@ -40,6 +41,7 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.EventListener;
 import com.google.firebase.firestore.FirebaseFirestoreException;
+import com.google.firebase.firestore.QuerySnapshot;
 import com.squareup.picasso.Picasso;
 
 import de.hdodenhof.circleimageview.CircleImageView;
@@ -58,6 +60,7 @@ public class LoginFragment extends Fragment {
     private MainActivity myContext;
     private DbEmployees dbEmployees;
     private DbBitacoras dbBitacoras;
+    private BitacoraProvider bitacoraProvider;
 
     Employee employee;
 
@@ -88,6 +91,7 @@ public class LoginFragment extends Fragment {
         authProvider = new AuthProvider();
         dbEmployees = new DbEmployees(myContext);
         dbBitacoras = new DbBitacoras(myContext);
+        bitacoraProvider = new BitacoraProvider();
 
         if (authProvider.getId() != null && dbEmployees.getEmployee(authProvider.getId()) != null) {
             textInputEmailLogin.setText(dbEmployees.getEmployee(authProvider.getId()).getEmail());
@@ -206,10 +210,32 @@ public class LoginFragment extends Fragment {
                 startActivity(intent);
             }
         } else {
-            Intent intent = new Intent(myContext, SettingsActivity.class);
-            intent.putExtra("loginNotData", true);
-            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-            startActivity(intent);
+            bitacoraProvider.getBitacorasByUser(authProvider.getId()).get().addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
+                @Override
+                public void onComplete(@NonNull Task<QuerySnapshot> task) {
+                    if(task.isSuccessful()){
+                        if(task.getResult().size() != 0){
+                            Intent intent = new Intent(myContext, SettingsActivity.class);
+                            intent.putExtra("loginNotData", true);
+                            intent.putExtra("geocercas", true);
+                            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                            startActivity(intent);
+                        } else {
+                            Intent intent = new Intent(myContext, SettingsActivity.class);
+                            intent.putExtra("loginNotData", true);
+                            intent.putExtra("geocercas", false);
+                            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                            startActivity(intent);
+                        }
+                    } else {
+                        Intent intent = new Intent(myContext, SettingsActivity.class);
+                        intent.putExtra("loginNotData", true);
+                        intent.putExtra("geocercas", false);
+                        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                        startActivity(intent);
+                    }
+                }
+            });
         }
     }
 

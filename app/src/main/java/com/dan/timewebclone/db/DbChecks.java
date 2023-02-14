@@ -69,6 +69,11 @@ public class DbChecks extends DbHelper{
                 //File file = new File(check.getImage());
                 values.put("image", check.getImage());
             }
+
+            if(check.getImage90()!=null){
+                //File file = new File(check.getImage());
+                values.put("image90", check.getImage90());
+            }
             //values.put("idCompany", employee.getCompany());
             id = db.insert(TABLE_CHECKS, null, values);
         } catch (Exception ex){
@@ -113,6 +118,7 @@ public class DbChecks extends DbHelper{
                 check.setTimeSend(cursorChecks.getInt(12));
                 check.setIdGeocerca(cursorChecks.getString(13));
                 check.setNameGeocerca(cursorChecks.getString(14));
+                check.setImage90(cursorChecks.getString(15));
                 listChecks.add(check);
             } while (cursorChecks.moveToNext());
         }
@@ -157,6 +163,7 @@ public class DbChecks extends DbHelper{
                 check.setTimeSend(cursorChecks.getInt(12));
                 check.setIdGeocerca(cursorChecks.getString(13));
                 check.setNameGeocerca(cursorChecks.getString(14));
+                check.setImage90(cursorChecks.getString(15));
                 listChecks.add(check);
             } while (cursorChecks.moveToNext());
         }
@@ -197,6 +204,7 @@ public class DbChecks extends DbHelper{
             check.setTimeSend(cursorChecks.getInt(12));
             check.setIdGeocerca(cursorChecks.getString(13));
             check.setNameGeocerca(cursorChecks.getString(14));
+            check.setImage90(cursorChecks.getString(15));
         }
         cursorChecks.close();
         dbChecks.close();

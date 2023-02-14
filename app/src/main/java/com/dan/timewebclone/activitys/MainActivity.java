@@ -111,8 +111,9 @@ public class MainActivity extends AppCompatActivity {
             public void onAuthenticationError(int errorCode,
                                               @NonNull CharSequence errString) {
                 super.onAuthenticationError(errorCode, errString);
-                moveFragment(loginFragment);
-                loginFragment.setTextEmail(dbEmployees.getEmployee(mAuth.getId()).getEmail());
+                    moveFragment(loginFragment);
+                    loginFragment.setTextEmail(dbEmployees.getEmployee(mAuth.getId()).getEmail());
+
                 //Toast.makeText(getApplicationContext(), "Authentication error: " + errString, Toast.LENGTH_SHORT).show();
             }
 
@@ -137,8 +138,10 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onAuthenticationFailed() {
                 super.onAuthenticationFailed();
-                moveFragment(loginFragment);
-                loginFragment.setTextEmail(dbEmployees.getEmployee(mAuth.getId()).getEmail());
+                //if(!loginFragment.isHidden()){
+                    moveFragment(loginFragment);
+                    loginFragment.setTextEmail(dbEmployees.getEmployee(mAuth.getId()).getEmail());
+                //}
                 //Toast.makeText(getApplicationContext(), "Authentication failed", Toast.LENGTH_SHORT).show();
             }
         });
@@ -224,6 +227,7 @@ public class MainActivity extends AppCompatActivity {
             fragmentTransaction.show(fragment).commit();
         } else {
             setBtns(false);
+            if(!fragment.isAdded())
             fragmentTransaction.add(R.id.frameLayoutMain, fragment).addToBackStack(null).commit();
         }
     }

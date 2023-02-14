@@ -13,6 +13,7 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Matrix;
 import android.location.Address;
 import android.location.Geocoder;
@@ -38,6 +39,10 @@ import com.dan.timewebclone.providers.BitacoraProvider;
 import com.dan.timewebclone.providers.ChecksProvider;
 import com.dan.timewebclone.providers.EmployeeProvider;
 
+import androidx.activity.result.ActivityResult;
+import androidx.activity.result.ActivityResultCallback;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
@@ -61,6 +66,8 @@ import androidx.appcompat.widget.Toolbar;
 import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+import androidx.core.content.FileProvider;
+import androidx.core.graphics.BitmapCompat;
 import androidx.viewpager.widget.ViewPager;
 
 import com.dan.timewebclone.providers.ImageProvider;
@@ -76,12 +83,15 @@ import com.google.firebase.firestore.ListenerRegistration;
 import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.QuerySnapshot;
 
+import java.io.BufferedOutputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.ByteBuffer;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -91,6 +101,8 @@ import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 import java.util.TimeZone;
+
+import id.zelory.compressor.Compressor;
 
 public class HomeTW extends AppCompatActivity{
 
@@ -120,6 +132,8 @@ public class HomeTW extends AppCompatActivity{
     private HistoryChecksLateSendFragment historyChecksLateSendFragment;
     private ViewPager.OnPageChangeListener pageChangeListener;
 
+    private String currentPhotoPath;
+    private Uri photoURI;
     public File mImageFile;
     public String imageFileStr;
     public byte[] image;
@@ -127,6 +141,7 @@ public class HomeTW extends AppCompatActivity{
     public Bitmap imagenBitmap;
     public Uri fotoUri;
     public String imagetoBase64 = "";
+    public String image90 = "";
     private boolean revieUpdateRegisters;
     private int updateNet;
     public int semanasSendOk;
@@ -202,7 +217,6 @@ public class HomeTW extends AppCompatActivity{
         viewPagerAdapter = new ViewPagerAdapter(getSupportFragmentManager());
 
         geoRadio = getIntent().getFloatExtra("geoRadio",0);
-        reviewSettings = getIntent().getBooleanExtra("reviewSettings", false);
 
         if(geoRadio == 0){
             reviewEmployee();
@@ -431,6 +445,8 @@ public class HomeTW extends AppCompatActivity{
         if(mapFragment.mapCircle!=null){
             mapFragment.mapCircle.remove();
         }
+        mapFragment.frameLayoutGoToGoogleMaps.setVisibility(View.GONE);
+        mapFragment.frameLayoutViewRout.setVisibility(View.GONE);
         SharedPreferences sharedPref = getSharedPreferences("geocerca", Context.MODE_PRIVATE);
         SharedPreferences.Editor editor = sharedPref.edit();
         editor.putFloat("geoLat", 0);
@@ -607,10 +623,77 @@ public class HomeTW extends AppCompatActivity{
            }
     }
 
+    ActivityResultLauncher<Intent> someActivityResultLauncher = registerForActivityResult(
+            new ActivityResultContracts.StartActivityForResult(), new ActivityResultCallback<ActivityResult>() {
+                @Override
+                public void onActivityResult(ActivityResult result) {
+                    if (result.getResultCode() == Activity.RESULT_OK) {
+                        //Intent data = result.getData();
+                        //imagenBitmap = (Bitmap) data.getExtras().get("data");
+                        try {
+
+                            Bitmap photo = MediaStore.Images.Media.getBitmap(getContentResolver(), photoURI);
+                            //imageView.setImageBitmap(photo);
+                            //imagenBitmap = MediaStore.Images.Media.getBitmap(getContentResolver(), fotoUri);
+                            /*BitmapCompat.getAllocationByteCount(imagenBitmap);
+                            int bytes = imagenBitmap.getByteCount();
+                            ByteBuffer buffer = ByteBuffer.allocate(bytes); //Create a new buffer
+                            imagenBitmap.copyPixelsToBuffer(buffer); //Move the byte data to the buffer
+                            byte[] image1 = buffer.array();*/
+                            Bitmap mB = reviewOrientationImage(photo);
+                            if(mB!=null){
+                                photo = mB;
+                            }
+                            if(mImageFile != null)
+                            photo = new Compressor(HomeTW.this).setQuality(80).compressToBitmap(mImageFile);
+
+                            ByteArrayOutputStream stream = new ByteArrayOutputStream();
+                            photo.compress(Bitmap.CompressFormat.JPEG, 80, stream);
+                            byte[] image1 = stream.toByteArray();
+                            image90 = Base64.encodeToString(image1, Base64.DEFAULT);
+
+                            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                            Bitmap compressImage = createImageScaleBitmap(photo);
+                            compressImage.compress(Bitmap.CompressFormat.JPEG, 80, baos);
+                            image = baos.toByteArray();
+                            imagetoBase64 = Base64.encodeToString(image, Base64.DEFAULT);
+
+                            Glide.with(HomeTW.this).load(image1).into(circleImageViewMap);
+                            //circleImageViewMap.setImageBitmap(imagenBitmap);
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+
+                    }
+                }
+            });
+
     //Tomar la foto
     public void takePhoto() {
-    fotoUri=null;
         Intent takePictureIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+        // Ensure that there's a camera activity to handle the intent
+        if (takePictureIntent.resolveActivity(getPackageManager()) != null) {
+            // Create the File where the photo should go
+            File photoFile = null;
+            try {
+                photoFile = createImageFile();
+            } catch (IOException ex) {
+
+            }
+            // Continue only if the File was successfully created
+            if (photoFile != null) {
+                mImageFile = photoFile;
+                photoURI = FileProvider.getUriForFile(this,
+                        "com.dan.timewebclone.fileprovider",
+                        photoFile);
+                takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT, photoURI);
+                someActivityResultLauncher.launch(takePictureIntent);
+            }
+        }
+
+
+
+        /*Intent takePictureIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
         takePictureIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION|Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
         if(takePictureIntent.resolveActivity(getPackageManager()) != null){
             OutputStream outputStream = null;
@@ -634,7 +717,7 @@ public class HomeTW extends AppCompatActivity{
                     grantUriPermission(packageName, FileProvider.getUriForFile(HomeTW.this, BuildConfig.APPLICATION_ID + ".fileprovider", new File(fotoUri.getPath())), Intent.FLAG_GRANT_WRITE_URI_PERMISSION | Intent.FLAG_GRANT_READ_URI_PERMISSION);
                 }*/
 
-                try {
+                /*try {
                     outputStream = resolver.openOutputStream(fotoUri);
                 } catch (FileNotFoundException e) {
                     e.printStackTrace();
@@ -655,14 +738,30 @@ public class HomeTW extends AppCompatActivity{
                     startActivityForResult(takePictureIntent, TAKE_PICTURE);
                 }
             }
-        }
+        }*/
+    }
+
+    private File createImageFile() throws IOException {
+        // Create an image file name
+        String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
+        String imageFileName = "JPEG_" + timeStamp + "_";
+        File storageDir = getExternalFilesDir(Environment.DIRECTORY_PICTURES);
+        File image = File.createTempFile(
+                imageFileName,  /* prefix */
+                ".jpg",         /* suffix */
+                storageDir      /* directory */
+        );
+
+        // Save a file: path for use with ACTION_VIEW intents
+        currentPhotoPath = image.getAbsolutePath();
+        return image;
     }
 
     //Resultado de la camara
-    @Override
-    public void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        if (resultCode == Activity.RESULT_OK && requestCode == TAKE_PICTURE) {
+    //@Override
+    //public void onActivityResult(int requestCode, int resultCode, Intent data) {
+      //  super.onActivityResult(requestCode, resultCode, data);
+        /*if (resultCode == Activity.RESULT_OK && requestCode == TAKE_PICTURE) {
             if(fotoUri!=null){
                 imagenBitmap = null;
 
@@ -689,8 +788,8 @@ public class HomeTW extends AppCompatActivity{
                 }
             }
             //saveImageDirectori();
-        }
-    }
+        }*/
+    //}
 
     //Revisar la orientacion de la foto
     private Bitmap reviewOrientationImage(Bitmap compressImage) {
@@ -699,26 +798,27 @@ public class HomeTW extends AppCompatActivity{
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             try {
-                InputStream fi = getContentResolver().openInputStream(fotoUri);
-                ei = new ExifInterface(fi);
+                if(photoURI != null){
+                    ei = new ExifInterface(getContentResolver().openInputStream(photoURI));
+                    int orientation = ei.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_UNDEFINED);
+
+                    switch (orientation) {
+                        case ExifInterface.ORIENTATION_ROTATE_90:
+                            rotatedBitmap = rotateImage(compressImage, 90);
+                            break;
+                        case ExifInterface.ORIENTATION_ROTATE_180:
+                            rotatedBitmap = rotateImage(compressImage, 180);
+                            break;
+                        case ExifInterface.ORIENTATION_ROTATE_270:
+                            rotatedBitmap = rotateImage(compressImage, 270);
+                            break;
+                        case ExifInterface.ORIENTATION_NORMAL:
+                        default:
+                            rotatedBitmap = compressImage;
+                    }
+                }
             } catch (IOException e) {
                 e.printStackTrace();
-            }
-            int orientation = ei.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_UNDEFINED);
-
-            switch (orientation) {
-                case ExifInterface.ORIENTATION_ROTATE_90:
-                    rotatedBitmap = rotateImage(compressImage, 90);
-                    break;
-                case ExifInterface.ORIENTATION_ROTATE_180:
-                    rotatedBitmap = rotateImage(compressImage, 180);
-                    break;
-                case ExifInterface.ORIENTATION_ROTATE_270:
-                    rotatedBitmap = rotateImage(compressImage, 270);
-                    break;
-                case ExifInterface.ORIENTATION_NORMAL:
-                default:
-                    rotatedBitmap = compressImage;
             }
         }
         return rotatedBitmap;
@@ -768,10 +868,6 @@ public class HomeTW extends AppCompatActivity{
 
     //Revisar checks pendientes, con mas de 30 dias y si no cuentas con checks pero se encuentran en firebase
     public void checkUpdateSend() {
-        if(!reviewSettings){
-            goToSettings();
-            reviewSettings = true;
-        } else {
             updateChecksNotSend = true;
             updateData = true;
             Check ch = new Check();
@@ -912,7 +1008,6 @@ public class HomeTW extends AppCompatActivity{
                     linearLayoutLoadingHome.setVisibility(View.GONE);
                 }
             }
-        }
     }
 
     public void reviewChecksOlderThan31Days(QuerySnapshot result) {
@@ -1087,8 +1182,6 @@ public class HomeTW extends AppCompatActivity{
                         }
                     }
                 });
-            } else {
-                reviewSettings = true;
             }
         }
 

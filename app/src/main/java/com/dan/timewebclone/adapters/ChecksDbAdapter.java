@@ -189,11 +189,6 @@ public class ChecksDbAdapter extends RecyclerView.Adapter<ChecksDbAdapter.CheckV
                     e.getMessage();
                 }
             }
-
-
-            /*else {
-                defaultImage(holder, checks.get(position));
-            }*/
     }
 
     private void longCLickCheck(CheckViewHolder holder, Check check){

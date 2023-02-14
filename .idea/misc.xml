@@ -4,6 +4,7 @@
     <option name="filePathToZoomLevelMap">
       <map>
         <entry key="..\:/Users/HPUser/AndroidStudioProjects/TimeWebClone/app/src/main/res/drawable-v24/circular_view.xml" value="0.1935" />
+        <entry key="..\:/Users/HPUser/AndroidStudioProjects/TimeWebClone/app/src/main/res/drawable-v24/circular_view_blue.xml" value="0.13" />
         <entry key="..\:/Users/HPUser/AndroidStudioProjects/TimeWebClone/app/src/main/res/drawable-v24/ic_edit_grey.xml" value="0.1135" />
         <entry key="..\:/Users/HPUser/AndroidStudioProjects/TimeWebClone/app/src/main/res/drawable-v24/ic_launcher_foreground.xml" value="0.147" />
         <entry key="..\:/Users/HPUser/AndroidStudioProjects/TimeWebClone/app/src/main/res/drawable-v24/ic_person_white.xml" value="0.176" />
@@ -19,6 +20,7 @@
         <entry key="..\:/Users/HPUser/AndroidStudioProjects/TimeWebClone/app/src/main/res/drawable/ic_edit_grey.xml" value="0.1135" />
         <entry key="..\:/Users/HPUser/AndroidStudioProjects/TimeWebClone/app/src/main/res/drawable/ic_image_white.xml" value="0.1645" />
         <entry key="..\:/Users/HPUser/AndroidStudioProjects/TimeWebClone/app/src/main/res/drawable/ic_launcher_background.xml" value="0.147" />
+        <entry key="..\:/Users/HPUser/AndroidStudioProjects/TimeWebClone/app/src/main/res/drawable/ic_map_w.xml" value="0.131" />
         <entry key="..\:/Users/HPUser/AndroidStudioProjects/TimeWebClone/app/src/main/res/drawable/ic_refresh_white.xml" value="0.19" />
         <entry key="..\:/Users/HPUser/AndroidStudioProjects/TimeWebClone/app/src/main/res/drawable/ic_search.xml" value="0.1945" />
         <entry key="..\:/Users/HPUser/AndroidStudioProjects/TimeWebClone/app/src/main/res/drawable/ic_time_orange.xml" value="0.105" />
@@ -39,7 +41,7 @@
         <entry key="..\:/Users/HPUser/AndroidStudioProjects/TimeWebClone/app/src/main/res/layout-sw600dp/activity_settings.xml" value="0.13" />
         <entry key="..\:/Users/HPUser/AndroidStudioProjects/TimeWebClone/app/src/main/res/layout-sw600dp/activity_show_location.xml" value="0.34305555555555556" />
         <entry key="..\:/Users/HPUser/AndroidStudioProjects/TimeWebClone/app/src/main/res/layout-sw600dp/fragment_login.xml" value="0.13984375" />
-        <entry key="..\:/Users/HPUser/AndroidStudioProjects/TimeWebClone/app/src/main/res/layout-sw600dp/fragment_map.xml" value="0.304421768707483" />
+        <entry key="..\:/Users/HPUser/AndroidStudioProjects/TimeWebClone/app/src/main/res/layout-sw600dp/fragment_map.xml" value="0.16" />
         <entry key="..\:/Users/HPUser/AndroidStudioProjects/TimeWebClone/app/src/main/res/layout-sw600dp/fragment_register.xml" value="0.13984375" />
         <entry key="..\:/Users/HPUser/AndroidStudioProjects/TimeWebClone/app/src/main/res/layout-w320dp/fragment_register.xml" value="0.18645833333333334" />
         <entry key="..\:/Users/HPUser/AndroidStudioProjects/TimeWebClone/app/src/main/res/layout-xhdpi/fragment_register.xml" value="0.10914855072463768" />
@@ -72,7 +74,7 @@
         <entry key="..\:/Users/HPUser/AndroidStudioProjects/TimeWebClone/app/src/main/res/layout/fragment_map.xml" value="0.18" />
         <entry key="..\:/Users/HPUser/AndroidStudioProjects/TimeWebClone/app/src/main/res/layout/fragment_menu.xml" value="0.21" />
         <entry key="..\:/Users/HPUser/AndroidStudioProjects/TimeWebClone/app/src/main/res/layout/fragment_photo.xml" value="0.17239583333333333" />
-        <entry key="..\:/Users/HPUser/AndroidStudioProjects/TimeWebClone/app/src/main/res/layout/fragment_register.xml" value="0.22" />
+        <entry key="..\:/Users/HPUser/AndroidStudioProjects/TimeWebClone/app/src/main/res/layout/fragment_register.xml" value="0.1" />
         <entry key="..\:/Users/HPUser/AndroidStudioProjects/TimeWebClone/app/src/main/res/layout/fragment_revie_password.xml" value="0.18645833333333334" />
         <entry key="..\:/Users/HPUser/AndroidStudioProjects/TimeWebClone/app/src/main/res/layout/fragment_second.xml" value="0.18645833333333334" />
         <entry key="..\:/Users/HPUser/AndroidStudioProjects/TimeWebClone/app/src/main/res/layout/fragment_terms_and_conditions.xml" value="0.103125" />

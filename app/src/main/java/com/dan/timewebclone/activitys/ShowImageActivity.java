@@ -59,7 +59,21 @@ public class ShowImageActivity extends AppCompatActivity {
 
     //Mostrar imagen
     private void getImage() {
-        if(check.getUrlImage() != null){
+        if(check.getImage90() != null){
+            try{
+                byte[] decodedString = Base64.decode(check.getImage90(), Base64.DEFAULT);
+                Bitmap decodedByte = BitmapFactory.decodeByteArray(decodedString, 0, decodedString.length);
+                if(decodedByte != null){
+                    imageViewPictureShow.setImageBitmap(decodedByte);
+                } else {
+                    //defaultImage();
+                }
+            }
+            catch(Exception e){
+                e.getMessage();
+            }
+        }
+        /*if(check.getUrlImage() != null){
             Uri uri;
             uri = Uri.parse(check.getUrlImage());
             ContentResolver contentResolver = getContentResolver();
@@ -98,7 +112,7 @@ public class ShowImageActivity extends AppCompatActivity {
             } catch(Exception e){
                 e.getMessage();
             }
-        }
+        }*/
     }
 
     //Cambiar el color de la barra de notificaciones
