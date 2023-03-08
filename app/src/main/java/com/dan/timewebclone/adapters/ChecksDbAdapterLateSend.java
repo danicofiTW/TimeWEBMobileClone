@@ -1,20 +1,10 @@
 package com.dan.timewebclone.adapters;
 
-import android.annotation.SuppressLint;
-import android.content.ContentResolver;
-import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.graphics.Color;
-import android.graphics.ImageDecoder;
-import android.location.Address;
-import android.location.Geocoder;
-import android.net.Uri;
 import android.os.Build;
-import android.provider.MediaStore;
 import android.util.Base64;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -28,8 +18,8 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.dan.timewebclone.R;
 import com.dan.timewebclone.activitys.HomeTW;
-import com.dan.timewebclone.activitys.ShowImageActivity;
 import com.dan.timewebclone.activitys.ShowLocationActivity;
+import com.dan.timewebclone.activitys.ShowLocationHuaweiActivity;
 import com.dan.timewebclone.db.DbChecks;
 import com.dan.timewebclone.fragments.HistoryChecksSendOkFragment;
 import com.dan.timewebclone.models.Check;
@@ -38,13 +28,12 @@ import com.dan.timewebclone.providers.AuthProvider;
 import com.dan.timewebclone.providers.ChecksProvider;
 import com.dan.timewebclone.providers.EmployeeProvider;
 import com.dan.timewebclone.utils.RelativeTime;
+import com.dan.timewebclone.utils.Utils;
 
-import java.io.IOException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.List;
 
 public class ChecksDbAdapterLateSend extends RecyclerView.Adapter<ChecksDbAdapterLateSend.CheckViewHolder> {
 
@@ -64,6 +53,7 @@ public class ChecksDbAdapterLateSend extends RecyclerView.Adapter<ChecksDbAdapte
     private RelativeTime relativeTime;
     private SimpleDateFormat sdfLongDate;
     private SimpleDateFormat sdfDate;
+    private boolean isMapHuawei;
 
 
 
@@ -78,7 +68,11 @@ public class ChecksDbAdapterLateSend extends RecyclerView.Adapter<ChecksDbAdapte
         historyChecksSendOkFragment = new HistoryChecksSendOkFragment();
         sdfLongDate = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
         sdfDate = new SimpleDateFormat("dd/MM/yyyy");
-
+        if(Utils.isGMS(context)){
+            isMapHuawei = false;
+        } else {
+            isMapHuawei = true;
+        }
         checks = listChecks;
         idChecksDelete = new ArrayList<>();
     }
@@ -173,15 +167,23 @@ public class ChecksDbAdapterLateSend extends RecyclerView.Adapter<ChecksDbAdapte
                 DbChecks dbChecks = new DbChecks(context);
                 if(context.idChecksLateDelete.size() == 0){
                     if(context.isViewDeleteSendLate() == View.GONE) {
-                        dbChecks.updateCheckDelete(false, check.getIdCheck());
-                        check.setDelete(false);
-                        Intent i = new Intent(context, ShowLocationActivity.class);
-                        i.putExtra("lat", check.getCheckLat());
-                        i.putExtra("lng", check.getCheckLong());
-                        i.putExtra("date", check.getTime());
-                        i.putExtra("tipe", check.getTipeCheck());
-                        i.putExtra("idCheck", check.getIdCheck());
-                        context.startActivity(i);
+                        if(isMapHuawei){
+                            Intent i = new Intent(context, ShowLocationHuaweiActivity.class);
+                            i.putExtra("lat", check.getCheckLat());
+                            i.putExtra("lng", check.getCheckLong());
+                            i.putExtra("date", check.getTime());
+                            i.putExtra("tipe", check.getTipeCheck());
+                            i.putExtra("idCheck", check.getIdCheck());
+                            context.startActivity(i);
+                        } else {
+                            Intent i = new Intent(context, ShowLocationActivity.class);
+                            i.putExtra("lat", check.getCheckLat());
+                            i.putExtra("lng", check.getCheckLong());
+                            i.putExtra("date", check.getTime());
+                            i.putExtra("tipe", check.getTipeCheck());
+                            i.putExtra("idCheck", check.getIdCheck());
+                            context.startActivity(i);
+                        }
                     } else {
                         notifyDataSetChanged();
                     }

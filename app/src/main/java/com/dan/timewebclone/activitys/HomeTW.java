@@ -1,30 +1,27 @@
 package com.dan.timewebclone.activitys;
 
-import static com.dan.timewebclone.fragments.MapFragment.circleImageViewMap;
-
 import android.Manifest;
 import android.app.Activity;
 import android.app.ProgressDialog;
-import android.content.ContentResolver;
-import android.content.ContentValues;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.graphics.Matrix;
-import android.location.Address;
-import android.location.Geocoder;
 import android.media.ExifInterface;
 import android.net.Uri;
+import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
 
+import com.airbnb.lottie.LottieAnimationView;
+import com.airbnb.lottie.RenderMode;
 import com.bumptech.glide.Glide;
 import com.dan.timewebclone.R;
 import com.dan.timewebclone.adapters.ViewPagerAdapter;
+import com.dan.timewebclone.channel.NotificationMessage;
 import com.dan.timewebclone.db.DbBitacoras;
 import com.dan.timewebclone.db.DbChecks;
 import com.dan.timewebclone.db.DbEmployees;
@@ -32,8 +29,11 @@ import com.dan.timewebclone.db.DbGeocercas;
 import com.dan.timewebclone.fragments.HistoryChecksSendOkFragment;
 import com.dan.timewebclone.fragments.MapFragment;
 import com.dan.timewebclone.fragments.HistoryChecksLateSendFragment;
+import com.dan.timewebclone.fragments.MapHuaweiFragment;
 import com.dan.timewebclone.models.Check;
 import com.dan.timewebclone.models.Employee;
+import com.dan.timewebclone.models.FCMBody;
+import com.dan.timewebclone.models.FCMResponse;
 import com.dan.timewebclone.providers.AuthProvider;
 import com.dan.timewebclone.providers.BitacoraProvider;
 import com.dan.timewebclone.providers.ChecksProvider;
@@ -44,13 +44,13 @@ import androidx.activity.result.ActivityResultCallback;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.os.Environment;
-import android.os.Looper;
+import android.os.Handler;
 import android.provider.MediaStore;
+import android.provider.Settings;
 import android.util.Base64;
 import android.util.Log;
 import android.view.Menu;
@@ -67,42 +67,41 @@ import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
-import androidx.core.graphics.BitmapCompat;
 import androidx.viewpager.widget.ViewPager;
 
 import com.dan.timewebclone.providers.ImageProvider;
+import com.dan.timewebclone.providers.NotificationProvider;
+import com.dan.timewebclone.retrofit.HMSApi;
+import com.dan.timewebclone.retrofit.RetrofitClient;
+import com.dan.timewebclone.services.HmsMessageService;
+import com.dan.timewebclone.services.MyFirebaseMessagingClient;
 import com.dan.timewebclone.utils.RelativeTime;
+import com.dan.timewebclone.utils.Utils;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
 import com.google.android.material.tabs.TabLayout;
+import com.google.firebase.crashlytics.FirebaseCrashlytics;
 import com.google.firebase.firestore.DocumentSnapshot;
-import com.google.firebase.firestore.EventListener;
-import com.google.firebase.firestore.FirebaseFirestoreException;
-import com.google.firebase.firestore.ListenerRegistration;
-import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.QuerySnapshot;
 
-import java.io.BufferedOutputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.nio.ByteBuffer;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
-import java.util.Collections;
 import java.util.Date;
-import java.util.List;
+import java.util.HashMap;
 import java.util.Locale;
+import java.util.Map;
 import java.util.TimeZone;
 
 import id.zelory.compressor.Compressor;
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
 
 public class HomeTW extends AppCompatActivity{
 
@@ -116,9 +115,12 @@ public class HomeTW extends AppCompatActivity{
     private DbBitacoras dbBitacoras;
     private Employee employee;
     private BitacoraProvider bitacoraProvider;
+    private NotificationProvider notificationProvider;
+    private static boolean isNotification;
 
     private SearchView searchView;
     private EditText editTextSearch;
+    private LottieAnimationView animation, animationLoad;
     public MenuItem menuItemSearch;
 
     public Toolbar toolbar;
@@ -128,6 +130,7 @@ public class HomeTW extends AppCompatActivity{
     private int tabSelected = 0;
 
     private MapFragment mapFragment;
+    private MapHuaweiFragment mapHuaweiFragment;
     private HistoryChecksSendOkFragment historyChecksSendOkFragment;
     private HistoryChecksLateSendFragment historyChecksLateSendFragment;
     private ViewPager.OnPageChangeListener pageChangeListener;
@@ -142,8 +145,11 @@ public class HomeTW extends AppCompatActivity{
     public Uri fotoUri;
     public String imagetoBase64 = "";
     public String image90 = "";
-    private boolean revieUpdateRegisters;
+    public boolean revieUpdateRegisters;
+    private boolean showReviewChecks = false;
+    private boolean isMapHuawei = false;
     private int updateNet;
+    public int review2Tipe;
     public int semanasSendOk;
     public int semanasSendLate;
     public float geoLat;
@@ -151,6 +157,7 @@ public class HomeTW extends AppCompatActivity{
     public float geoRadio;
     public String idGeocerca;
     public int numberChecksSendLate = 0;
+    public long timeReal;
 
     public ArrayList<String> idChecksDelete;
     public ArrayList<String> idChecksLateDelete;
@@ -168,21 +175,33 @@ public class HomeTW extends AppCompatActivity{
     private static final int TAKE_PICTURE = 101;
     private static final int REQUEST_PERMISSION_WRITE_STORAGE = 200;
 
+    private long longD;
+    private long difference;
+
+    AsyncTask<Void, Void, Long> runningTask;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_home_tw);
+        isNotification = false;
+        ShowNotificationActivity.updateActivity(this);
+        ShowLocationActivity.updateActivity(this);
 
         linearLayoutLoadingHome = findViewById(R.id.linearLayoutLoadingHome);
         linearLayoutLoadingHome.setVisibility(View.VISIBLE);
         constraintLayoutProgress = findViewById(R.id.progressLayout);
+        animation = findViewById(R.id.animationH);
+        animationLoad = findViewById(R.id.animationHLoad);
+        animation.isHardwareAccelerated();
+        animation.setRenderMode(RenderMode.HARDWARE);
+        animationLoad.isHardwareAccelerated();
+        animationLoad.setRenderMode(RenderMode.HARDWARE);
 
         pdRevieData = new ProgressDialog(this);
         pdRevieData.setTitle("Revisando informacion");
         pdRevieData.setMessage("Espere un momento ...");
         pdRevieData.setCancelable(false);
-
-
 
         dbGeocercas = new DbGeocercas(this);
         dbBitacoras = new DbBitacoras(this);
@@ -208,6 +227,7 @@ public class HomeTW extends AppCompatActivity{
         bitacoraProvider = new BitacoraProvider();
         dbChecks = new DbChecks(HomeTW.this);
         dbEmployees = new DbEmployees(HomeTW.this);
+        notificationProvider = new NotificationProvider();
 
         builderDialogExit = new AlertDialog.Builder(this);
         builderDialogUpdateChecks = new AlertDialog.Builder(HomeTW.this);
@@ -219,14 +239,22 @@ public class HomeTW extends AppCompatActivity{
         geoRadio = getIntent().getFloatExtra("geoRadio",0);
 
         if(geoRadio == 0){
-            reviewEmployee();
+           // reviewEmployee();
         }
-
-        mapFragment = new MapFragment();
+        setCrashlytics();
         historyChecksSendOkFragment = new HistoryChecksSendOkFragment();
         historyChecksLateSendFragment = new HistoryChecksLateSendFragment();
 
-        viewPagerAdapter.addFragment(mapFragment,"");
+        if(Utils.isGMS(this)){
+            mapFragment = new MapFragment();
+            viewPagerAdapter.addFragment(mapFragment,"");
+            stopService(new Intent(HomeTW.this, HmsMessageService.class));
+        } else {
+            isMapHuawei = true;
+            mapHuaweiFragment = new MapHuaweiFragment();
+            viewPagerAdapter.addFragment(mapHuaweiFragment,"");
+            stopService(new Intent(HomeTW.this, MyFirebaseMessagingClient.class));
+        }
         viewPagerAdapter.addFragment(historyChecksSendOkFragment,"ENVIADOS");
         viewPagerAdapter.addFragment(historyChecksLateSendFragment,"PENDIENTES");
 
@@ -260,7 +288,7 @@ public class HomeTW extends AppCompatActivity{
 
         //Cambiar la imagen del mapa
         setupTabIcon(true);
-
+        //generateToken();
     }
 
     //Revisar cambios en la vista
@@ -278,12 +306,20 @@ public class HomeTW extends AppCompatActivity{
                     case 0:
                         setupTabIcon(true);
                         viewSearchView(false);
-                        mapFragment.removeWach(false);
+                        if(isMapHuawei){
+                            mapHuaweiFragment.removeSecondProces(false);
+                        } else {
+                            mapFragment.removeSecondProces(false);
+                        }
                         break;
                     case 1:
                         setupTabIcon(false);
                         viewSearchView(true);
-                        mapFragment.removeWach(true);
+                        if(isMapHuawei){
+                            mapHuaweiFragment.removeSecondProces(true);
+                        } else {
+                            mapFragment.removeSecondProces(true);
+                        }
                         break;
                     default:
                         break;
@@ -343,14 +379,13 @@ public class HomeTW extends AppCompatActivity{
                 .setPositiveButton("Si", new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialogInterface, int i) {
+                        if(Utils.isGMS(HomeTW.this)){
+                            employeeProvider.deleteToken(authHome.getId(), HomeTW.this);
+                        } else {
+                            employeeProvider.deleteTokenHMS(authHome.getId(), HomeTW.this);
+                        }
                         authHome.signOut();
                         dialogInterface.dismiss();
-                        if(historyChecksLateSendFragment.deleteChecks.getVisibility() == View.VISIBLE){
-                            historyChecksLateSendFragment.updateDelete();
-                        }
-                        if(historyChecksSendOkFragment.deleteChecks.getVisibility() == View.VISIBLE){
-                            historyChecksSendOkFragment.updateDelete();
-                        }
                         removeGeocerca();
                         Intent in = new Intent(HomeTW.this, MainActivity.class);
                         in.putExtra("ChangePassword", "true");
@@ -364,13 +399,13 @@ public class HomeTW extends AppCompatActivity{
                         dialogInterface.dismiss();
                         Intent in = new Intent(HomeTW.this, MainActivity.class);
                         if(dbChecks.deleteAllChecks() && dbEmployees.deleteAllEmployees() && dbGeocercas.deleteAllGeocercas() && dbBitacoras.deleteAllBitacoras()){
+                            //employeeProvider.deleteToken(authHome.getId(), HomeTW.this);
+                            if(Utils.isGMS(HomeTW.this)){
+                                employeeProvider.deleteToken(authHome.getId(), HomeTW.this);
+                            } else {
+                                employeeProvider.deleteTokenHMS(authHome.getId(), HomeTW.this);
+                            }
                             authHome.signOut();
-                            if(historyChecksLateSendFragment.deleteChecks.getVisibility() == View.VISIBLE){
-                                historyChecksLateSendFragment.updateDelete();
-                            }
-                            if(historyChecksSendOkFragment.deleteChecks.getVisibility() == View.VISIBLE){
-                                historyChecksSendOkFragment.updateDelete();
-                            }
                             removeGeocerca();
                             in.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
                             startActivity(in);
@@ -387,12 +422,6 @@ public class HomeTW extends AppCompatActivity{
 
     //Ir a configuracion
     public void goToSettings() {
-        if(historyChecksLateSendFragment.deleteChecks.getVisibility() == View.VISIBLE){
-            historyChecksLateSendFragment.updateDelete();
-        }
-        if(historyChecksSendOkFragment.deleteChecks.getVisibility() == View.VISIBLE){
-            historyChecksSendOkFragment.updateDelete();
-        }
         Intent i = new Intent(HomeTW.this, SettingsActivity.class);
         startActivity(i);
     }
@@ -400,30 +429,30 @@ public class HomeTW extends AppCompatActivity{
     //Ir a geocercas
     private void goToGeocercas() {
         if(dbBitacoras.getBitacorasByIdUser(authHome.getId()).size()!=0){
-            if(historyChecksLateSendFragment.deleteChecks.getVisibility() == View.VISIBLE){
-                historyChecksLateSendFragment.updateDelete();
+
+            if(isMapHuawei){
+                if(mapHuaweiFragment.isVisible())
+                    mapHuaweiFragment.firstReviewGeoface=true;
+            } else {
+                if(mapFragment.isVisible())
+                    mapFragment.firstReviewGeoface=true;
             }
-            if(historyChecksSendOkFragment.deleteChecks.getVisibility() == View.VISIBLE){
-                historyChecksSendOkFragment.updateDelete();
-            }
-            mapFragment.firstReviewGeoface=true;
             //mViewPager.setCurrentItem(0);
             Intent i = new Intent(HomeTW.this, GeocercasActivity.class);
             startActivity(i);
         } else {
-            if(mapFragment.isOnlineNet()){
+            if(Utils.isOnlineNet(this)){
                 bitacoraProvider.getBitacorasByUser(authHome.getId()).get().addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
                     @Override
                     public void onComplete(@NonNull Task<QuerySnapshot> task) {
                         if(task.isSuccessful()){
                           if(task.getResult().size()!=0){
-                              if(historyChecksLateSendFragment.deleteChecks.getVisibility() == View.VISIBLE){
-                                  historyChecksLateSendFragment.updateDelete();
+                              if(isMapHuawei){
+                                  mapHuaweiFragment.firstReviewGeoface=true;
+                              } else {
+                                  mapFragment.firstReviewGeoface=true;
                               }
-                              if(historyChecksSendOkFragment.deleteChecks.getVisibility() == View.VISIBLE){
-                                  historyChecksSendOkFragment.updateDelete();
-                              }
-                              mapFragment.firstReviewGeoface=true;
+                              //mapFragment.firstReviewGeoface=true;
                               //mViewPager.setCurrentItem(0);
                               Intent i = new Intent(HomeTW.this, GeocercasActivity.class);
                               startActivity(i);
@@ -442,11 +471,27 @@ public class HomeTW extends AppCompatActivity{
     }
 
     public void removeGeocerca(){
-        if(mapFragment.mapCircle!=null){
-            mapFragment.mapCircle.remove();
+        if(isMapHuawei){
+            if(mapHuaweiFragment.isVisible()){
+                if(mapHuaweiFragment.mapCircle!=null){
+                    mapHuaweiFragment.mapCircle.remove();
+                }
+                mapHuaweiFragment.frameLayoutGoToPetalMaps.setVisibility(View.GONE);
+                mapHuaweiFragment.frameLayoutViewRout.setVisibility(View.GONE);
+            }
+        } else {
+            if(mapFragment!=null){
+                if(mapFragment.isVisible()){
+                    if(mapFragment.mapCircle!=null){
+                        mapFragment.mapCircle.remove();
+                    }
+                    if(mapFragment.frameLayoutGoToGoogleMaps!=null)
+                    mapFragment.frameLayoutGoToGoogleMaps.setVisibility(View.GONE);
+                    if(mapFragment.frameLayoutViewRout!=null)
+                    mapFragment.frameLayoutViewRout.setVisibility(View.GONE);
+                }
+            }
         }
-        mapFragment.frameLayoutGoToGoogleMaps.setVisibility(View.GONE);
-        mapFragment.frameLayoutViewRout.setVisibility(View.GONE);
         SharedPreferences sharedPref = getSharedPreferences("geocerca", Context.MODE_PRIVATE);
         SharedPreferences.Editor editor = sharedPref.edit();
         editor.putFloat("geoLat", 0);
@@ -460,25 +505,12 @@ public class HomeTW extends AppCompatActivity{
     }
     //Ir a cambiar el password
     private void goToChangePassword() {
-        if(historyChecksLateSendFragment.deleteChecks.getVisibility() == View.VISIBLE){
-            historyChecksLateSendFragment.updateDelete();
-        }
-        if(historyChecksSendOkFragment.deleteChecks.getVisibility() == View.VISIBLE){
-            historyChecksSendOkFragment.updateDelete();
-        }
         Intent i = new Intent(HomeTW.this, ChangePasswordActivity.class);
         startActivity(i);
     }
 
     //Ir a tu perfil
     private void goToProfile() {
-
-        if(historyChecksLateSendFragment.deleteChecks.getVisibility() == View.VISIBLE){
-            historyChecksLateSendFragment.updateDelete();
-        }
-        if(historyChecksSendOkFragment.deleteChecks.getVisibility() == View.VISIBLE){
-            historyChecksSendOkFragment.updateDelete();
-        }
         Intent i = new Intent(HomeTW.this, ProfileActivity.class);
         startActivity(i);
     }
@@ -589,19 +621,39 @@ public class HomeTW extends AppCompatActivity{
             if(permissions.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED){
                 takePhoto();
             }
-        } else if (requestCode == mapFragment.LOCATION_REQUEST_CODE) {
-            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-                    if (mapFragment.gpsActived()) {
-                        mapFragment.startLocation2();
+        } else {
+            if(isMapHuawei){
+               if (requestCode == mapHuaweiFragment.LOCATION_REQUEST_CODE) {
+                    if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+                            if (mapHuaweiFragment.gpsActived()) {
+                                mapHuaweiFragment.startLocation2();
+                            } else {
+                                mapHuaweiFragment.showAlertDialogNOGPS();
+                            }
+                        } else {
+                            mapHuaweiFragment.checkLocationPermissions();
+                        }
                     } else {
-                        mapFragment.showAlertDialogNOGPS();
+                        mapHuaweiFragment.checkLocationPermissions();
                     }
-                } else {
-                    mapFragment.checkLocationPermissions();
                 }
             } else {
-                mapFragment.checkLocationPermissions();
+                if (requestCode == mapFragment.LOCATION_REQUEST_CODE) {
+                    if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+                            if (mapFragment.gpsActived()) {
+                                mapFragment.startLocation2();
+                            } else {
+                                mapFragment.showAlertDialogNOGPS();
+                            }
+                        } else {
+                            mapFragment.checkLocationPermissions();
+                        }
+                    } else {
+                        mapFragment.checkLocationPermissions();
+                    }
+                }
             }
         }
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
@@ -633,19 +685,17 @@ public class HomeTW extends AppCompatActivity{
                         try {
 
                             Bitmap photo = MediaStore.Images.Media.getBitmap(getContentResolver(), photoURI);
-                            //imageView.setImageBitmap(photo);
-                            //imagenBitmap = MediaStore.Images.Media.getBitmap(getContentResolver(), fotoUri);
-                            /*BitmapCompat.getAllocationByteCount(imagenBitmap);
-                            int bytes = imagenBitmap.getByteCount();
-                            ByteBuffer buffer = ByteBuffer.allocate(bytes); //Create a new buffer
-                            imagenBitmap.copyPixelsToBuffer(buffer); //Move the byte data to the buffer
-                            byte[] image1 = buffer.array();*/
                             Bitmap mB = reviewOrientationImage(photo);
-                            if(mB!=null){
+                            if(mB != null){
                                 photo = mB;
                             }
                             if(mImageFile != null)
-                            photo = new Compressor(HomeTW.this).setQuality(80).compressToBitmap(mImageFile);
+
+                            try {
+                                photo = new Compressor(HomeTW.this).setQuality(80).compressToBitmap(mImageFile);
+                            } catch (IOException e) {
+                                e.printStackTrace();
+                            }
 
                             ByteArrayOutputStream stream = new ByteArrayOutputStream();
                             photo.compress(Bitmap.CompressFormat.JPEG, 80, stream);
@@ -658,7 +708,11 @@ public class HomeTW extends AppCompatActivity{
                             image = baos.toByteArray();
                             imagetoBase64 = Base64.encodeToString(image, Base64.DEFAULT);
 
-                            Glide.with(HomeTW.this).load(image1).into(circleImageViewMap);
+                            if(isMapHuawei){
+                                Glide.with(HomeTW.this).load(image1).into(mapHuaweiFragment.circleImageViewMap);
+                            } else {
+                                Glide.with(HomeTW.this).load(image1).into(mapFragment.circleImageViewMap);
+                            }
                             //circleImageViewMap.setImageBitmap(imagenBitmap);
                         } catch (Exception e) {
                             e.printStackTrace();
@@ -876,7 +930,11 @@ public class HomeTW extends AppCompatActivity{
                 @Override
                 public void onSuccess(Void unused) {
                     if (linearLayoutLoadingHome.getVisibility() == View.GONE) {
-                        mapFragment.loadin(false);
+                        if(isMapHuawei){
+                            mapHuaweiFragment.loadin(false);
+                        } else {
+                            mapFragment.loadin(false);
+                        }
                         pdRevieData.show();
                     }
                     time1 = Calendar.getInstance().getTime();
@@ -931,23 +989,22 @@ public class HomeTW extends AppCompatActivity{
                                                 reviewChecksOlderThan31Days(task.getResult());
                                                 savePreferenceReviewChecks(date);
                                             } else {
-                                                if (linearLayoutLoadingHome.getVisibility() == View.VISIBLE) {
+                                                /*if (linearLayoutLoadingHome.getVisibility() == View.VISIBLE) {
                                                     linearLayoutLoadingHome.setVisibility(View.GONE);
-                                                }
+                                                }*/
                                             }
                                         } catch (ParseException e) {
                                             e.printStackTrace();
                                         }
                                     }
 
-                                    if (linearLayoutLoadingHome.getVisibility() == View.VISIBLE) {
+                                    /*if (linearLayoutLoadingHome.getVisibility() == View.VISIBLE) {
                                         linearLayoutLoadingHome.setVisibility(View.GONE);
-                                    } else {
+                                    } else {*/
                                         if (pdRevieData.isShowing()) {
                                             pdRevieData.dismiss();
                                         }
-                                    }
-
+                                    //}
 
                                     revieUpdateRegisters = false;
                                     if (dbChecks.getChecksNotSendSucces(authHome.getId()).size() == 0 ) {
@@ -957,13 +1014,22 @@ public class HomeTW extends AppCompatActivity{
                                                 if(task.isSuccessful()){
                                                     if(task.getResult().size() != 0){
                                                         if(revieUpdateRegisters == false){
-                                                            mostrarUpdateChecks();
+                                                            //showReviewChecks = true;
+                                                            review2Tipe++;
                                                             revieUpdateRegisters = true;
+                                                        } else {
+                                                            review2Tipe++;
                                                         }
+                                                    } else {
+                                                        review2Tipe++;
                                                     }
+                                                } else {
+                                                    review2Tipe++;
                                                 }
                                             }
                                         });
+                                    } else {
+                                        review2Tipe++;
                                     }
                                     if (dbChecks.getChecksSendSucces(authHome.getId()).size() == 0) {
                                         checksProvider.getChecksByUserAndStatusSend(authHome.getId(), 1).get().addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
@@ -972,42 +1038,53 @@ public class HomeTW extends AppCompatActivity{
                                                 if(task.isSuccessful()){
                                                     if(task.getResult().size() != 0){
                                                         if(revieUpdateRegisters == false){
-                                                            mostrarUpdateChecks();
+
+                                                            //showReviewChecks = true;
+
+                                                            review2Tipe++;
                                                             revieUpdateRegisters = true;
+                                                        } else {
+                                                            review2Tipe++;
                                                         }
+                                                    } else {
+                                                        review2Tipe++;
                                                     }
+                                                } else {
+                                                    review2Tipe++;
                                                 }
                                             }
                                         });
+                                    } else {
+                                        review2Tipe++;
                                     }
 
                                     } else {
-                                    if (linearLayoutLoadingHome.getVisibility() == View.VISIBLE) {
+                                   /* if (linearLayoutLoadingHome.getVisibility() == View.VISIBLE) {
                                         linearLayoutLoadingHome.setVisibility(View.GONE);
-                                    } else {
+                                    } else {*/
                                         if (pdRevieData.isShowing()) {
                                             pdRevieData.dismiss();
                                         }
-                                    }
+                                    //}
                                 }
                             } else {
-                                if (linearLayoutLoadingHome.getVisibility() == View.VISIBLE) {
+                                /*if (linearLayoutLoadingHome.getVisibility() == View.VISIBLE) {
                                     linearLayoutLoadingHome.setVisibility(View.GONE);
-                                } else {
+                                } else {*/
                                     if (pdRevieData.isShowing()) {
                                         pdRevieData.dismiss();
                                     }
-                                }
+                                //}
                             }
                         }
                     });
                 }
             });
-            if (!mapFragment.isOnlineNet()) {
+            /*if (!Utils.isOnlineNet(this)) {
                 if (linearLayoutLoadingHome.getVisibility() == View.VISIBLE) {
                     linearLayoutLoadingHome.setVisibility(View.GONE);
                 }
-            }
+            }*/
     }
 
     public void reviewChecksOlderThan31Days(QuerySnapshot result) {
@@ -1032,18 +1109,18 @@ public class HomeTW extends AppCompatActivity{
         if(numberDelete!=0) {
             checksProvider.deleteChecksForId(idDeleteChecks);
             dbChecks.delete(idDeleteChecks);
-            if(linearLayoutLoadingHome.getVisibility() == View.VISIBLE) {
+           /* if(linearLayoutLoadingHome.getVisibility() == View.GONE) {
                 linearLayoutLoadingHome.setVisibility(View.GONE);
-            }
+            }*/
             if(numberDelete==1){
                 Toast.makeText(HomeTW.this, "Se elimino un registro enviado hace más de 31 días", Toast.LENGTH_SHORT).show();
             } else {
                 Toast.makeText(HomeTW.this, "Se eliminaron " + numberDelete + " registros enviados hace más de 31 días", Toast.LENGTH_SHORT).show();
             }
         } else {
-            if(linearLayoutLoadingHome.getVisibility() == View.VISIBLE) {
+            /*if(linearLayoutLoadingHome.getVisibility() == View.VISIBLE) {
                 linearLayoutLoadingHome.setVisibility(View.GONE);
-            }
+            }*/
         }
     }
 
@@ -1056,28 +1133,28 @@ public class HomeTW extends AppCompatActivity{
 
     //Mostrar mensaje de actualizaion de informacion
     public void mostrarUpdateChecks(){
-        builderDialogUpdateChecks.setMessage("Se encontraron registros en la red, ¿Deseas actualizar los registros?")
-                .setPositiveButton("Si", new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialogInterface, int i) {
-                        if(mapFragment.isOnlineNet()){
+            builderDialogUpdateChecks.setMessage("Se encontraron registros en la red, ¿Deseas actualizar los registros?")
+                    .setPositiveButton("Si", new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialogInterface, int i) {
+                            if(Utils.isOnlineNet(HomeTW.this)){
+                                dialogInterface.dismiss();
+                                constraintLayoutProgress.setVisibility(View.VISIBLE);
+                                updateDataNet();
+                            } else {
+                                //revieUpdateRegisters = false;
+                                Toast.makeText(HomeTW.this, "Conectate a internet para actualizar información", Toast.LENGTH_SHORT).show();
+                                mostrarUpdateChecks();
+                            }
+                        }
+                    })
+                    .setNegativeButton("Cancelar", new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialogInterface, int i) {
                             dialogInterface.dismiss();
-                            constraintLayoutProgress.setVisibility(View.VISIBLE);
-                            updateDataNet();
                         }
-                        else {
-                            Toast.makeText(HomeTW.this, "Conectate a internet para actualizar información", Toast.LENGTH_SHORT).show();
-                            mostrarUpdateChecks();
-                        }
-                    }
-                })
-                .setNegativeButton("Cancelar", new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialogInterface, int i) {
-                        dialogInterface.dismiss();
-                    }
-                });
-        builderDialogUpdateChecks.show();
+                    });
+            builderDialogUpdateChecks.show();
     }
 
     private void updateDataNet() {
@@ -1099,163 +1176,404 @@ public class HomeTW extends AppCompatActivity{
                 }
             });
 
-            checksProvider.getChecksByUserAndStatusSend(authHome.getId(), 2).get().addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
+        checksProvider.getChecksByUserAndStatusSend(authHome.getId(), 2).get().addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
+            @Override
+            public void onComplete(@NonNull Task<QuerySnapshot> task) {
+                if(task.isSuccessful()){
+                    for (DocumentSnapshot document : task.getResult()) {
+                        dbChecks.insertCheck(document.toObject(Check.class));
+                    }
+                    historyChecksLateSendFragment.notifyChangeAdapter();
+                    updateNet--;
+                    if(updateNet == 0){
+                        constraintLayoutProgress.setVisibility(View.GONE);
+                    }
+                }
+            }
+        });
+    }
+
+
+        //Actualizar la vista al eliminar
+    public void updateDeleteAllChecksSeendOk(boolean b) {
+        if(historyChecksSendOkFragment.deleteAllChecks != null){
+            if(b){
+                historyChecksSendOkFragment.deleteAllChecks.setChecked(true);
+            } else{
+                historyChecksSendOkFragment.deleteAllChecks.setChecked(false);
+                if(idChecksDelete.size()==0){
+                    historyChecksSendOkFragment.showImageDelete(false);
+                }
+            }
+        }
+    }
+
+
+    //Actualizar la vista al eliminar
+    public void updateDeleteAllChecksLate(boolean b) {
+        if(historyChecksLateSendFragment.deleteAllChecks != null){
+            if(b){
+                historyChecksLateSendFragment.deleteAllChecks.setChecked(true);
+            } else{
+                historyChecksLateSendFragment.deleteAllChecks.setChecked(false);
+                if(idChecksLateDelete.size()==0){
+                    historyChecksLateSendFragment.showImageDelete(false);
+                }
+            }
+        }
+    }
+
+    public int isViewDeleteSendOk(){
+        return historyChecksSendOkFragment.deleteChecks.getVisibility();
+    }
+
+    public int isViewDeleteSendLate() {
+        return historyChecksLateSendFragment.deleteChecks.getVisibility();
+    }
+
+    public void showNumberDelete(){
+        if(idChecksDelete.size() != 0)
+            historyChecksSendOkFragment.textViewNumberChecksDelete.setText(""+idChecksDelete.size());
+        if(idChecksLateDelete.size() != 0)
+            historyChecksLateSendFragment.textViewNumberChecksDelete.setText(""+idChecksLateDelete.size());
+    }
+
+    //Revisar el empleado que inicio sesion
+    private void reviewEmployee() {
+        employee = dbEmployees.getEmployee(authHome.getId());
+        //Si el usuario logeado no existe en db se actualiza la informacion
+        if(employee == null){
+            employeeProvider.getUserInfo(authHome.getId()).get().addOnCompleteListener(new OnCompleteListener<DocumentSnapshot>() {
                 @Override
-                public void onComplete(@NonNull Task<QuerySnapshot> task) {
+                public void onComplete(@NonNull Task<DocumentSnapshot> task) {
                     if(task.isSuccessful()){
-                        for (DocumentSnapshot document : task.getResult()) {
-                            dbChecks.insertCheck(document.toObject(Check.class));
-                        }
-                        historyChecksLateSendFragment.notifyChangeAdapter();
-                        updateNet--;
-                        if(updateNet == 0){
-                            constraintLayoutProgress.setVisibility(View.GONE);
+                        if (task.getResult() != null) {
+                            if (task.getResult().exists()) {
+                                employee = task.getResult().toObject(Employee.class);
+                                if(dbEmployees.deleteAllEmployees() && dbChecks.deleteAllChecks() && dbBitacoras.deleteAllBitacoras() && dbGeocercas.deleteAllGeocercas()){
+                                    removeGeocerca();
+                                    dbEmployees.insertEmployye(employee);
+                                }
+                            }
                         }
                     }
                 }
             });
+        }
     }
 
+   /* @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        //Clear the Activity's bundle of the subsidiary fragments' bundles.
+        outState.clear();
+    }*/
 
-            //Actualizar la vista al eliminar
-        public void updateDeleteAllChecksSeendOk(boolean b) {
-            if(historyChecksSendOkFragment.deleteAllChecks != null){
-                if(b){
-                    historyChecksSendOkFragment.deleteAllChecks.setChecked(true);
-                } else{
-                    historyChecksSendOkFragment.deleteAllChecks.setChecked(false);
-                    if(idChecksDelete.size()==0){
-                        historyChecksSendOkFragment.showImageDelete(false);
-                    }
-                }
-            }
-        }
+    //Accion hacia atras del dispositivo
+    @Override
+    public void onBackPressed() {
+        mostrarSalida();
+        //super.onBackPressed();
+    }
 
-
-        //Actualizar la vista al eliminar
-        public void updateDeleteAllChecksLate(boolean b) {
-            if(historyChecksLateSendFragment.deleteAllChecks != null){
-                if(b){
-                    historyChecksLateSendFragment.deleteAllChecks.setChecked(true);
-                } else{
-                    historyChecksLateSendFragment.deleteAllChecks.setChecked(false);
-                    if(idChecksLateDelete.size()==0){
-                        historyChecksLateSendFragment.showImageDelete(false);
-                    }
-                }
-            }
-        }
-
-        public int isViewDeleteSendOk(){
-            return historyChecksSendOkFragment.deleteChecks.getVisibility();
-        }
-
-        public int isViewDeleteSendLate() {
-            return historyChecksLateSendFragment.deleteChecks.getVisibility();
-        }
-
-        public void showNumberDelete(){
-            if(idChecksDelete.size() != 0)
-                historyChecksSendOkFragment.textViewNumberChecksDelete.setText(""+idChecksDelete.size());
-            if(idChecksLateDelete.size() != 0)
-                historyChecksLateSendFragment.textViewNumberChecksDelete.setText(""+idChecksLateDelete.size());
-        }
-
-        //Revisar el empleado que inicio sesion
-        private void reviewEmployee() {
-            employee = dbEmployees.getEmployee(authHome.getId());
-            //Si el usuario logeado no existe en db se actualiza la informacion
-            if(employee == null){
-                employeeProvider.getUserInfo(authHome.getId()).get().addOnCompleteListener(new OnCompleteListener<DocumentSnapshot>() {
-                    @Override
-                    public void onComplete(@NonNull Task<DocumentSnapshot> task) {
-                        if(task.isSuccessful()){
-                            if (task.getResult() != null) {
-                                if (task.getResult().exists()) {
-                                    employee = task.getResult().toObject(Employee.class);
-                                    if(dbEmployees.deleteAllEmployees() && dbChecks.deleteAllChecks() && dbBitacoras.deleteAllBitacoras() && dbGeocercas.deleteAllGeocercas()){
-                                        removeGeocerca();
-                                        dbEmployees.insertEmployye(employee);
-                                    }
-                                }
-                            }
-                        }
-                    }
-                });
-            }
-        }
-
-        @Override
-        protected void onSaveInstanceState(Bundle outState) {
-            super.onSaveInstanceState(outState);
-            //Clear the Activity's bundle of the subsidiary fragments' bundles.
-            outState.clear();
-        }
-
-        //Accion hacia atras del dispositivo
-        @Override
-        public void onBackPressed() {
-            mostrarSalida();
-            //super.onBackPressed();
-        }
-
-        @Override
-        protected void onStop() {
-            super.onStop();
-        }
-
-        @Override
-        protected void onPause() {
-            super.onPause();
+    @Override
+    protected void onStop() {
+        super.onStop();
+        if(!isNotification)
+        ShowNotificationActivity.updateStatusActivity(false);
+        if(historyChecksLateSendFragment.isVisible()){
             if(historyChecksLateSendFragment.deleteChecks.getVisibility() == View.VISIBLE){
                 historyChecksLateSendFragment.updateDelete();
             }
+        }
+        if(historyChecksSendOkFragment.isVisible()){
             if(historyChecksSendOkFragment.deleteChecks.getVisibility() == View.VISIBLE){
                 historyChecksSendOkFragment.updateDelete();
             }
         }
+    }
+
+    @Override
+    protected void onStart() {
+        ShowNotificationActivity.updateStatusActivity(true);
+        super.onStart();
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        removeGeocerca();
+    }
+
+    public static void updateStatusActivity(boolean b) {
+        isNotification = b;
+    }
+
+    @Override
+        protected void onPause() {
+        super.onPause();
+        if (runningTask != null)
+            runningTask.cancel(true);
+        }
+
+    @Override
+    protected void onResume(){
+        setCrashlytics();
+        checkTime();
+        super.onResume();
+    }
+
+    public void checkTime() {
+        if(!Utils.isTimeAutomaticEnabled(this)){
+            showGoToChangeTimeAutomatic();
+        } else {
+            SharedPreferences sharedPref = getSharedPreferences("TIME", Context.MODE_PRIVATE);
+            timeReal = sharedPref.getLong("timeReal", 0);
+            if(timeReal < Utils.getTime().getTime()){
+                if(Utils.isOnlineNet(HomeTW.this)){
+                    if (runningTask != null)
+                        runningTask.cancel(true);
+                    runningTask = new GetTimeNet();
+                    runningTask.execute();
+                }
+            } else {
+                if(Utils.isOnlineNet(HomeTW.this)){
+                    showGoToChangeTimeAutomatic();
+                } else {
+                    showGoToConectInternet();
+                }
+            }
+        }
+    }
+
+    private void saveTimePreference(){}
+
+
+
+
+    public void showGoToConectInternet(){
+        android.app.AlertDialog.Builder builder = new android.app.AlertDialog.Builder(HomeTW.this);
+        builder.setMessage("La hora no parece ser la correcta conéctate a internet para continuar.")
+                .setPositiveButton("Red Mobil", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialogInterface, int i) {
+                        startActivity(new Intent(Settings.ACTION_DATA_ROAMING_SETTINGS));
+                    }
+                }).setNeutralButton("Wi-Fi", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialogInterface, int i) {
+                        startActivity(new Intent(Settings.ACTION_WIFI_SETTINGS));
+                    }
+                }).setCancelable(false).create().show();
+    }
+
+    public void showGoToChangeTimeAutomatic() {
+        android.app.AlertDialog.Builder builder = new android.app.AlertDialog.Builder(this);
+        builder.setMessage("Por favor activa la fecha y hora proporcionadas por la red")
+                .setPositiveButton("Configuraciones", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialogInterface, int i) {
+                        startActivityForResult(new Intent(Settings.ACTION_DATE_SETTINGS), 0);
+                    }
+                }).setCancelable(false).create().show();
+    }
 
 
     //Mensaje de salida de la app
-            public void mostrarSalida(){
-                builderDialogExit.setMessage("¿Deseas salir de TimeWEBMobile?")
-                        .setPositiveButton("Si", new DialogInterface.OnClickListener() {
-                            @Override
-                            public void onClick(DialogInterface dialogInterface, int i) {
-                                dialogInterface.dismiss();
+        public void mostrarSalida(){
+            builderDialogExit.setMessage("¿Deseas salir de TimeWEBMobile?")
+                    .setPositiveButton("Si", new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialogInterface, int i) {
+                            dialogInterface.dismiss();
+                            if(historyChecksLateSendFragment.isVisible()){
                                 if(historyChecksLateSendFragment.deleteChecks.getVisibility() == View.VISIBLE){
                                     historyChecksLateSendFragment.updateDelete();
                                 }
+                            }
+                            if(historyChecksSendOkFragment.isVisible()){
                                 if(historyChecksSendOkFragment.deleteChecks.getVisibility() == View.VISIBLE){
                                     historyChecksSendOkFragment.updateDelete();
                                 }
-                                Intent in = new Intent(Intent.ACTION_MAIN);
-                                in.addCategory(Intent.CATEGORY_HOME);
-                                in.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                                startActivity(in);
                             }
-                        })
-                        .setNegativeButton("Cancelar", new DialogInterface.OnClickListener() {
-                            @Override
-                            public void onClick(DialogInterface dialogInterface, int i) {
-                                dialogInterface.dismiss();
-                            }
-                        }).setNeutralButton("", new DialogInterface.OnClickListener() {
-                            @Override
-                            public void onClick(DialogInterface dialogInterface, int i) {
-                            }
-                        });
-                builderDialogExit.show();
-            }
+                            Intent in = new Intent(Intent.ACTION_MAIN);
+                            in.addCategory(Intent.CATEGORY_HOME);
+                            in.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                            startActivity(in);
+                        }
+                    })
+                    .setNegativeButton("Cancelar", new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialogInterface, int i) {
+                            dialogInterface.dismiss();
+                        }
+                    }).setNeutralButton("", new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialogInterface, int i) {
+                        }
+                    });
+            builderDialogExit.show();
+        }
 
-            //Cambiar el color de la barra de notificaciones
-            private void setStatusBarColor() {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                    getWindow().setStatusBarColor(getResources().getColor(R.color.colorHomeTw, this.getTheme()));
+
+
+        private void generateToken(){
+            if(employee!=null){
+                employeeProvider.updateToken(employee.getIdUser(), this);
+                employee = dbEmployees.getEmployee(authHome.getId());
+            } else {
+                employee = dbEmployees.getEmployee(authHome.getId());
+                if(employee!=null){
+                    employeeProvider.updateToken(employee.getIdUser(), this);
+                    employee = dbEmployees.getEmployee(authHome.getId());
                 }
-                else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                    getWindow().setStatusBarColor(getResources().getColor(R.color.colorHomeTw));
+            }
+        }
+
+    private final ActivityResultLauncher<String> requestPermissionLauncher =
+            registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {
+                if (isGranted) {
+                    Toast.makeText(this, "Permiso otorgado para enviar notificaciones", Toast.LENGTH_SHORT).show();
+                    // FCM SDK (and your app) can post notifications.
+                } else {
+                    Toast.makeText(this, "No cuentas con permiso para enviar notificaciones", Toast.LENGTH_SHORT).show();
+                    // TODO: Inform user that that your app will not show notifications.
+                }
+            });
+
+    public void askNotificationPermission(String body, String idCheck) {
+        // This is only necessary for API level >= 33 (TIRAMISU)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) ==
+                    PackageManager.PERMISSION_GRANTED) {
+                sendNotification(body,idCheck);
+                // FCM SDK (and your app) can post notifications.
+            }
+            /*else if (shouldShowRequestPermissionRationale(Manifest.permission.POST_NOTIFICATIONS)) {
+                requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS);
+            } */
+            else {
+                // Directly ask for the permission
+                requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS);
+            }
+        } else {
+            sendNotification(body,idCheck);
+        }
+    }
+
+        public void sendNotification(String body, String idCheck){
+            employee = dbEmployees.getEmployee(authHome.getId());
+            if(Utils.isGMS(HomeTW.this)){
+                if(employee.getToken() != null && !employee.getToken().equals("")){
+                    Map<String, String> map = new HashMap<>();
+                    map.put("title", "REGISTROS");
+                    map.put("body", body);
+                    map.put("idCheck", idCheck);
+                    map.put("idUser", employee.getIdUser());
+                    FCMBody fcmBody = new FCMBody(employee.getToken(), "high","REGISTROS", map);
+                    notificationProvider.sendNotification(fcmBody).enqueue(new Callback<FCMResponse>() {
+                        @Override
+                        public void onResponse(Call<FCMResponse> call, Response<FCMResponse> response) {
+                            if(response.body()!=null){
+                                if(response.body().getSuccess() == 1){
+                                    //Toast.makeText(HomeTW.this, "La notificacion se envio correctamente", Toast.LENGTH_SHORT).show();
+                                } else {
+                                    Toast.makeText(HomeTW.this, "No se pudo enviar la notificacion", Toast.LENGTH_SHORT).show();
+                                }
+                            } else {
+                                Toast.makeText(HomeTW.this, "No se pudo enviar la notificacion", Toast.LENGTH_SHORT).show();
+                            }
+                        }
+
+                        @Override
+                        public void onFailure(Call<FCMResponse> call, Throwable t) {
+                            Log.d("Error", "Error" + t.getMessage());
+                        }
+                    });
+                } else {
+                    Toast.makeText(HomeTW.this, "Token Nullo", Toast.LENGTH_SHORT).show();
+                }
+            } else {
+                if(employee.getToken() != null && !employee.getToken().equals("")){
+                    sendNotificationHMS(employee.getToken(), body, idCheck);
+                } else {
+                    Toast.makeText(HomeTW.this, "Token Nullo", Toast.LENGTH_SHORT).show();
                 }
             }
 
         }
+
+    public void sendNotificationHMS(String token, String body, String idCheck){
+        HMSApi services = RetrofitClient.getInstanceHMS().create(HMSApi.class);;
+        //HMSApi apiInterface = retrofit.create(WebService.class);
+        NotificationMessage notificationMessage = new NotificationMessage.Builder(
+                "REGISTROS", body+"", token)
+                .build();
+
+        Call<Void> call = services.createNotification(
+                "Bearer " + token,
+                notificationMessage
+        );
+
+        call.enqueue(new Callback<Void>() {
+            @Override
+            public void onResponse(Call<Void> call, Response<Void> response) {
+                if(response.code() == 200){
+                    if (response.body() != null){
+                        Toast.makeText(HomeTW.this, response.body()+"", Toast.LENGTH_SHORT).show();
+                    }else{
+                        Toast.makeText(HomeTW.this, "Sin respuesta", Toast.LENGTH_SHORT).show();//Toast.makeText(getContext(),"Nothing returned",Toast.LENGTH_LONG).show();
+                    }
+                }
+            }
+            @Override
+            public void onFailure(Call<Void> call, Throwable t) {
+                Log.d("Error", "Error" + t.getMessage());
+            }
+        });
+    }
+
+    private void setCrashlytics(){
+        FirebaseCrashlytics.getInstance().setUserId(authHome.getId());
+        FirebaseCrashlytics.getInstance().setCustomKey("geoRadio", geoRadio);
+        if(employee != null)
+            FirebaseCrashlytics.getInstance().setCustomKey("nameUser", employee.getName());
+        FirebaseCrashlytics.getInstance().log("Se ah generado una falla");
+    }
+
+    //Cambiar el color de la barra de notificaciones
+    private void setStatusBarColor() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            getWindow().setStatusBarColor(getResources().getColor(R.color.colorHomeTw, this.getTheme()));
+        }
+        else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            getWindow().setStatusBarColor(getResources().getColor(R.color.colorHomeTw));
+        }
+    }
+
+    private final class GetTimeNet extends AsyncTask<Void, Void, Long> {
+
+        @Override
+        protected Long doInBackground(Void... voids) {
+            return Utils.getTimeLongNet();
+        }
+
+        @Override
+        protected void onPostExecute(Long result) {
+            if(result != 0){
+                long differenceNet = Math.abs(System.currentTimeMillis() - result);
+                if(differenceNet > 300000){
+                    showGoToChangeTimeAutomatic();
+                } else {
+                    SharedPreferences sharedPref = getSharedPreferences("TIME", Context.MODE_PRIVATE);
+                    SharedPreferences.Editor editor = sharedPref.edit();
+                    editor.putLong("timeReal", result);
+                    editor.apply();
+                    editor.commit();
+                }
+            }
+        }
+    }
+
+
+}

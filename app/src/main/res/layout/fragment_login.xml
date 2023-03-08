@@ -9,7 +9,7 @@
     android:background="@color/white"
     android:id="@+id/fragmentLogin">
 
-    <com.github.florent37.shapeofview.shapes.ArcView
+    <io.github.florent37.shapeofview.shapes.ArcView
         android:layout_width="match_parent"
         android:layout_height="200dp"
         android:elevation="4dp"
@@ -35,7 +35,7 @@
             android:layout_marginLeft="80dp"/>
 
         <com.airbnb.lottie.LottieAnimationView
-            android:id="@+id/animation"
+            android:id="@+id/animationLogin"
             android:layout_width="120dp"
             android:layout_height="120dp"
             app:lottie_imageAssetsFolder="assets"
@@ -55,7 +55,7 @@
             android:layout_marginTop="15dp"
             android:layout_marginLeft="15dp"/>
 
-    </com.github.florent37.shapeofview.shapes.ArcView>
+    </io.github.florent37.shapeofview.shapes.ArcView>
 
     <LinearLayout
         android:id="@+id/linearLayoutLogin"
@@ -125,7 +125,7 @@
 
     <Button
         android:id="@+id/btnLogin"
-        android:layout_width="270dp"
+        android:layout_width="180dp"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom|center"
         android:layout_marginLeft="20dp"

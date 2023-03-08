@@ -24,20 +24,30 @@ import android.widget.LinearLayout;
 import android.widget.Switch;
 import android.widget.Toast;
 
+import com.airbnb.lottie.LottieAnimationView;
+import com.airbnb.lottie.RenderMode;
 import com.dan.timewebclone.activitys.HomeTW;
 import com.dan.timewebclone.activitys.MainActivity;
 import com.dan.timewebclone.R;
+import com.dan.timewebclone.activitys.SettingsActivity;
+import com.dan.timewebclone.db.DbBitacoras;
+import com.dan.timewebclone.db.DbChecks;
 import com.dan.timewebclone.db.DbEmployees;
+import com.dan.timewebclone.db.DbGeocercas;
 import com.dan.timewebclone.models.Employee;
 import com.dan.timewebclone.providers.AuthProvider;
 import com.dan.timewebclone.providers.EmployeeProvider;
+import com.dan.timewebclone.utils.Utils;
 import com.google.android.gms.tasks.OnCompleteListener;
+import com.google.android.gms.tasks.OnFailureListener;
+import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.firebase.auth.AuthResult;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.EventListener;
 import com.google.firebase.firestore.FirebaseFirestoreException;
+import com.google.firebase.firestore.QuerySnapshot;
 import com.hbb20.CountryCodePicker;
 
 import de.hdodenhof.circleimageview.CircleImageView;
@@ -54,14 +64,19 @@ public class RegisterFragment extends Fragment{
     private CircleImageView imageViewBack;
     private LinearLayout linearLayoutRegister;
     private Switch switchAceptPerms;
+    private LottieAnimationView animation;
 
     FragmentTransaction fragmentTransaction;
     FragmentManager fragmentManager;
     LoginFragment loginFragment;
     DialogFragment termsAndConditionsFragment;
 
-    AuthProvider authProvider;
-    EmployeeProvider employeeProvider;
+    private AuthProvider authProvider;
+    private EmployeeProvider employeeProvider;
+    private DbEmployees dbEmployees;
+    private DbChecks dbChecks;
+    private DbGeocercas dbGeocercas;
+    private DbBitacoras dbBitacoras;
     //public FirebaseAuth mAuth;
     Bundle datosAEnviar;
 
@@ -81,7 +96,8 @@ public class RegisterFragment extends Fragment{
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
-        btnRegister = (Button) view.findViewById(R.id.btnRegister);
+        btnRegister = view.findViewById(R.id.btnRegister);
+        animation = view.findViewById(R.id.animationRegister);
         imageViewBack =  view.findViewById(R.id.circleImageBackRegister);
         textInputName =  view.findViewById(R.id.textInputName);
         textInputClaveUser =  view.findViewById(R.id.textInputKey);
@@ -93,16 +109,20 @@ public class RegisterFragment extends Fragment{
         countryCode = view.findViewById(R.id.ccp);
         linearLayoutRegister = view.findViewById(R.id.linearLayoutRegister);
         switchAceptPerms = view.findViewById(R.id.switch1);
-
+        animation.isHardwareAccelerated();
+        //animation.enableMergePathsForKitKatAndAbove(true);
+        animation.setRenderMode(RenderMode.HARDWARE);
         /*loginFragment = new LoginFragment();
         loginFragment.setViewLoginFragment(false);
         setViewRegisterFragment(true);*/
 
-
         datosAEnviar = new Bundle();
         authProvider = new AuthProvider();
-        //mAuth = FirebaseAuth.getInstance();
         employeeProvider = new EmployeeProvider();
+        dbEmployees = new DbEmployees(myContext);
+        dbChecks = new DbChecks(myContext);
+        dbBitacoras = new DbBitacoras(myContext);
+        dbGeocercas = new DbGeocercas(myContext);
 
         mDialog = new ProgressDialog(myContext);
         mDialog.setTitle("ESPERE UN MOMENTO");
@@ -174,32 +194,28 @@ public class RegisterFragment extends Fragment{
         }
     }
 
-    public boolean isOnlineNet() {
-        try {
-            Process p = java.lang.Runtime.getRuntime().exec("ping -c 1 www.google.es");
-            int val = p.waitFor();
-            boolean reachable = (val == 0);
-            return reachable;
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return false;
-    }
-
-
     private void register(String name, String clave, String rfc, String email, String phone, String password) {
-        if(isOnlineNet()){
+        if(Utils.isOnlineNet(myContext)){
             authProvider.register(email, password).addOnCompleteListener(new OnCompleteListener<AuthResult>() {
                 @Override
                 public void onComplete(@NonNull Task<AuthResult> task) {
-                    mDialog.hide();
+                    if(mDialog.isShowing())
+                        mDialog.dismiss();
                     String id = authProvider.getId();
                     Employee employee = new Employee(name,clave,rfc,email,phone,password,id);
                     create(employee);
                 }
+            }).addOnFailureListener(new OnFailureListener() {
+                @Override
+                public void onFailure(@NonNull Exception e) {
+                    if(mDialog.isShowing())
+                        mDialog.dismiss();
+                    Toast.makeText(myContext, "Error al registrar el usuario: "+e.getMessage(), Toast.LENGTH_SHORT).show();
+                }
             });
         } else {
-            mDialog.hide();
+            if(mDialog.isShowing())
+                mDialog.dismiss();
             Toast.makeText(myContext, "No cuentas con internet", Toast.LENGTH_SHORT).show();
         }
     }
@@ -209,10 +225,21 @@ public class RegisterFragment extends Fragment{
             @Override
             public void onComplete(@NonNull Task<Void> task) {
                 if(task.isSuccessful()){
-                    //getUserInfo();
-                    Intent intent = new Intent(myContext, HomeTW.class);
-                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-                    startActivity(intent);
+                    if(Utils.isGMS(myContext)){
+                        employeeProvider.deleteToken(authProvider.getId(), myContext);
+                    } else {
+                        employeeProvider.deleteTokenHMS(authProvider.getId(), myContext);
+                    }
+                    if(dbEmployees.deleteAllEmployees() && dbChecks.deleteAllChecks() && dbBitacoras.deleteAllBitacoras() && dbGeocercas.deleteAllGeocercas()){
+                        dbEmployees.insertEmployye(employee);
+                        Intent intent = new Intent(myContext, SettingsActivity.class);
+                        intent.putExtra("loginNotData", true);
+                        intent.putExtra("geocercas", false);
+                        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                        startActivity(intent);
+                    } else {
+                        Toast.makeText(myContext, "Error en DB", Toast.LENGTH_SHORT).show();
+                    }
                 } else {
                     Toast.makeText(myContext, "No se pudo registrar el usuario en internet", Toast.LENGTH_SHORT).show();
                 }
@@ -221,41 +248,6 @@ public class RegisterFragment extends Fragment{
 
     }
 
-    /*private void getUserInfo() {
-        employeeProvider.getUserInfo(authProvider.getId()).addSnapshotListener(new EventListener<DocumentSnapshot>() {
-            @Override
-            public void onEvent(@Nullable DocumentSnapshot documentSnapshot, @Nullable FirebaseFirestoreException error) {
-                if(documentSnapshot!= null){
-                    if(documentSnapshot.exists()){
-                        employee = documentSnapshot.toObject(Employee.class);
-
-                        myContext.saveInfoUser(employee);
-                    }
-                }
-            }
-        });
-
-    }*/
-
-    /*private void goToVerificationCode() {
-        loginFragment = new VerificationFragment();
-        datosAEnviar.putString("phone", mPhone);
-        datosAEnviar.putString("email", mEmail);
-        datosAEnviar.putString("password", mPassword);
-        datosAEnviar.putString("RFC", mRFC);
-        loginFragment.setArguments(datosAEnviar);
-        fragmentManager = myContext.getSupportFragmentManager();
-        fragmentTransaction = fragmentManager.beginTransaction();
-        fragmentTransaction.replace(R.id.frameLayoutMain, loginFragment );
-        fragmentTransaction.addToBackStack(null);
-        fragmentTransaction.commit();
-        //termsAndConditionsFragment.show(fragmentManager, "TermsAndConditionsFragment");
-    }*/
-
-
-
-
-
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
@@ -263,7 +255,5 @@ public class RegisterFragment extends Fragment{
         return  inflater.inflate(R.layout.fragment_register, container, false);
 
     }
-
-
 
 }

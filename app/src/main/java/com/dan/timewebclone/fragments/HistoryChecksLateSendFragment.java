@@ -21,6 +21,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.airbnb.lottie.LottieAnimationView;
+import com.airbnb.lottie.RenderMode;
 import com.dan.timewebclone.R;
 import com.dan.timewebclone.activitys.HomeTW;
 import com.dan.timewebclone.adapters.ChecksDbAdapterLateSend;
@@ -94,7 +95,7 @@ public class HistoryChecksLateSendFragment extends Fragment {
 
         mReciclerView = mView.findViewById(R.id.rvChecksLateSend);
         deleteChecks = mView.findViewById(R.id.imageViewDeleteChecks);
-        animation = mView.findViewById(R.id.animation);
+        animation = mView.findViewById(R.id.animationSL);
         deleteAllChecks = mView.findViewById(R.id.checkboxDeleteAll);
         textViewNumberChecksDelete = mView.findViewById(R.id.textViewNumberChecksDelete);
         frameLayoutNumberChecksDelete = mView.findViewById(R.id.frameLayoutNumberChecksDelete);
@@ -111,6 +112,15 @@ public class HistoryChecksLateSendFragment extends Fragment {
         relativeTime = new RelativeTime();
         listChecks = new ArrayList<>();
         statusSend = Arrays.asList(0,2);
+
+        animation.isHardwareAccelerated();
+        //animation.enableMergePathsForKitKatAndAbove(true);
+        animation.setRenderMode(RenderMode.HARDWARE);
+        //animation.useHardwareAcceleration(true);
+
+// confirmed this works on Lottie 3.2.0
+        //animation.cancelAnimation();
+        //animation.setVisibility(View.GONE);
 
         getChecksById();
         //checksDbAdapterLateSend.updateChecks(dbChecks.getChecksNotSendSucces(authProvider.getId()));
@@ -133,8 +143,10 @@ public class HistoryChecksLateSendFragment extends Fragment {
 
     public void notifyChangeAdapter() {
        // checksDbAdapter.notifyDataSetChanged();
-        checksDbAdapterLateSend.updateChecks(dbChecks.getChecksNotSendSucces(authProvider.getId()));
-        mReciclerView.scrollToPosition(0);
+        if( authProvider != null){
+            checksDbAdapterLateSend.updateChecks(dbChecks.getChecksNotSendSucces(authProvider.getId()));
+            mReciclerView.scrollToPosition(0);
+        }
     }
 
     public void getChecksById() {
@@ -377,7 +389,13 @@ public class HistoryChecksLateSendFragment extends Fragment {
         super.onStop();
     }
 
-
+    @Override
+    public void onPause() {
+        if(deleteChecks != null && deleteChecks.getVisibility() == View.VISIBLE){
+            updateDelete();
+        }
+        super.onPause();
+    }
 
     /*public  int compareToDate(Long dateCheck) {
         int dias = 0;

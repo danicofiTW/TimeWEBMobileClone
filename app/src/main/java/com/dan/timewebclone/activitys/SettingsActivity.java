@@ -91,16 +91,12 @@ public class SettingsActivity extends AppCompatActivity {
         }
 
         reviewBiometrics();
-
-
         if(takePhoto){
             switchPhoto.setChecked(true);
         }
-
         if(stateBiometrics){
             switchBiometrics.setChecked(true);
         }
-
 
         switchBiometrics.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -123,13 +119,9 @@ public class SettingsActivity extends AppCompatActivity {
             }
         });
 
-
-
         mImageBack.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                //saveTakePhoto(switchPhoto.isChecked());
-                //saveUseBiometrics(switchBiometrics.isChecked());
                 if(loginNotData){
                     if(geocercas){
                         Intent in = new Intent(SettingsActivity.this, GeocercasActivity.class);

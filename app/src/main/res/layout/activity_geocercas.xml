@@ -12,7 +12,7 @@
 
 
     <com.airbnb.lottie.LottieAnimationView
-        android:id="@+id/animation"
+        android:id="@+id/animationGeo"
         android:layout_width="120dp"
         android:layout_height="120dp"
         app:lottie_imageAssetsFolder="assets"

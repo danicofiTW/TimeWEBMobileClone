@@ -41,7 +41,7 @@
         android:layout_height="70dp">
 
 
-        <com.github.florent37.shapeofview.shapes.BubbleView
+        <io.github.florent37.shapeofview.shapes.BubbleView
             android:layout_width="match_parent"
             android:layout_height="70dp"
             app:shape_bubble_arrowHeight="10dp"
@@ -57,7 +57,7 @@
                 android:background="@color/colorChecks"/>
 
             <com.airbnb.lottie.LottieAnimationView
-                android:id="@+id/animation"
+                android:id="@+id/animationSL"
                 android:layout_width="60dp"
                 android:layout_height="60dp"
                 app:lottie_imageAssetsFolder="assets"
@@ -149,7 +149,7 @@
                 android:layout_marginBottom="6dp"
                 android:visibility="visible"/>
 
-        </com.github.florent37.shapeofview.shapes.BubbleView>
+        </io.github.florent37.shapeofview.shapes.BubbleView>
 
     </FrameLayout>
 

@@ -24,4 +24,15 @@ public class RetrofitClient {
 
         return  retrofit;
     }
+
+    public static Retrofit getInstanceHMS() {
+
+        Retrofit retrofit = new Retrofit.Builder()
+                .baseUrl("https://push-api.cloud.huawei.com/")
+                .addConverterFactory(GsonConverterFactory.create())
+                .build();
+
+        return  retrofit;
+    }
+
 }

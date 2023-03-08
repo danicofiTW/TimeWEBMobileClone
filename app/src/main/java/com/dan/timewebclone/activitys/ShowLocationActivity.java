@@ -5,6 +5,7 @@ import static com.dan.timewebclone.fragments.MapFragment.circleImageViewMap;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
+import android.app.Activity;
 import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
@@ -31,6 +32,7 @@ import com.dan.timewebclone.db.DbChecks;
 import com.dan.timewebclone.db.DbEmployees;
 import com.dan.timewebclone.models.Check;
 import com.dan.timewebclone.models.Employee;
+import com.dan.timewebclone.providers.AuthProvider;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
@@ -43,6 +45,7 @@ import com.google.android.gms.maps.model.MarkerOptions;
 import com.squareup.picasso.Picasso;
 
 import java.io.IOException;
+import java.lang.ref.WeakReference;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
@@ -51,6 +54,8 @@ import de.hdodenhof.circleimageview.CircleImageView;
 
 public class ShowLocationActivity extends AppCompatActivity implements OnMapReadyCallback {
 
+
+    private static WeakReference<Activity> mActivityRef;
     private ImageView imageViewBackShowLocation;
     private CircleImageView circleImageViewPhotoShow, circleImageViewTipeShowCheck;
     private TextView textViewName, textViewLocation, textViewDate;
@@ -61,6 +66,8 @@ public class ShowLocationActivity extends AppCompatActivity implements OnMapRead
     private GoogleMap map;
     private Marker marker;
     private Check check;
+    private AuthProvider authProvider;
+    private boolean showForNotify;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -74,6 +81,7 @@ public class ShowLocationActivity extends AppCompatActivity implements OnMapRead
         textViewDate = findViewById(R.id.textViewShowDate);
         textViewLocation = findViewById(R.id.textViewShowLocation);
         textViewName = findViewById(R.id.textViewShowName);
+        authProvider = new AuthProvider();
 
         mapFragmentLocation = (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.mapLocation);
         if(mapFragmentLocation != null){
@@ -85,16 +93,47 @@ public class ShowLocationActivity extends AppCompatActivity implements OnMapRead
         mExtraDate = getIntent().getLongExtra("date", 0);
         mExtraTipe = getIntent().getStringExtra("tipe");
         mExtraId = getIntent().getStringExtra("idCheck");
+        showForNotify = getIntent().getBooleanExtra("showForNotify", false);
+
 
         DbChecks dbChecks = new DbChecks(ShowLocationActivity.this);
         check = dbChecks.getCheck(mExtraId);
 
-        setInfo();
+        if( check != null){
+            if(mExtraLatitud == 0){
+                mExtraLatitud = check.getCheckLat();
+            }
+            if(mExtraLongitud == 0){
+                mExtraLongitud = check.getCheckLong();
+            }
+            if(mExtraDate == 0){
+                mExtraDate = check.getTime();
+            }
+            if(mExtraTipe == null){
+                mExtraTipe = check.getTipeCheck();
+            }
+            setInfo();
+        }
 
         imageViewBackShowLocation.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                finish();
+                if(mActivityRef != null && mActivityRef.get() != null){
+                    if(mActivityRef.get().isDestroyed()) {
+                        Intent intent1 = new Intent(ShowLocationActivity.this, MainActivity.class);
+                        intent1.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                        intent1.setAction(Intent.ACTION_RUN);
+                        startActivity(intent1);
+                    } else {
+                        finish();
+                    }
+                } else {
+                    Intent intent1 = new Intent(ShowLocationActivity.this, MainActivity.class);
+                    intent1.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                    intent1.setAction(Intent.ACTION_RUN);
+                    startActivity(intent1);
+                }
+                //finish();
             }
         });
 
@@ -130,7 +169,6 @@ public class ShowLocationActivity extends AppCompatActivity implements OnMapRead
 
     //Mostrar imagen
     private void mostrarImagen() {
-
         if(check.getImage90() != null){
             try{
                 byte[] decodedString = Base64.decode(check.getImage90(), Base64.DEFAULT);
@@ -149,55 +187,6 @@ public class ShowLocationActivity extends AppCompatActivity implements OnMapRead
         } else {
             defaultImage();
         }
-
-        /*if(check.getUrlImage() != null){
-            Uri uri;
-            uri = Uri.parse(check.getUrlImage());
-            ContentResolver contentResolver = getContentResolver();
-            Bitmap bitmap = null;
-            try {
-                if(Build.VERSION.SDK_INT < 28) {
-                    bitmap = MediaStore.Images.Media.getBitmap(contentResolver, uri);
-                } else {
-                    ImageDecoder.Source source = ImageDecoder.createSource(contentResolver, uri);
-                    bitmap = ImageDecoder.decodeBitmap(source);
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-            if(uri != null && bitmap != null){
-                Glide.with(ShowLocationActivity.this).load(uri).into(circleImageViewPhotoShow);
-                //circleImageViewPhotoShow.setImageURI(uri);
-                viewTipeCheck();
-                openImageView();
-            } else {
-                try {
-                    byte[] decodedString = Base64.decode(check.getImage(), Base64.DEFAULT);
-                    Bitmap decodedByte = BitmapFactory.decodeByteArray(decodedString, 0, decodedString.length);
-                    if (decodedByte != null) {
-                        circleImageViewPhotoShow.setImageBitmap(decodedByte);
-                        viewTipeCheck();
-                        openImageView();
-                    }
-                } catch(Exception e){
-                    e.getMessage();
-                }
-            }
-        } else if(check.getImage() != null){
-            try {
-                byte[] decodedString = Base64.decode(check.getImage(), Base64.DEFAULT);
-                Bitmap decodedByte = BitmapFactory.decodeByteArray(decodedString, 0, decodedString.length);
-                if (decodedByte != null) {
-                    circleImageViewPhotoShow.setImageBitmap(decodedByte);
-                    viewTipeCheck();
-                    openImageView();
-                }
-            } catch(Exception e){
-                e.getMessage();
-            }
-        } else {
-            defaultImage();
-        }*/
     }
 
     //Mostrar imagen por defecto cuando el registro no cuenta con imagen
@@ -263,6 +252,10 @@ public class ShowLocationActivity extends AppCompatActivity implements OnMapRead
                         .zoom(18f)
                         .build()
         ));
+    }
+
+    public static void updateActivity(Activity activity) {
+        mActivityRef = new WeakReference<Activity>(activity);
     }
 
     //Cambiar el color de la barra de notificaciones

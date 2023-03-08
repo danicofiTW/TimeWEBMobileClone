@@ -7,6 +7,8 @@ import androidx.core.app.ActivityCompat;
 
 import android.Manifest;
 import android.app.Activity;
+import android.content.ClipData;
+import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -35,20 +37,16 @@ import com.dan.timewebclone.models.Employee;
 import com.dan.timewebclone.providers.AuthProvider;
 import com.dan.timewebclone.providers.EmployeeProvider;
 import com.dan.timewebclone.providers.ImageProvider;
+import com.dan.timewebclone.utils.Utils;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
-import com.google.firebase.firestore.DocumentSnapshot;
-import com.google.firebase.firestore.EventListener;
-import com.google.firebase.firestore.FirebaseFirestoreException;
 import com.google.firebase.firestore.ListenerRegistration;
 
 import com.fxn.pix.Options;
 import com.fxn.pix.Pix;
 import com.fxn.utility.PermUtil;
-import com.google.firebase.storage.UploadTask;
-import com.squareup.picasso.Picasso;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -57,6 +55,7 @@ import java.io.InputStream;
 import java.util.ArrayList;
 
 import de.hdodenhof.circleimageview.CircleImageView;
+import id.zelory.compressor.Compressor;
 
 public class ProfileActivity extends AppCompatActivity {
 
@@ -65,9 +64,9 @@ public class ProfileActivity extends AppCompatActivity {
     private BottomSheetUserName bottomSheetUserName;
     private BottomSheetPhone bottomSheetPhone;
     private BottomSheetCompany bottomSheetCompany;
-    private TextView mUserName, mCompany, mPhone, mEmail;
+    private TextView mUserName, mCompany, mPhone, mEmail, mToken;
     private CircleImageView circleImageProfile;
-    private ImageView imageViewEditUserName, imageViewEditCompany,imageViewEditPhone, mImageBack;
+    private ImageView imageViewEditUserName,imageViewEditPhone, mImageBack;
 
     private EmployeeProvider employeeProvider;
     private AuthProvider authProvider;
@@ -80,7 +79,7 @@ public class ProfileActivity extends AppCompatActivity {
     private Options mOptions;
     private ArrayList<String> returnValues = new ArrayList<>();
     private File mImageFile;
-    private ListenerRegistration listenerRegistration;
+    //private ListenerRegistration listenerRegistration;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -102,10 +101,10 @@ public class ProfileActivity extends AppCompatActivity {
         mUserName = findViewById(R.id.textViewUserName);
         imageViewEditUserName = findViewById(R.id.imageEditUserName);
         mCompany = findViewById(R.id.textViewCompany);
-        imageViewEditCompany = findViewById(R.id.imageEditCompany);
         mPhone = findViewById(R.id.textViewPhone);
         imageViewEditPhone= findViewById(R.id.imageEditPhone);
         mEmail = findViewById(R.id.textViewEmail);
+        mToken= findViewById(R.id.textViewToken);
         circleImageProfile = findViewById(R.id.circleImageProfile);
         mFabSelectImage = findViewById(R.id.fabSelectImage);
         mImageBack = findViewById(R.id.circleImageBack);
@@ -178,19 +177,24 @@ public class ProfileActivity extends AppCompatActivity {
             else{
                 setImageDefault();
             }
+            if(employee.getToken() != null){
+                mToken.setText(employee.getToken());
+                mToken.setOnLongClickListener(new View.OnLongClickListener() {
+                    @Override
+                    public boolean onLongClick(View v) {
+                        String text = mToken.getText().toString();
+                        ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+                        ClipData clip = ClipData.newPlainText("text",  text);
+                        clipboard.setPrimaryClip(clip);
+                        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
+                            Toast.makeText(ProfileActivity.this, "Texto copiado", Toast.LENGTH_SHORT).show();
+                        }
+                        return false;
+                    }
+                });
+            }
         }
     }
-
-    //Editar compania
-    /*private void openBottonSheetEditCompany() {
-        if(employee != null ){
-            bottomSheetCompany = BottomSheetCompany.newInstance(employee.getCompany(),ProfileActivity.this);
-            bottomSheetCompany.show(getSupportFragmentManager(),bottomSheetCompany.getTag());
-        } else {
-            Toast.makeText(this, "La informacion no se pudo cargar", Toast.LENGTH_SHORT).show();
-        }
-    }*/
-
     //Editar telefono
     private void openBottonSheetEditPhone() {
         if(employee != null){
@@ -266,13 +270,21 @@ public class ProfileActivity extends AppCompatActivity {
             Bitmap mImage = BitmapFactory.decodeFile(mImageFile.getAbsolutePath());
             Bitmap mImageReview = reviewOrientationImage(mImage);
 
+            try {
+                mImageReview = new Compressor(this)
+                        .setMaxWidth(500)
+                        .setMaxHeight(500)
+                        .setQuality(85)
+                        .compressToBitmap(mImageFile);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             mImageReview.compress(Bitmap.CompressFormat.JPEG, 85, baos);
             byte[] image = baos.toByteArray();
             imagetoBase64 = Base64.encodeToString(image,Base64.DEFAULT);
-            dbEmployees.saveImage(authProvider.getId(),imagetoBase64);
-            circleImageProfile.setImageBitmap(mImageReview);
-            saveImage(imagetoBase64);
+            saveImage(imagetoBase64, mImageReview);
         }
     }
 
@@ -318,20 +330,26 @@ public class ProfileActivity extends AppCompatActivity {
     }
 
     //Guardar imagen de perfil en firebase y base de datos
-    private void saveImage(String mImageFile) {
-      employeeProvider.updateImage(authProvider.getId(), mImageFile).addOnCompleteListener(new OnCompleteListener<Void>() {
-          @Override
-          public void onComplete(@NonNull Task<Void> task) {
-         if(task!=null){
-             if(task.isSuccessful()){
-                 mBottonSelectedImage.dismiss();
-                 Toast.makeText(ProfileActivity.this, "La foto de perfil se actualizo correctamente", Toast.LENGTH_SHORT).show();
-             } else {
-                 Toast.makeText(ProfileActivity.this, "La foto de perfil no logro almacenarse correctamente", Toast.LENGTH_SHORT).show();
-             }
-         }
+    private void saveImage(String imageB64, Bitmap imageBitmap) {
+        employeeProvider.updateImage(authProvider.getId(), imageB64).addOnSuccessListener(new OnSuccessListener<Void>() {
+            @Override
+            public void onSuccess(Void unused) {
+                if(mBottonSelectedImage != null && mBottonSelectedImage.isVisible()){
+                    mBottonSelectedImage.dismiss();
+                }
+                if(circleImageProfile != null && circleImageProfile.getVisibility() == View.VISIBLE){
+                    circleImageProfile.setImageBitmap(imageBitmap);
+                }
+                dbEmployees.saveImage(authProvider.getId(),imageB64);
+                Toast.makeText(ProfileActivity.this, "La foto de perfil se actualizo correctamente", Toast.LENGTH_SHORT).show();
+            }
+        });
+      if(!Utils.isOnlineNet(ProfileActivity.this)){
+          if(mBottonSelectedImage != null && mBottonSelectedImage.isVisible()){
+              mBottonSelectedImage.dismiss();
           }
-      });
+          Toast.makeText(ProfileActivity.this, "Conectate a internet para actualizar correctamente tu forto de perfil", Toast.LENGTH_SHORT).show();
+      }
     }
 
     //Se utiliza para evitar problemas con los fragment
@@ -345,8 +363,6 @@ public class ProfileActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        if(listenerRegistration != null)
-            listenerRegistration.remove();
     }
 
     //Cambiar el color de la barra de notificaciones

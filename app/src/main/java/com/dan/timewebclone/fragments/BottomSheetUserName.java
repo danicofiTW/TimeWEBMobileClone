@@ -19,12 +19,13 @@ import com.dan.timewebclone.activitys.ProfileActivity;
 import com.dan.timewebclone.db.DbEmployees;
 import com.dan.timewebclone.providers.AuthProvider;
 import com.dan.timewebclone.providers.EmployeeProvider;
+import com.dan.timewebclone.utils.Utils;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment;
 
 public class BottomSheetUserName extends BottomSheetDialogFragment {
 
-    private static Context myContext;
+    private static ProfileActivity myContext;
     EmployeeProvider employeeProvider;
     //FirebaseAuth mAuth;
     AuthProvider authProvider;
@@ -33,7 +34,7 @@ public class BottomSheetUserName extends BottomSheetDialogFragment {
 
     String username;
 
-    public static BottomSheetUserName newInstance(String username, Context context){
+    public static BottomSheetUserName newInstance(String username, ProfileActivity context){
         BottomSheetUserName bottomSheetSelectImage = new BottomSheetUserName();
         Bundle args = new Bundle();
         myContext = context;
@@ -83,16 +84,19 @@ public class BottomSheetUserName extends BottomSheetDialogFragment {
     private void updateUserName() {
         String username = editTextUserName.getText().toString();
         DbEmployees dbEmployees = new DbEmployees(myContext);
-        dbEmployees.updateName(authProvider.getId(), username);
         dismiss();
         if (!username.equals("")) {
             employeeProvider.updateUserName(authProvider.getId(), username).addOnSuccessListener(new OnSuccessListener<Void>() {
                 @Override
                 public void onSuccess(Void unused) {
+                    dbEmployees.updateName(authProvider.getId(), username);
                     Toast.makeText(myContext, "El nombre de usuario se ha actualizado", Toast.LENGTH_SHORT).show();
+                    myContext.getUserInfo();
                 }
             });
         }
-        ((ProfileActivity)getActivity()).getUserInfo();
+        if(!Utils.isOnlineNet(myContext)){
+            Toast.makeText(myContext, "Conectate a internet para actualizar correctamente tu forto de perfil", Toast.LENGTH_SHORT).show();
+        }
     }
 }

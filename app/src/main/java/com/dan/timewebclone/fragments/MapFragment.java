@@ -6,7 +6,6 @@ import static androidx.biometric.BiometricManager.Authenticators.DEVICE_CREDENTI
 
 import android.Manifest;
 import android.app.AlertDialog;
-import android.app.PendingIntent;
 import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.DialogInterface;
@@ -26,6 +25,7 @@ import androidx.biometric.BiometricPrompt;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
+import androidx.lifecycle.Lifecycle;
 
 import android.os.Handler;
 import android.os.Looper;
@@ -39,10 +39,8 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.dan.timewebclone.activitys.GeocercasActivity;
 import com.dan.timewebclone.activitys.HomeTW;
 import com.dan.timewebclone.R;
-import com.dan.timewebclone.activitys.MainActivity;
 import com.dan.timewebclone.db.DbBitacoras;
 import com.dan.timewebclone.db.DbChecks;
 import com.dan.timewebclone.db.DbEmployees;
@@ -53,9 +51,9 @@ import com.dan.timewebclone.providers.AuthProvider;
 import com.dan.timewebclone.providers.BitacoraProvider;
 import com.dan.timewebclone.providers.ChecksProvider;
 import com.dan.timewebclone.providers.EmployeeProvider;
-import com.dan.timewebclone.providers.GeocercaProvider;
 import com.dan.timewebclone.providers.GoogleApiProvider;
 import com.dan.timewebclone.utils.DecodePoints;
+import com.dan.timewebclone.utils.Utils;
 import com.getbase.floatingactionbutton.FloatingActionButton;
 import com.getbase.floatingactionbutton.FloatingActionsMenu;
 import com.google.android.gms.location.FusedLocationProviderClient;
@@ -86,7 +84,6 @@ import com.google.android.gms.maps.model.SquareCap;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
-import com.google.firebase.firestore.QuerySnapshot;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -110,6 +107,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
     private AuthProvider authProvider;
     private ChecksProvider checksProvider;
     private BitacoraProvider bitacoraProvider;
+    private EmployeeProvider employeeProvider;
     private DbChecks dbChecks;
     private DbGeocercas dbGeocercas;
     private DbBitacoras dbBitacoras;
@@ -176,17 +174,17 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
     public boolean biometria = false;
     private boolean viewRout = false;
     private boolean moveLocation = false;
+    public long timeReal;
+
     Handler handler = new Handler();
 
     Runnable runnable = new Runnable() {
         @Override
         public void run() {
             if (employee != null) {
-                if (isTimeAutomaticEnabled(myContext)) {
+                if (Utils.isTimeAutomaticEnabled(myContext)) {
                     secondsIsOver = false;
-                    timezoneID = TimeZone.getDefault().getID();
-                    calendar = Calendar.getInstance(TimeZone.getTimeZone(timezoneID), Locale.getDefault());
-                    mDateD = calendar.getTime();
+                          mDateD = Utils.getTime();
                     String date1 = sdf1.format(mDateD.getTime());
                     if (textViewTime != null) {
                         textViewTime.setText(date1);
@@ -196,7 +194,6 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                     secondsIsOver = true;
                     if (textViewTime != null) {
                         textViewTime.setText("");
-                        //textViewGoodTime.setText("");
                     }
                 }
             } else {
@@ -206,6 +203,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                     reviewTakePhoto();
                 }
             }
+
             handler.postDelayed(runnable, 1000);
         }
     };
@@ -216,7 +214,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
             for (Location location : locationResult.getLocations()) {
                 mLocation2 = location;
                 //Log.d("UBICACION", "Location: " + mLocation.getLatitude()+ ", " + mLocation.getLongitude());
-                if (isMockLocationOn(location, myContext)) {
+                if (Utils.isMockLocationOn(location, myContext)) {
                     disconnect();
                     Toast.makeText(myContext, "Se ha detectado ubicacion de prueba, por lo que no se puede enviar registros", Toast.LENGTH_LONG).show();
                 } else {
@@ -226,34 +224,41 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                     if (marker != null) {
                         marker.remove();
                     }
-                    //icono del conductor
                     marker = map.addMarker(new MarkerOptions().position(new LatLng(location.getLatitude(), location.getLongitude()))
                             .title("Tu posicion")
+                            .anchor(0.5f,1f)
                             .icon(BitmapDescriptorFactory.fromResource(R.drawable.icon_employee_48)));
 
                     if(!moveLocation && !viewRout)
-                    map.animateCamera(CameraUpdateFactory.newCameraPosition(
-                            new CameraPosition.Builder()
-                                    .target(new LatLng(location.getLatitude(), location.getLongitude()))
-                                    .zoom(17f)
-                                    .build()
-                    ));
+                        map.animateCamera(CameraUpdateFactory.newCameraPosition(
+                                new CameraPosition.Builder()
+                                        .target(new LatLng(location.getLatitude(), location.getLongitude()))
+                                        .zoom(17f)
+                                        .build()
+                        ));
+                    //icono del conductor
+
                 }
 
-                if (myContext.geoRadio != 0 && updateGeocerca == false) {
+
+                if (myContext.geoRadio != 0 && !updateGeocerca) {
                     updateGeocerca = true;
                     createGeofencig();
                 }
 
-                if (myContext.updateData == false && updateGeocerca == true) {
-                    myContext.checkUpdateSend();
+                if (myContext.linearLayoutLoadingHome.getVisibility() == View.VISIBLE ) {
+                    myContext.linearLayoutLoadingHome.setVisibility(View.GONE);
+                }
+                if (updateGeocerca && myContext.revieUpdateRegisters && myContext.review2Tipe >= 2) {
+                    myContext.revieUpdateRegisters = false;
+                    myContext.review2Tipe = 0;
+                    myContext.mostrarUpdateChecks();
                 } else {
                     loadin(false);
                 }
             }
         }
     };
-
 
     public MapFragment() {
     }
@@ -281,10 +286,10 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         dbGeocercas = new DbGeocercas(myContext);
         dbBitacoras = new DbBitacoras(myContext);
         googleApiProvider = new GoogleApiProvider(myContext);
+        employeeProvider = new EmployeeProvider();
 
         firstReviewGeoface = false;
         //viewRout = true;
-
         fusedLocation = LocationServices.getFusedLocationProviderClient(mView.getContext());
 
         floatingActionsMenu = mView.findViewById(R.id.groupButton);
@@ -310,11 +315,10 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
 
         geofencingClient = LocationServices.getGeofencingClient(myContext);
         dbEmployees = new DbEmployees(myContext);
-        //markerDestination = new Marker()
 
-        //employee = dbEmployees.getEmployee(authProvider.getId());
-        //employee = dbEmployees.getEmployee(authProvider.getId());
-        //textViewName.setText(employee.getName());
+        if (employee == null) {
+            employee = dbEmployees.getEmployee(authProvider.getId());
+        }
         textViewState.setText("!Conectate para enviar¡");
         sdf1 = new SimpleDateFormat("HH:mm:ss");
 
@@ -329,15 +333,14 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                     } else if (!secondsIsOver) {
                         startLocation();
                     } else {
-                        AlertDialog.Builder builder = new AlertDialog.Builder(myContext);
+                        /*AlertDialog.Builder builder = new AlertDialog.Builder(myContext);
                         builder.setMessage("Por favor activa la fecha y hora proporcionadas por la red")
                                 .setPositiveButton("Configuraciones", new DialogInterface.OnClickListener() {
                                     @Override
                                     public void onClick(DialogInterface dialogInterface, int i) {
                                         startActivityForResult(new Intent(Settings.ACTION_DATE_SETTINGS), 0);
                                     }
-                                }).create().show();
-                        //Toast.makeText(myContext, "No se cuenta con la hora correcta para enviar registros", Toast.LENGTH_SHORT).show();
+                                }).create().show();*/
                     }
                 }
             }
@@ -442,6 +445,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                 }else{
                     String uri = "geo:<" + myContext.geoLat + ">,<" + myContext.geoLong + ">?q=<" + myContext.geoLat + ">,<" + myContext.geoLong + ">(" + dbGeocercas.getGeocerca(myContext.idGeocerca).getGeoNombre() + ")";
                     Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(uri));
+                    intent.setPackage("com.google.android.apps.maps");
                     startActivity(intent);
                 }
             }
@@ -450,7 +454,11 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         frameLayoutViewRout.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                reviewRoutLocation();
+                if(isConnect){
+                    reviewRoutLocation();
+                } else {
+                    Toast.makeText(myContext, "Conectate para obtener la ruta", Toast.LENGTH_SHORT).show();
+                }
             }
         });
 
@@ -461,8 +469,10 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
             }
         });
 
-
-        runnable.run();
+        //runnable.run();
+        myContext.review2Tipe = 0;
+        if(myContext.updateData == false)
+            myContext.checkUpdateSend();
         return mView;
     }
 
@@ -474,7 +484,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
             map.getUiSettings().setScrollGesturesEnabled(false);
             map.getUiSettings().setZoomControlsEnabled(false);
             map.getUiSettings().setAllGesturesEnabled(false);
-            if(mLocation2!=null){
+            if(mLocation2!=null && !viewRout){
                 map.animateCamera(CameraUpdateFactory.newCameraPosition(
                         new CameraPosition.Builder()
                                 .target(new LatLng(mLocation2.getLatitude(), mLocation2.getLongitude()))
@@ -526,39 +536,49 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
     private void reviewRoutLocation( ){
         if(!viewRout){
             //fusedLocation.removeLocationUpdates(locationCallback);
-            if(isOnlineNet()){
-                viewRout = true;
-                imageViewRout.setImageResource(R.drawable.ic_route_white);
-                viewViewRout.setBackground(ContextCompat.getDrawable(myContext, R.drawable.circular_view));
+            if(Utils.isOnlineNet(myContext)){
                 if (checkIfLocationOpened()) {
                     if (ContextCompat.checkSelfPermission(myContext, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
                         fusedLocation.getLastLocation().addOnCompleteListener(new OnCompleteListener<Location>() {
                             @Override
                             public void onComplete(@NonNull Task<Location> task) {
                                 if(task.isSuccessful()){
-                                    LatLng originLatLng = new LatLng(task.getResult().getLatitude(), task.getResult().getLongitude());
-                                    LatLng destinationLatLng = new LatLng(myContext.geoLat, myContext.geoLong);
-                                    //map.addMarker(new MarkerOptions().position(originLatLng).title("Origen").icon(BitmapDescriptorFactory.fromResource(R.drawable.icon_map_marker_red)));
-                                    markerDestination = map.addMarker(new MarkerOptions().position(destinationLatLng).title("Destino").icon(BitmapDescriptorFactory.fromResource(R.drawable.icon_map_marker_blue)));
+                                    float distance;
+                                    if(updateGeocerca && myContext.geoRadio != 0){
+                                        distance = reviewDistance(task.getResult());
+                                    } else {
+                                        distance=0;
+                                    }
+                                    if(distance>0){
+                                        viewRout = true;
+                                        imageViewRout.setImageResource(R.drawable.ic_route_white);
+                                        viewViewRout.setBackground(ContextCompat.getDrawable(myContext, R.drawable.circular_view));
+                                        LatLng originLatLng = new LatLng(task.getResult().getLatitude(), task.getResult().getLongitude());
+                                        LatLng destinationLatLng = new LatLng(myContext.geoLat, myContext.geoLong);
+                                        //map.addMarker(new MarkerOptions().position(originLatLng).title("Origen").icon(BitmapDescriptorFactory.fromResource(R.drawable.icon_map_marker_red)));
+                                        markerDestination = map.addMarker(new MarkerOptions().position(destinationLatLng).title("Destino").icon(BitmapDescriptorFactory.fromResource(R.drawable.icon_map_marker_blue)));
 
-                                    LatLngBounds.Builder builder = new LatLngBounds.Builder();
-                                    builder.include(originLatLng);
-                                    builder.include(markerDestination.getPosition());
-                                    LatLngBounds bounds = builder.build();
-                                    int width = getResources().getDisplayMetrics().widthPixels;
-                                    int height = getResources().getDisplayMetrics().heightPixels;
-                                    int padding = (int) (width * 0.20); // offset from edges of the map 10% of screen
+                                        LatLngBounds.Builder builder = new LatLngBounds.Builder();
+                                        builder.include(originLatLng);
+                                        builder.include(markerDestination.getPosition());
+                                        LatLngBounds bounds = builder.build();
+                                        int width = getResources().getDisplayMetrics().widthPixels;
+                                        int height = getResources().getDisplayMetrics().heightPixels;
+                                        int padding = (int) (width * 0.20); // offset from edges of the map 10% of screen
 
-                                    CameraUpdate cu = CameraUpdateFactory.newLatLngBounds(bounds, width, height, padding);
+                                        CameraUpdate cu = CameraUpdateFactory.newLatLngBounds(bounds, width, height, padding);
 
-                                    map.animateCamera(cu);
-                                   /* map.animateCamera(CameraUpdateFactory.newCameraPosition(
-                                            new CameraPosition.Builder()
-                                                    .target(originLatLng)
-                                                    .zoom(14f)
-                                                    .build()
-                                    ));*/
-                                    drawRoute(originLatLng, destinationLatLng);
+                                        map.animateCamera(cu);
+                                       /* map.animateCamera(CameraUpdateFactory.newCameraPosition(
+                                                new CameraPosition.Builder()
+                                                        .target(originLatLng)
+                                                        .zoom(14f)
+                                                        .build()
+                                        ));*/
+                                        drawRoute(originLatLng, destinationLatLng);
+                                    } else {
+                                        Toast.makeText(myContext, "Ya te encuentras en la geocerca asignada", Toast.LENGTH_SHORT).show();
+                                    }
                                 }
                             }
                         });
@@ -602,6 +622,8 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
     }
 
     private void createGeofencig() {
+
+        if(map!=null){
         latLngGeoFence = new LatLng(myContext.geoLat, myContext.geoLong);
         CircleOptions circleOptions = new CircleOptions();
         circleOptions.center(latLngGeoFence);
@@ -610,9 +632,9 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         circleOptions.fillColor(R.color.colorHomeTw2);
         circleOptions.strokeWidth(4);
         frameLayoutGoToGoogleMaps.setVisibility(View.VISIBLE);
-        frameLayoutViewRout.setVisibility(View.VISIBLE);
+        //if(isConnect)
+        //frameLayoutViewRout.setVisibility(View.VISIBLE);
 
-        if(map!=null){
             if(mapCircle!=null){
                 mapCircle.remove();
                 mapCircle = map.addCircle(circleOptions);
@@ -623,50 +645,6 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
             updateGeocerca = false;
         }
     }
-
-   /* private GeofencingRequest getGeofencingRequest() {
-        GeofencingRequest.Builder builder = new GeofencingRequest.Builder();
-        builder.setInitialTrigger(GeofencingRequest.INITIAL_TRIGGER_ENTER);
-        builder.addGeofence(geofencing);
-        return builder.build();
-    }
-
-    private PendingIntent getGeofencePendingIntent() {
-        if (geofencePendingIntent != null) {
-            return geofencePendingIntent;
-        }
-        Intent intent = new Intent(this, GeofenceBroadcastReceiver.class);
-        // We use FLAG_UPDATE_CURRENT so that we get the same pending intent back when
-        // calling addGeofences() and removeGeofences().
-        geofencePendingIntent = PendingIntent.getBroadcast(myContext, 0, intent, PendingIntent.
-                FLAG_UPDATE_CURRENT);
-        return geofencePendingIntent;
-    }*/
-
-    /*private void addGeofence() {
-        geofencingClient.addGeofences(getGeofencingRequest(), getGeofencePendingIntent())
-                .addOnSuccessListener(this, aVoid -> {
-                    Toast.makeText(getApplicationContext()
-                            , "Geofencing has started", Toast.LENGTH_SHORT).show();
-                })
-                .addOnFailureListener(this, e -> {
-                    Toast.makeText(getApplicationContext()
-                            , "Geofencing failed", Toast.LENGTH_SHORT).show();
-
-                });
-    }
-
-    private void removeGeofence() {
-        geofencingClient.removeGeofences(getGeofencePendingIntent())
-                .addOnSuccessListener(this, aVoid -> {
-                    Toast.makeText(getApplicationContext()
-                            , "Geofencing has been removed", Toast.LENGTH_SHORT).show();
-                })
-                .addOnFailureListener(this, e -> {
-                    Toast.makeText(getApplicationContext()
-                            , "Geofencing could not be removed", Toast.LENGTH_SHORT).show();
-                });
-    }*/
 
     private void reviewTakePhoto() {
         //SharedPreferences prefe = myContext.getSharedPreferences("datos", Context.MODE_PRIVATE);
@@ -683,17 +661,19 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
     }
 
     public void loadin(boolean b) {
-        if (b) {
-            frameLayoutLoading.setVisibility(View.VISIBLE);
-            buttonConnect.setEnabled(false);
-            imageViewPhotoMap.setEnabled(false);
-            floatingActionsMenu.setEnabled(false);
-        } else {
-            if (frameLayoutLoading.getVisibility() == View.VISIBLE) {
-                frameLayoutLoading.setVisibility(View.GONE);
-                buttonConnect.setEnabled(true);
-                imageViewPhotoMap.setEnabled(true);
-                floatingActionsMenu.setEnabled(true);
+        if(frameLayoutLoading != null){
+            if (b) {
+                frameLayoutLoading.setVisibility(View.VISIBLE);
+                buttonConnect.setEnabled(false);
+                imageViewPhotoMap.setEnabled(false);
+                floatingActionsMenu.setEnabled(false);
+            } else {
+                if (frameLayoutLoading.getVisibility() == View.VISIBLE) {
+                    frameLayoutLoading.setVisibility(View.GONE);
+                    buttonConnect.setEnabled(true);
+                    imageViewPhotoMap.setEnabled(true);
+                    floatingActionsMenu.setEnabled(true);
+                }
             }
         }
     }
@@ -729,21 +709,16 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         LocationManager lm = (LocationManager) myContext.getSystemService(Context.LOCATION_SERVICE);
         boolean gps_enabled = false;
         boolean network_enabled = false;
-
         try {
             gps_enabled = lm.isProviderEnabled(LocationManager.GPS_PROVIDER);
         } catch (Exception ex) {
         }
-
         try {
             network_enabled = lm.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
         } catch (Exception ex) {
         }
-
         if (gps_enabled && network_enabled) {
-            //if (provider.contains("gps") || provider.contains("network")){
             return true;
-            //}
         } else {
             loadin(false);
             new AlertDialog.Builder(myContext)
@@ -870,10 +845,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
 
     private void messageSend(String tipe, Location location){
         myContext.constraintLayoutProgress.setVisibility(View.VISIBLE);
-        String timezoneID = TimeZone.getDefault().getID();
-        Calendar calendar = Calendar.getInstance(TimeZone.getTimeZone(timezoneID), Locale.getDefault());
-        time1 = calendar.getTime();
-
+        time1 = Utils.getTime();
         Check check = new Check();
         check.setTipeCheck(tipe);
         check.setIdUser(authProvider.getId());
@@ -881,6 +853,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         check.setCheckLat(location.getLatitude());
         check.setCheckLong(location.getLongitude());
         check.setStatusSend(0);
+
         if (myContext.imagetoBase64 != null) {
             if (myContext.imagetoBase64 != "") {
                 check.setImage(myContext.imagetoBase64);
@@ -916,9 +889,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                     myContext.constraintLayoutProgress.setVisibility(View.VISIBLE);
                 }
                 int tipeSend;
-                String timezoneID = TimeZone.getDefault().getID();
-                Calendar calendar = Calendar.getInstance(TimeZone.getTimeZone(timezoneID), Locale.getDefault());
-                Date time2 = calendar.getTime();
+                Date time2 = Utils.getTime();
 
                 if (time1 != null) {
                     if (withoutInternet == true) {
@@ -941,7 +912,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                 myContext.constraintLayoutProgress.setVisibility(View.GONE);
                 if (myContext.numberChecksSendLate != 0 ) {
                     if (!myContext.updateChecksNotSend){
-                        enviarToast(true);
+                        enviarToast(true, check.getIdCheck());
                         myContext.numberChecksSendLate = 0;
                         withoutInternet = true;
                         myContext.updateChecksNotSend = false;
@@ -958,11 +929,11 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
             myContext.updateViewLateCheck();
             setImageDefault();
 
-            if (!isOnlineNet()) {
+            if (!Utils.isOnlineNet(myContext)) {
                 //loadin(false);
                 withoutInternet = false;
                 myContext.constraintLayoutProgress.setVisibility(View.GONE);
-                enviarToast(false);
+                enviarToast(false, "");
             }
         } else {
             myContext.constraintLayoutProgress.setVisibility(View.GONE);
@@ -978,14 +949,16 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
     }
 
 
-    private void enviarToast(boolean b) {
+    private void enviarToast(boolean b, String idCheck) {
         CharSequence text;
         int duration = Toast.LENGTH_SHORT;
         if (b) {
             if (myContext.numberChecksSendLate == 1) {
                 text = "Registro enviado";
+                //myContext.sendNotification(text+"");
             } else {
                 text = "Se enviaron " + myContext.numberChecksSendLate + " registros";
+                //myContext.sendNotification(text+"");
             }
         } else {
             text = "Registro pendiente, conectate a internet para enviar!!";
@@ -998,11 +971,17 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                 }
                 mToast = Toast.makeText(myContext, text, duration);
                 mToast.show();
+                if(b)
+                    myContext.askNotificationPermission(text+"", idCheck);
+                //myContext.sendNotification(text+"", idCheck);
             }
         } else {
             if (mToast != null) mToast.cancel();
             mToast = Toast.makeText(myContext, text, duration);
             mToast.show();
+            if(b)
+                myContext.askNotificationPermission(text+"", idCheck);
+            //myContext.sendNotification(text+"", idCheck);
         }
     }
 
@@ -1039,6 +1018,10 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                     if (myContext.linearLayoutLoadingHome.getVisibility() == View.GONE) {
                         loadin(true);
                     }
+                    if(frameLayoutMoveLocation.getVisibility() == View.GONE){
+                        frameLayoutMoveLocation.setVisibility(View.VISIBLE);
+                    }
+
                     buttonConnect.setText("Desconectarse");
                     textViewState.setText("¡Listo para enviar registros!");
                     isConnect = true;
@@ -1056,6 +1039,10 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                 if (myContext.linearLayoutLoadingHome.getVisibility() == View.GONE) {
                     loadin(true);
                 }
+                if(frameLayoutMoveLocation.getVisibility() == View.GONE){
+                    frameLayoutMoveLocation.setVisibility(View.VISIBLE);
+                }
+
                 buttonConnect.setText("Desconectarse");
                 textViewState.setText("¡Listo para enviar registros!");
                 isConnect = true;
@@ -1072,7 +1059,9 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
             if (ContextCompat.checkSelfPermission(myContext, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
                 if (gpsActived()) {
                     //if(!isOnlineNet()){
-
+                    if(frameLayoutMoveLocation.getVisibility() == View.GONE){
+                        frameLayoutMoveLocation.setVisibility(View.VISIBLE);
+                    }
                     buttonConnect.setText("Desconectarse");
                     textViewState.setText("¡Listo para enviar registros!");
                     isConnect = true;
@@ -1087,6 +1076,9 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
             }
         } else {
             if (gpsActived()) {
+                if(frameLayoutMoveLocation.getVisibility() == View.GONE){
+                    frameLayoutMoveLocation.setVisibility(View.VISIBLE);
+                }
                 fusedLocation.requestLocationUpdates(locationRequest, locationCallback, Looper.myLooper());
                 map.setMyLocationEnabled(false);
             } else {
@@ -1122,8 +1114,6 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
 
     }
 
-
-
     public void checkLocationPermissions() {
         //myContext.pdRevieData.dismiss();
         if (myContext.linearLayoutLoadingHome.getVisibility() == View.VISIBLE) {
@@ -1146,93 +1136,15 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         }
     }
 
-
-
-    public static boolean isMockLocationOn(Location location, Context context) {
-        if (android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR2) {
-            if (location != null) {
-                return location.isFromMockProvider();
-            } else {
-                return false;
-            }
-        } else {
-            String mockLocation = "0";
-            try {
-                mockLocation = Settings.Secure.getString(context.getContentResolver(), Settings.Secure.ALLOW_MOCK_LOCATION);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-            return !mockLocation.equals("0");
-        }
-    }
-
-   /*PREGUNTAR DE APP CON SOBREPOSICION
-   public static boolean areThereMockPermissionApps(Context context) {
-        int count = 0;
-
-        PackageManager pm = context.getPackageManager();
-        List<ApplicationInfo> packages =
-                pm.getInstalledApplications(PackageManager.GET_META_DATA);
-
-        for (ApplicationInfo applicationInfo : packages) {
-            try {
-                PackageInfo packageInfo = pm.getPackageInfo(applicationInfo.packageName,
-                        PackageManager.GET_PERMISSIONS);
-
-                // Get Permissions
-                String[] requestedPermissions = packageInfo.requestedPermissions;
-
-                if (requestedPermissions != null) {
-                    for (int i = 0; i < requestedPermissions.length; i++) {
-                        if (requestedPermissions[i]
-                                .equals("android.permission.ACCESS_MOCK_LOCATION")
-                                && !applicationInfo.packageName.equals(context.getPackageName())) {
-                            count++;
-                        }
-                    }
-                }
-            } catch (PackageManager.NameNotFoundException e) {
-                Log.e("Got exception " , e.getMessage());
-            }
-        }
-
-        if (count > 0)
-            return true;
-        return false;
-    }*/
-
-    public static boolean isTimeAutomaticEnabled(Context context) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
-            return Settings.Global.getInt(context.getContentResolver(), Settings.Global.AUTO_TIME, 0) == 1;
-        } else {
-            //Menor a Android 4.2
-            return android.provider.Settings.System.getInt(context.getContentResolver(), android.provider.Settings.System.AUTO_TIME, 0) == 1;
-        }
-    }
-
-    public boolean isOnlineNet() {
-        try {
-            Process p = java.lang.Runtime.getRuntime().exec("ping -c 1 www.google.es");
-            int val = p.waitFor();
-            boolean reachable = (val == 0);
-            return reachable;
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return false;
-    }
-
-
-    /*private void updateLocation() {
-        if (authProvider.existSesion() && currentLatLng != null) {
-            employeeProvider.saveLocation(authProvider.getId(), currentLatLng);
-        }
-    }*/
-
     @Override
     public void onAttach(@NonNull Context context) {
         myContext = (HomeTW) context;
         super.onAttach(context);
+    }
+
+    @Override
+    public void onStart() {
+        super.onStart();
     }
 
     @Override
@@ -1241,7 +1153,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         employee = dbEmployees.getEmployee(authProvider.getId());
         updateGeocerca = false;
         //if(myContext.geoRadio == 0){
-            reviewGeocerca();
+        reviewGeocerca();
         if(employee!=null){
             setGreeting();
             reviewTakePhoto();
@@ -1250,6 +1162,8 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                 reviewBiometrics();
             }
         }
+        runnable.run();
+        //checkTime();
         super.onResume();
     }
 
@@ -1261,77 +1175,55 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         myContext.geoRadio = sharedPref.getFloat("geoRadio",0);
         myContext.idGeocerca = sharedPref.getString("idGeocerca","");
         if(myContext.geoRadio == 0){
-            if(dbBitacoras.getBitacorasByIdUser(authProvider.getId()).size() != 0){
-                myContext.updateData = true;
-                Intent i = new Intent(myContext, GeocercasActivity.class);
-                i.putExtra("notComeBack", true);
-                i.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
-                startActivity(i);
-            } else {
-                bitacoraProvider.getBitacorasByUser(authProvider.getId()).get().addOnSuccessListener(new OnSuccessListener<QuerySnapshot>() {
-                    @Override
-                    public void onSuccess(QuerySnapshot querySnapshot) {
-                        if(!querySnapshot.isEmpty()){
-                            if(querySnapshot.size() != 0){
-                                myContext.updateData = true;
-                                Intent i = new Intent(myContext, GeocercasActivity.class);
-                                i.putExtra("notComeBack", true);
-                                i.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
-                                startActivity(i);
-                            } else {
-                                updateGeocerca = true;
-                            }
-                        } else {
-                           myContext.removeGeocerca();
-                            updateGeocerca = true;
-                        }
-                    }
-                });
+            if(dbBitacoras.getBitacorasByIdUser(authProvider.getId()).size() == 0){
+                myContext.removeGeocerca();
+                updateGeocerca = true;
             }
         } else {
-            if(!firstReviewGeoface && !myContext.getIntent().getBooleanExtra("notRevie",false)){
-                firstReviewGeoface = true;
-                bitacoraProvider.getBitacorasByUser(authProvider.getId()).get().addOnSuccessListener(new OnSuccessListener<QuerySnapshot>() {
-                    @Override
-                    public void onSuccess(QuerySnapshot querySnapshot) {
-                        if(!querySnapshot.isEmpty()){
-                            if(querySnapshot.size() != 0){
-                                myContext.updateData = true;
-                                Intent i = new Intent(myContext, GeocercasActivity.class);
-                                i.putExtra("notComeBack", true);
-                                i.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
-                                startActivity(i);
-                            } else {
-                                updateGeocerca = true;
-                            }
-                        } else {
-                            myContext.removeGeocerca();
-                            dbBitacoras.deleteAllBitacoras();
-                            updateGeocerca = true;
-                        }
-                    }
-                });
-            }
             if(dbBitacoras.getBitacorasByIdUser(authProvider.getId()).size() == 0){
                 myContext.removeGeocerca();
             } else {
                 updateGeocerca = true;
                 createGeofencig();
             }
-            //updateGeocerca = false;
+        }
+    }
+
+    public void setGreeting(){
+        textViewName.setText(employee.getName());
+        timezoneID = TimeZone.getDefault().getID();
+        calendar = Calendar.getInstance(TimeZone.getTimeZone(timezoneID), Locale.getDefault());
+        Date date = calendar.getTime();
+        updateInfo(date);
+    }
+
+    public void removeSecondProces(boolean remove) {
+        if (remove) {
+            if(isConnect){
+                if (locationCallback != null && fusedLocation != null) {
+                    fusedLocation.removeLocationUpdates(locationCallback);
+                }
+            }
+            handler.removeCallbacks(runnable);
+        } else {
+            if(isConnect){
+                startLocation2();
+            }
+            runnable.run();
         }
     }
 
     @Override
     public void onDestroy() {
+        removeSecondProces(true);
         super.onDestroy();
-        if (locationCallback != null && fusedLocation != null) {
-            fusedLocation.removeLocationUpdates(locationCallback);
-        }
-        myContext.removeGeocerca();
-        handler.removeCallbacks(runnable);
     }
 
+    @Override
+    public void onPause() {
+        handler.removeCallbacks(runnable);
+        super.onPause();
+    }
 
     @Override
     public void onMapReady(@NonNull GoogleMap googleMap) {
@@ -1354,6 +1246,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                 .setMaxUpdateDelayMillis(100)
                 .build();
 
+        generateToken();
 
         if(dbBitacoras.getBitacorasByIdUser(authProvider.getId()).size() == 0){
             startLocation();
@@ -1362,25 +1255,55 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         }
     }
 
-    public void setGreeting(){
-        textViewName.setText(employee.getName());
-        timezoneID = TimeZone.getDefault().getID();
-        calendar = Calendar.getInstance(TimeZone.getTimeZone(timezoneID), Locale.getDefault());
-        Date date = calendar.getTime();
-        updateInfo(date);
-    }
-
-    public void removeWach(boolean remove) {
-        if (remove) {
-            if(isConnect){
-                fusedLocation.removeLocationUpdates(locationCallback);
+    public void getTimeToLocate(){
+        if (ContextCompat.checkSelfPermission(myContext, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+            if(fusedLocation!=null){
+                fusedLocation.getLastLocation().addOnSuccessListener(new OnSuccessListener<Location>() {
+                    @Override
+                    public void onSuccess(Location location) {
+                        long l = location.getTime();
+                        if(l != 0){
+                            SharedPreferences sharedPref = myContext.getSharedPreferences("TIME", Context.MODE_PRIVATE);
+                            SharedPreferences.Editor editor = sharedPref.edit();
+                            editor.putLong("timeReal", l);
+                            editor.apply();
+                            editor.commit();
+                        }
+                    }
+                });
             }
-            handler.removeCallbacks(runnable);
-        } else {
-            if(isConnect){
-                startLocation2();
-            }
-            runnable.run();
         }
     }
+
+    /*public void checkTime() {
+        if(!Utils.isTimeAutomaticEnabled(myContext)){
+            myContext.showGoToChangeTimeAutomatic();
+        } else {
+            SharedPreferences sharedPref = myContext.getSharedPreferences("TIME", Context.MODE_PRIVATE);
+            timeReal = sharedPref.getLong("timeReal", 0);
+            if(timeReal < Utils.getTime().getTime()){
+                if(Utils.isOnlineNet(myContext)){
+                    getTimeToLocate();
+                }
+            } else {
+                if(Utils.isOnlineNet(myContext)){
+                    myContext.showGoToChangeTimeAutomatic();
+                } else {
+                    myContext.showGoToConectInternet();
+                }
+            }
+        }
+    }*/
+
+    private void generateToken(){
+        if(employeeProvider != null){
+            employee = dbEmployees.getEmployee(authProvider.getId());
+            if(employee!=null){
+                employeeProvider.updateToken(employee.getIdUser(), myContext);
+                employee = dbEmployees.getEmployee(authProvider.getId());
+            }
+        }
+    }
+
+
 }

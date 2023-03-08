@@ -2,18 +2,13 @@ package com.dan.timewebclone.adapters;
 
 import static com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions.withCrossFade;
 
-import android.animation.Animator;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.transition.Fade;
-import android.transition.Transition;
-import android.transition.TransitionManager;
 import android.util.Base64;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.animation.Animation;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -26,6 +21,7 @@ import com.airbnb.lottie.LottieAnimationView;
 import com.dan.timewebclone.R;
 import com.dan.timewebclone.activitys.HomeTW;
 import com.dan.timewebclone.activitys.ShowLocationActivity;
+import com.dan.timewebclone.activitys.ShowLocationHuaweiActivity;
 import com.dan.timewebclone.db.DbChecks;
 import com.dan.timewebclone.fragments.HistoryChecksSendOkFragment;
 import com.dan.timewebclone.models.Check;
@@ -34,6 +30,7 @@ import com.dan.timewebclone.providers.AuthProvider;
 import com.dan.timewebclone.providers.ChecksProvider;
 import com.dan.timewebclone.providers.EmployeeProvider;
 import com.dan.timewebclone.utils.RelativeTime;
+import com.dan.timewebclone.utils.Utils;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -58,6 +55,7 @@ public class ChecksDbAdapter extends RecyclerView.Adapter<ChecksDbAdapter.CheckV
     private SimpleDateFormat sdfDate;
     private DbChecks dbChecks;
     private boolean noReviewDelete;
+    private boolean isMapHuawei;
     //private Animation.AnimationListener animLis;
 
 
@@ -79,6 +77,11 @@ public class ChecksDbAdapter extends RecyclerView.Adapter<ChecksDbAdapter.CheckV
         noReviewDelete = false;
         historyChecksSendOkFragment = new HistoryChecksSendOkFragment();
         //context.semanasSendOk=0;
+        if(Utils.isGMS(context)){
+            isMapHuawei = false;
+        } else {
+            isMapHuawei = true;
+        }
         checks = listChecks;
         idChecksDelete = new ArrayList<>();
     }
@@ -240,13 +243,23 @@ public class ChecksDbAdapter extends RecyclerView.Adapter<ChecksDbAdapter.CheckV
             public void onClick(View view) {
                 if(context.idChecksDelete.size()==0){
                     if(context.isViewDeleteSendOk() == View.GONE){
-                        Intent i = new Intent(context, ShowLocationActivity.class);
-                        i.putExtra("lat", check.getCheckLat());
-                        i.putExtra("lng", check.getCheckLong());
-                        i.putExtra("date", check.getTime());
-                        i.putExtra("tipe", check.getTipeCheck());
-                        i.putExtra("idCheck", check.getIdCheck());
-                        context.startActivity(i);
+                        if(isMapHuawei){
+                            Intent i = new Intent(context, ShowLocationHuaweiActivity.class);
+                            i.putExtra("lat", check.getCheckLat());
+                            i.putExtra("lng", check.getCheckLong());
+                            i.putExtra("date", check.getTime());
+                            i.putExtra("tipe", check.getTipeCheck());
+                            i.putExtra("idCheck", check.getIdCheck());
+                            context.startActivity(i);
+                        } else {
+                            Intent i = new Intent(context, ShowLocationActivity.class);
+                            i.putExtra("lat", check.getCheckLat());
+                            i.putExtra("lng", check.getCheckLong());
+                            i.putExtra("date", check.getTime());
+                            i.putExtra("tipe", check.getTipeCheck());
+                            i.putExtra("idCheck", check.getIdCheck());
+                            context.startActivity(i);
+                        }
                     } else {
                         notifyDataSetChanged();
                     }

@@ -1,11 +1,21 @@
 package com.dan.timewebclone.providers;
 
+import static android.content.ContentValues.TAG;
+
 import android.content.Context;
 import android.database.sqlite.SQLiteDatabase;
+import android.text.TextUtils;
+import android.util.Log;
+import android.widget.Toast;
 
+import androidx.annotation.NonNull;
+
+import com.dan.timewebclone.db.DbEmployees;
 import com.dan.timewebclone.models.Employee;
 import com.dan.timewebclone.db.DbHelper;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.tasks.OnCompleteListener;
+import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
 import com.google.firebase.firestore.CollectionReference;
@@ -13,13 +23,22 @@ import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Query;
+import com.google.firebase.messaging.FirebaseMessaging;
+import com.huawei.agconnect.AGConnectOptionsBuilder;
+import com.huawei.hms.aaid.HmsInstanceId;
+import com.huawei.hms.common.ApiException;
+import com.huawei.hms.push.HmsMessageService;
+import com.huawei.hms.support.api.push.service.HmsMsgService;
 
 import java.util.HashMap;
 import java.util.Map;
 
 public class EmployeeProvider {
     private CollectionReference collection;
+    private DbEmployees dbEmployees;
 
+    private String appId = "107706035";
+    private String tokenScope = "HCM";
     //Instancia
     public EmployeeProvider(){
         collection = FirebaseFirestore.getInstance().collection("Employees");
@@ -61,6 +80,85 @@ public class EmployeeProvider {
         map.put("name", name);
         return collection.document(id).update(map);
     }
+
+    public void updateToken(String id, Context context){
+        FirebaseMessaging.getInstance().getToken().addOnSuccessListener(new OnSuccessListener<String>() {
+            @Override
+            public void onSuccess(String token) {
+                dbEmployees = new DbEmployees(context);
+                dbEmployees.updateTokenDB(id,token);
+                Map<String, Object> map = new HashMap<>();
+                map.put("token", token);
+                collection.document(id).update(map);
+            }
+        }).addOnFailureListener(new OnFailureListener() {
+            @Override
+            public void onFailure(@NonNull Exception e) {
+                //getToken(id, context);
+                Toast.makeText(context, "Problema al obtener token", Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    public void updateTokenHMS(String id, Context context) {
+
+        new Thread() {
+            @Override
+            public void run() {
+                try {
+                    //String APY_KEY = "DAEDAHiidNYFRwwGIFtnRv1diOv0FG60k+seNMFCsNtRjh3gTAJ7ZBlMWo6vFvAnPz8bt9jytDQqUkkCiqu6eWw8dFVPWsd3EKh1wQ==";
+
+                    String token = HmsInstanceId.getInstance(context).getToken(appId, tokenScope);
+                    if(!TextUtils.isEmpty(token)) {
+                        sendRegTokenToServer(id, token, context);
+                    } else {
+                        //Toast.makeText(context, "Problema al obtener token", Toast.LENGTH_SHORT).show();
+                    }
+                } catch (ApiException e) {
+                    Log.e(TAG, "TOKEN HMS ERROR: " + e);
+                    //Toast.makeText(context, "Problema al obtener token", Toast.LENGTH_SHORT).show();
+                }
+            }
+        }.start();
+    }
+    private void sendRegTokenToServer(String id, String token, Context context) {
+        dbEmployees = new DbEmployees(context);
+        dbEmployees.updateTokenDB(id,token);
+        Map<String, Object> map = new HashMap<>();
+        map.put("token", token);
+        collection.document(id).update(map);
+        //Toast.makeText(context, "Se obtubo token HMS", Toast.LENGTH_SHORT).show();
+    }
+
+    public void deleteTokenHMS(String idUser, Context context){
+        new Thread() {
+            @Override
+            public void run() {
+                try {
+                    dbEmployees = new DbEmployees(context);
+                    dbEmployees.updateTokenDB(idUser,"");
+                    Map<String, Object> map = new HashMap<>();
+                    map.put("token", "");
+                    collection.document(idUser).update(map);
+                    HmsInstanceId.getInstance(context).deleteToken(appId, tokenScope);
+                    Log.i(TAG, "token deleted successfully");
+                } catch (ApiException e) {
+                    Log.e(TAG, "deleteToken failed." + e);
+                }
+            }
+        }.start();
+    }
+
+    public void deleteToken(String idUser, Context context){
+        dbEmployees = new DbEmployees(context);
+        dbEmployees.updateTokenDB(idUser,"");
+        Map<String, Object> map = new HashMap<>();
+        map.put("token", "");
+        collection.document(idUser).update(map);
+        FirebaseMessaging.getInstance().deleteToken();
+    }
+
+
 
     //Actualizar telefono
     public Task<Void> updatePhone(String id, String phone){

@@ -22,6 +22,7 @@ import androidx.cardview.widget.CardView;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.airbnb.lottie.LottieAnimationView;
+import com.airbnb.lottie.RenderMode;
 import com.dan.timewebclone.R;
 import com.dan.timewebclone.activitys.GeocercasActivity;
 import com.dan.timewebclone.activitys.HomeTW;
@@ -136,6 +137,8 @@ public class GeocercasDbAdapter extends RecyclerView.Adapter<GeocercasDbAdapter.
             textViewNameGeocerca = view.findViewById(R.id.textViewGeoName);
             textViewAdrressGeocerca = view.findViewById(R.id.textViewDireccion);
             lottieAnimationViewGeo = view.findViewById(R.id.animationGeo);
+            lottieAnimationViewGeo.isHardwareAccelerated();
+            lottieAnimationViewGeo.setRenderMode(RenderMode.HARDWARE);
         }
     }
 

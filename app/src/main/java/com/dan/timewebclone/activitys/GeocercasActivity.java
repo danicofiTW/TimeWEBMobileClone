@@ -24,6 +24,8 @@ import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.airbnb.lottie.LottieAnimationView;
+import com.airbnb.lottie.RenderMode;
 import com.dan.timewebclone.R;
 import com.dan.timewebclone.adapters.ChecksDbAdapter;
 import com.dan.timewebclone.adapters.GeocercasDbAdapter;
@@ -35,6 +37,7 @@ import com.dan.timewebclone.models.Geocerca;
 import com.dan.timewebclone.providers.AuthProvider;
 import com.dan.timewebclone.providers.BitacoraProvider;
 import com.dan.timewebclone.providers.GeocercaProvider;
+import com.dan.timewebclone.utils.Utils;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
@@ -55,6 +58,7 @@ public class GeocercasActivity extends AppCompatActivity {
     private EditText editTextSearch;
     private TextView textViewNoGeocercas;
     private AlertDialog.Builder builderDialogExit;
+    private LottieAnimationView animation;
 
     private MenuItem menuItemSearch;
     private RecyclerView mReciclerView;
@@ -91,6 +95,10 @@ public class GeocercasActivity extends AppCompatActivity {
         textViewNoGeocercas = findViewById(R.id.textViewNoGeocercas);
         mReciclerView = findViewById(R.id.rvGeocercas);
         constraintLayoutProgress = findViewById(R.id.progressLayout);
+        animation = findViewById(R.id.animationGeo);
+        animation.isHardwareAccelerated();
+        //animation.enableMergePathsForKitKatAndAbove(true);
+        animation.setRenderMode(RenderMode.HARDWARE);
         builderDialogExit = new AlertDialog.Builder(this);
         linearLayoutManager = new LinearLayoutManager(this);
         mReciclerView.setLayoutManager(linearLayoutManager);
@@ -155,7 +163,7 @@ public class GeocercasActivity extends AppCompatActivity {
         geocercasDbAdapter = new GeocercasDbAdapter(geocercas, GeocercasActivity.this);
         mReciclerView.setAdapter(geocercasDbAdapter);
         geocercasDbAdapter.notifyDataSetChanged();
-        if(isOnlineNet() && !updateForOne){
+        if(Utils.isOnlineNet(this) && !updateForOne){
             updateForOne = true;
             updateGeocercas();
         } else {
@@ -263,7 +271,7 @@ public class GeocercasActivity extends AppCompatActivity {
     }
 
     private void updateGeocercas() {
-        if(isOnlineNet()){
+        if(Utils.isOnlineNet(this)){
             if(bitacoraProvider!=null){
                 if(geocercaProvider!=null){
                     constraintLayoutProgress.setVisibility(View.VISIBLE);
@@ -344,18 +352,6 @@ public class GeocercasActivity extends AppCompatActivity {
             }
         }
         geocercasDbAdapter.filtrar(mGeocercasFilter);
-    }
-
-    public boolean isOnlineNet() {
-        try {
-            Process p = java.lang.Runtime.getRuntime().exec("ping -c 1 www.google.es");
-            int val = p.waitFor();
-            boolean reachable = (val == 0);
-            return reachable;
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return false;
     }
 
     @Override

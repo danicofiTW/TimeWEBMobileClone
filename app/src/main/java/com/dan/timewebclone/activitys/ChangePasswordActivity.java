@@ -20,6 +20,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.airbnb.lottie.LottieAnimationView;
+import com.airbnb.lottie.RenderMode;
 import com.dan.timewebclone.R;
 import com.dan.timewebclone.db.DbChecks;
 import com.dan.timewebclone.db.DbEmployees;
@@ -28,9 +29,13 @@ import com.dan.timewebclone.fragments.UpdatePasswordFragment;
 import com.dan.timewebclone.models.Employee;
 import com.dan.timewebclone.providers.AuthProvider;
 import com.dan.timewebclone.providers.EmployeeProvider;
+import com.dan.timewebclone.utils.Utils;
+import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.android.gms.tasks.Task;
 import com.google.android.material.textfield.TextInputEditText;
+import com.google.firebase.firestore.DocumentSnapshot;
 
 import de.hdodenhof.circleimageview.CircleImageView;
 
@@ -42,7 +47,7 @@ public class ChangePasswordActivity extends AppCompatActivity {
     private ImageView imageViewBack;
     private LinearLayout linearLayoutEmail;
     private ProgressDialog changePasswordProgress;
-    private LottieAnimationView animationView;
+    private LottieAnimationView animation;
 
     private AuthProvider authProvider;
     private EmployeeProvider employeeProvider;
@@ -65,12 +70,16 @@ public class ChangePasswordActivity extends AppCompatActivity {
         setContentView(R.layout.activity_change_password);
         setStatusBarColor();
 
+        animation = findViewById(R.id.animationChangePassword);
         tietEmail = findViewById(R.id.textInputEmail);
         btnChangePassword = findViewById(R.id.btnChangePassword);
         imageViewBack = findViewById(R.id.imageViewBackCP);
         textViewChangePassword = findViewById(R.id.textViewChangePassword);
         linearLayoutEmail = findViewById(R.id.linearLayoutEmail);
         levelFragment = 0;
+        animation.isHardwareAccelerated();
+        //animation.enableMergePathsForKitKatAndAbove(true);
+        animation.setRenderMode(RenderMode.HARDWARE);
 
         updatePasswordFragment = new UpdatePasswordFragment();
         reviePasswordFragment = new ReviePasswordFragment();
@@ -79,6 +88,9 @@ public class ChangePasswordActivity extends AppCompatActivity {
         employeeProvider = new EmployeeProvider();
         dbEmployees = new DbEmployees(ChangePasswordActivity.this);
         employee = dbEmployees.getEmployee(authProvider.getId());
+        if(employee == null){
+           getEmployee();
+        }
         changePasswordProgress = new ProgressDialog(ChangePasswordActivity.this);
         changePasswordProgress.setTitle("Cambiando");
         changePasswordProgress.setMessage("Por favor espere ...");
@@ -104,6 +116,24 @@ public class ChangePasswordActivity extends AppCompatActivity {
             }
         });
 
+    }
+
+    private void getEmployee() {
+        employeeProvider.getUserInfo(authProvider.getId()).get().addOnCompleteListener(new OnCompleteListener<DocumentSnapshot>() {
+            @Override
+            public void onComplete(@NonNull Task<DocumentSnapshot> task) {
+                if(task.isSuccessful()){
+                    if (task.getResult() != null) {
+                        if (task.getResult().exists()) {
+                            employee = task.getResult().toObject(Employee.class);
+                            if(dbEmployees.deleteAllEmployees()){
+                                dbEmployees.insertEmployye(employee);
+                            }
+                        }
+                    }
+                }
+            }
+        });
     }
 
 
@@ -154,7 +184,7 @@ public class ChangePasswordActivity extends AppCompatActivity {
                 if(newPassword.equals(confirmNewPassword)){
                     if(newPassword.length()>=6){
                         if(!newPassword.equals(password)){
-                            if(isOnlineNet()){
+                            if(Utils.isOnlineNet(this)){
                                 changePasswordProgress.show();
                                 changePassword(employee, email, password, newPassword);
                             } else {
@@ -245,9 +275,8 @@ public class ChangePasswordActivity extends AppCompatActivity {
                                 employee.setPassword(newPassword);
                                 changePasswordProgress.dismiss();
                                 Toast.makeText(ChangePasswordActivity.this, "La contraseña se actualizo correctamente", Toast.LENGTH_SHORT).show();
-                                authProvider.signOut();
                                 Intent in = new Intent(ChangePasswordActivity.this, MainActivity.class);
-                                in.putExtra("ChangePassword", "true");
+                                in.putExtra("ChangePassword", true);
                                 in.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
                                 startActivity(in);
                             }
@@ -263,20 +292,6 @@ public class ChangePasswordActivity extends AppCompatActivity {
             }
         });
     }
-
-    //Revisar si se cuenta con internet
-    public boolean isOnlineNet() {
-        try {
-            Process p = java.lang.Runtime.getRuntime().exec("ping -c 1 www.google.es");
-            int val = p.waitFor();
-            boolean reachable = (val == 0);
-            return reachable;
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return false;
-    }
-
 
     //Cambiar el color de la barra de notificaciones
     private void setStatusBarColor() {

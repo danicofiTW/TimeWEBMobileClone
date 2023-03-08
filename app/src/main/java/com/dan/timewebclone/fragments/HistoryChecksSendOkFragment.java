@@ -21,6 +21,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.airbnb.lottie.LottieAnimationView;
+import com.airbnb.lottie.RenderMode;
 import com.dan.timewebclone.R;
 import com.dan.timewebclone.activitys.HomeTW;
 import com.dan.timewebclone.adapters.ChecksDbAdapter;
@@ -101,6 +102,9 @@ public class HistoryChecksSendOkFragment extends Fragment  {
         imageViewCancelDelete = mView.findViewById(R.id.imageViewCancelDelete);
         textViewNoChecks = mView.findViewById(R.id.textViewNoChecks);
         builderDialogUpdateChecks = new AlertDialog.Builder(myContext);
+        animation.isHardwareAccelerated();
+        //animation.enableMergePathsForKitKatAndAbove(true);
+        animation.setRenderMode(RenderMode.HARDWARE);
 
         linearLayoutManager = new LinearLayoutManager(myContext);
         mReciclerView.setLayoutManager(linearLayoutManager);
@@ -164,13 +168,15 @@ public class HistoryChecksSendOkFragment extends Fragment  {
     }
 
     public void updateDelete() {
-        myContext.idChecksDelete.clear();
-        dbChecks.updateChecksDelete(false, authProvider.getId(), true);
-        showImageDelete(false);
-        if(deleteAllChecks.isChecked()){
-            deleteAllChecks.setChecked(false);
+        if(authProvider != null){
+            myContext.idChecksDelete.clear();
+            dbChecks.updateChecksDelete(false, authProvider.getId(), true);
+            showImageDelete(false);
+            if(deleteAllChecks.isChecked()){
+                deleteAllChecks.setChecked(false);
+            }
+            notifyChangeAdapter();
         }
-        notifyChangeAdapter();
     }
 
     private void allChecks() {
@@ -321,8 +327,13 @@ public class HistoryChecksSendOkFragment extends Fragment  {
         super.onStop();
     }
 
-
-
+    @Override
+    public void onPause() {
+        if(deleteChecks != null && deleteChecks.getVisibility() == View.VISIBLE){
+            updateDelete();
+        }
+        super.onPause();
+    }
 
     /*public  int compareToDate(Long dateCheck) {
         Date fechaInicial = new Date(dateCheck);

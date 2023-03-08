@@ -36,6 +36,7 @@ public class DbEmployees extends DbHelper{
             values.put("password", employee.getPassword());
             values.put("idUser", employee.getIdUser());
             values.put("company", employee.getCompany());
+            values.put("company", employee.getCompany());
             if(employee.isStateCamera()){
                 values.put("stateCamera", 1);
             } else{
@@ -48,6 +49,9 @@ public class DbEmployees extends DbHelper{
             }
             if(employee.getImage()!=null){
                 values.put("image", employee.getImage());
+            }
+            if(employee.getToken()!=null){
+                values.put("token", employee.getToken());
             }
             //values.put("idCompany", employee.getCompany());
             id = db.insert(TABLE_EMPLOYEES, null, values);
@@ -117,6 +121,7 @@ public class DbEmployees extends DbHelper{
             employee.setPhone(cursorChecks.getString(7));
             employee.setEmail(cursorChecks.getString(6));
             employee.setPassword(cursorChecks.getString(8));
+            employee.setToken(cursorChecks.getString(9));
             employee.setImage(cursorChecks.getString(11));
             if(cursorChecks.getInt(13) == 1){
                 employee.setStateCamera(true);
@@ -188,6 +193,22 @@ public class DbEmployees extends DbHelper{
 
         try{
             db.execSQL("UPDATE " + TABLE_EMPLOYEES + " SET password = '"+password+"'WHERE idUser = '"+idUser+"'");
+            save = true;
+        } catch (Exception ex){
+            ex.toString();
+            save = false;
+        } finally {
+            dbEmployee.close();
+        }
+        return save;
+    }
+
+    public boolean updateTokenDB(String idUser, String token){
+        boolean save = false;
+        DbHelper dbEmployee = new DbHelper(myContext);
+        SQLiteDatabase db = dbEmployee.getWritableDatabase();
+        try{
+            db.execSQL("UPDATE " + TABLE_EMPLOYEES + " SET token = '"+token+"'WHERE idUser = '"+idUser+"'");
             save = true;
         } catch (Exception ex){
             ex.toString();

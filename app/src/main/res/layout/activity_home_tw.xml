@@ -50,6 +50,7 @@
         android:visibility="visible">
 
         <com.airbnb.lottie.LottieAnimationView
+            android:id="@+id/animationH"
             android:layout_width="150dp"
             android:layout_height="150dp"
             app:lottie_imageAssetsFolder="assets"
@@ -60,7 +61,7 @@
             app:lottie_autoPlay="true"/>
 
         <com.airbnb.lottie.LottieAnimationView
-            android:id="@+id/animation"
+            android:id="@+id/animationHLoad"
             android:layout_width="100dp"
             android:layout_height="100dp"
             app:lottie_autoPlay="true"

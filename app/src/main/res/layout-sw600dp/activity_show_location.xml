@@ -39,7 +39,7 @@
         android:layout_height="300dp"
         android:layout_gravity="bottom">
 
-    <com.github.florent37.shapeofview.shapes.RoundRectView
+    <io.github.florent37.shapeofview.shapes.RoundRectView
         android:layout_width="300dp"
         android:layout_height="110dp"
         android:layout_gravity="bottom|center"
@@ -108,7 +108,7 @@
 
         </LinearLayout>
 
-    </com.github.florent37.shapeofview.shapes.RoundRectView>
+    </io.github.florent37.shapeofview.shapes.RoundRectView>
 
 
     </FrameLayout>

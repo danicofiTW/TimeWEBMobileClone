@@ -1,48 +1,75 @@
 package com.dan.timewebclone.activitys;
 
+import static android.content.ContentValues.TAG;
 import static androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_STRONG;
 import static androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_WEAK;
 import static androidx.biometric.BiometricManager.Authenticators.DEVICE_CREDENTIAL;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.biometric.BiometricManager;
 import androidx.biometric.BiometricPrompt;
+import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.DialogFragment;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
+import androidx.lifecycle.Lifecycle;
 
+import android.Manifest;
+import android.content.ActivityNotFoundException;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.ServiceConnection;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.IBinder;
 import android.provider.Settings;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.Toast;
 
+import com.airbnb.lottie.LottieAnimationView;
+import com.airbnb.lottie.RenderMode;
 import com.dan.timewebclone.R;
 import com.dan.timewebclone.db.DbBitacoras;
 import com.dan.timewebclone.db.DbEmployees;
+import com.dan.timewebclone.db.DbGeocercas;
 import com.dan.timewebclone.fragments.LoginFragment;
 import com.dan.timewebclone.fragments.TermsAndConditionsFragment;
 import com.dan.timewebclone.fragments.RegisterFragment;
 import com.dan.timewebclone.models.Employee;
 import com.dan.timewebclone.providers.AuthProvider;
+import com.dan.timewebclone.providers.BitacoraProvider;
+import com.dan.timewebclone.services.HmsMessageService;
+import com.dan.timewebclone.utils.Utils;
+import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.android.play.core.appupdate.AppUpdateInfo;
+import com.google.android.play.core.appupdate.AppUpdateManager;
+import com.google.android.play.core.appupdate.AppUpdateManagerFactory;
+import com.google.android.play.core.install.model.UpdateAvailability;
+import com.google.android.play.core.tasks.Task;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.firestore.QuerySnapshot;
 
+import java.util.Set;
 import java.util.concurrent.Executor;
 
 public class MainActivity extends AppCompatActivity {
 
     private Button btnGoToRegister, btnGoToLogin;
     private AlertDialog.Builder builderDialogExit;
+    private LottieAnimationView animation;
 
     private LoginFragment loginFragment;
     private RegisterFragment registerFragment;
@@ -52,14 +79,27 @@ public class MainActivity extends AppCompatActivity {
     private DialogFragment termsAndConditionsFragment;
     private DbEmployees dbEmployees;
     private DbBitacoras dbBitacoras;
+    private BitacoraProvider bitacoraProvider;
 
     private AuthProvider mAuth = null;
 
-    private String changePassword;
+    private boolean changePassword;
     private Executor executor;
     private BiometricPrompt biometricPrompt;
     private BiometricPrompt.PromptInfo promptInfo;
     private int canUseBiometrics;
+
+    static String titleNotify;
+    static String bodyNotify;
+    static String urlNotify;
+    static String imageNotify;
+    String idCheckotify;
+    static String idUser;
+    public static boolean notify;
+    boolean biometric = false;
+
+    private AppUpdateManager updateManager;
+    private Task<AppUpdateInfo> taskUpdate;
 
 
     @Override
@@ -67,8 +107,15 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         setStatusBarColor();
+        reviewUpdate();
         btnGoToRegister = findViewById(R.id.btnGoToRegister);
         btnGoToLogin = findViewById(R.id.btnGoToLogin);
+        animation = findViewById(R.id.animationMain);
+        animation.isHardwareAccelerated();
+        //animation.enableMergePathsForKitKatAndAbove(true);
+        animation.setRenderMode(RenderMode.HARDWARE);
+        notify = false;
+
 
         loginFragment = new LoginFragment();
         registerFragment = new RegisterFragment();
@@ -76,14 +123,15 @@ public class MainActivity extends AppCompatActivity {
         dbBitacoras = new DbBitacoras(this);
         termsAndConditionsFragment = new TermsAndConditionsFragment();
         mAuth = new AuthProvider();
+        bitacoraProvider = new BitacoraProvider();
         builderDialogExit = new AlertDialog.Builder(this);
 
         //Cachar variable que se entrega al cerrar sesion y al cambiar password
-        changePassword = getIntent().getStringExtra("ChangePassword");
-        if (changePassword != null) {
+        changePassword = getIntent().getBooleanExtra("ChangePassword", false);
+        if (changePassword) {
             moveFragment(loginFragment);
             if(dbEmployees.getEmployee(mAuth.getId())!=null)
-            loginFragment.setTextEmail(dbEmployees.getEmployee(mAuth.getId()).getEmail());
+                loginFragment.setTextEmail(dbEmployees.getEmployee(mAuth.getId()).getEmail());
         }
 
         //Ir a registrarte
@@ -111,10 +159,11 @@ public class MainActivity extends AppCompatActivity {
             public void onAuthenticationError(int errorCode,
                                               @NonNull CharSequence errString) {
                 super.onAuthenticationError(errorCode, errString);
-                    moveFragment(loginFragment);
-                    loginFragment.setTextEmail(dbEmployees.getEmployee(mAuth.getId()).getEmail());
 
-                //Toast.makeText(getApplicationContext(), "Authentication error: " + errString, Toast.LENGTH_SHORT).show();
+                biometric = false;
+                moveFragment(loginFragment);
+                loginFragment.setTextEmail(dbEmployees.getEmployee(mAuth.getId()).getEmail());
+            //Toast.makeText(getApplicationContext(), "Authentication error: " + errString, Toast.LENGTH_SHORT).show();
             }
 
             @Override
@@ -123,15 +172,39 @@ public class MainActivity extends AppCompatActivity {
                 super.onAuthenticationSucceeded(result);
                 //Toast.makeText(getApplicationContext(), "Authentication succeeded!", Toast.LENGTH_SHORT).show();
                 if(dbBitacoras.getBitacorasByIdUser(mAuth.getId()).size() != 0){
+
+                    biometric = false;
                     Intent intent = new Intent(MainActivity.this, GeocercasActivity.class);
                     intent.putExtra("notComeBack", true);
                     intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
                     startActivity(intent);
                 } else {
-                    Intent intent = new Intent(MainActivity.this, HomeTW.class);
-                    intent.putExtra("revieEmployee", false);
-                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-                    startActivity(intent);
+                    if(Utils.isOnlineNet(MainActivity.this)){
+
+                        biometric = false;
+                        bitacoraProvider.getBitacorasByUser(mAuth.getId()).get().addOnSuccessListener(new OnSuccessListener<QuerySnapshot>() {
+                            @Override
+                            public void onSuccess(QuerySnapshot querySnapshot) {
+                                if(querySnapshot.size() != 0){
+                                    Intent i = new Intent(MainActivity.this, GeocercasActivity.class);
+                                    i.putExtra("notComeBack", true);
+                                    i.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
+                                    startActivity(i);
+                                } else {
+                                    Intent intent = new Intent(MainActivity.this, HomeTW.class);
+                                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                                    startActivity(intent);
+                                }
+                            }
+                        });
+                    } else {
+
+                        biometric = false;
+                        Intent intent = new Intent(MainActivity.this, HomeTW.class);
+                        intent.putExtra("revieEmployee", false);
+                        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                        startActivity(intent);
+                    }
                 }
             }
 
@@ -184,38 +257,152 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
+    private void reviewUpdate() {
+        updateManager = AppUpdateManagerFactory.create(this);
+        taskUpdate = updateManager.getAppUpdateInfo();
+        taskUpdate.addOnSuccessListener(new com.google.android.play.core.tasks.OnSuccessListener<AppUpdateInfo>() {
+            @Override
+            public void onSuccess(AppUpdateInfo appUpdateInfo) {
+                if(appUpdateInfo.updateAvailability() == UpdateAvailability.UPDATE_AVAILABLE){
+                    if(getLifecycle().getCurrentState() == Lifecycle.State.RESUMED){
+                        AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+                        builder.setTitle("Actualización disponible !!");
+                        builder.setMessage("Se encuentra una nueva version de timeWEBMobile, actualiza para continuar");
+                        builder.setCancelable(false);
+                        builder.setPositiveButton("Actualizar", new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+                                try {
+                                    Intent intent = new Intent(Intent.ACTION_VIEW);
+                                    Uri uri = Uri.parse("market://details?id="+getPackageName());
+                                    intent.setData(uri);
+                                    intent.setPackage("com.android.vending");
+                                    startActivity(intent);
+                                } catch (ActivityNotFoundException e){
+                                    Intent intent = new Intent(Intent.ACTION_VIEW);
+                                    Uri uri = Uri.parse("https://play.google.com/store/apps/details?id="+getPackageName());
+                                    intent.setData(uri);
+                                    intent.setPackage("com.android.vending");
+                                    startActivity(intent);
+                                }
+                            }
+                        });
+                        builder.show();
+                    }
+                }
+            }
+        });
+    }
+
     @Override
     protected void onStart() {
         super.onStart();
         //Si el usuario ya inicio sesion ingresar al Home
         if (mAuth.getId() != null && dbEmployees.getEmployee(mAuth.getId()) != null) {
-            if(canUseBiometrics == 0){
-                if(dbEmployees.getEmployee(mAuth.getId()).isStateBiometrics()){
-                    biometricPrompt.authenticate(promptInfo);
+            //getIntent().hasExtra("data") getIntent().getExtras().getString("data")
+            if (getIntent().getExtras() != null) {
+                titleNotify = getIntent().getExtras().getString("titleNotify");
+                bodyNotify = getIntent().getExtras().getString("bodyNotify");
+                urlNotify = getIntent().getExtras().getString("urlNotify");
+                imageNotify = getIntent().getExtras().getString("imageNotify");
+                idUser = mAuth.getId();
+                if(urlNotify != null && !notify){
+                    notify = true;
+                    biometricPrompt.cancelAuthentication();
+                    Intent i = new Intent(this, ShowNotificationActivity.class);
+                    i.putExtra("idUser", idUser);
+                    i.putExtra("title", titleNotify);
+                    i.putExtra("body", bodyNotify);
+                    i.putExtra("image", imageNotify);
+                    i.putExtra("url", urlNotify);
+                    i.putExtra("main", true);
+                    startActivity(i);
                 } else {
-                    moveFragment(loginFragment);
-                    loginFragment.setTextEmail(dbEmployees.getEmployee(mAuth.getId()).getName());
+                    if(canUseBiometrics == 0){
+                        if(dbEmployees.getEmployee(mAuth.getId()).isStateBiometrics()){
+                            if(!changePassword){
+                                biometricPrompt.authenticate(promptInfo);
+                                biometric = true;
+                            }
+                        } else {
+                            moveFragment(loginFragment);
+                            loginFragment.setTextEmail(dbEmployees.getEmployee(mAuth.getId()).getName());
+                            biometric = false;
+                        }
+                    } else {
+                        moveFragment(loginFragment);
+                        loginFragment.setTextEmail(dbEmployees.getEmployee(mAuth.getId()).getName());
+                        biometric = false;
+                    }
                 }
             } else {
-                /*if(dbBitacoras.getBitacorasByIdUser(mAuth.getId()).size() != 0){
-                    Intent intent = new Intent(MainActivity.this, GeocercasActivity.class);
-                    intent.putExtra("notComeBack", true);
-                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-                    startActivity(intent);
+                if(titleNotify != null){
+                    if(urlNotify != null && !notify){
+                        notify = true;
+                        biometricPrompt.cancelAuthentication();
+                        Intent i = new Intent(this, ShowNotificationActivity.class);
+                        i.putExtra("idUser", idUser);
+                        i.putExtra("title", titleNotify);
+                        i.putExtra("body", bodyNotify);
+                        i.putExtra("image", imageNotify);
+                        i.putExtra("url", urlNotify);
+                        i.putExtra("main", true);
+                        startActivity(i);
+                    } else {
+                        if(canUseBiometrics == 0){
+                            if(dbEmployees.getEmployee(mAuth.getId()).isStateBiometrics()){
+                                if(!changePassword){
+                                    biometricPrompt.authenticate(promptInfo);
+                                    biometric = true;
+                                }
+                            } else {
+                                moveFragment(loginFragment);
+                                loginFragment.setTextEmail(dbEmployees.getEmployee(mAuth.getId()).getName());
+                                biometric = false;
+                            }
+                        } else {
+                            moveFragment(loginFragment);
+                            loginFragment.setTextEmail(dbEmployees.getEmployee(mAuth.getId()).getName());
+                            biometric = false;
+                        }
+                    }
                 } else {
-                    Intent intent = new Intent(MainActivity.this, HomeTW.class);
-                    intent.putExtra("revieEmployee", false);
-                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-                    startActivity(intent);
+                    if(canUseBiometrics == 0){
+                        if(dbEmployees.getEmployee(mAuth.getId()).isStateBiometrics()){
+                            if(!changePassword){
+                                biometricPrompt.authenticate(promptInfo);
+                                biometric = true;
+                            }
+                        } else {
+                            moveFragment(loginFragment);
+                            loginFragment.setTextEmail(dbEmployees.getEmployee(mAuth.getId()).getName());
+                            biometric = false;
+                        }
+                    } else {
+                        moveFragment(loginFragment);
+                        loginFragment.setTextEmail(dbEmployees.getEmployee(mAuth.getId()).getName());
+                        biometric = false;
+                    }
                 }
-                Intent i = new Intent(MainActivity.this, HomeTW.class);
-                i.putExtra("revieEmployee", false);
-                i.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
-                startActivity(i);*/
-                moveFragment(loginFragment);
-                loginFragment.setTextEmail(dbEmployees.getEmployee(mAuth.getId()).getName());
             }
         }
+    }
+
+    public static void updateNotify(String title, String body, String url, String image, String idUserN){
+        titleNotify = title;
+        bodyNotify = body;
+        urlNotify = url;
+        imageNotify = image;
+        idUser = idUserN;
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        /*long l = Utils.getTimeLongNet();
+        if(l != 0){
+            Log.d("TIME", "YOUR TIME: " + l);
+        }*/
     }
 
     //Cambiar fragment a mostrar
@@ -244,6 +431,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+
     //Mensaje de salida de la app
     public void mostrarSalida(){
         builderDialogExit.setMessage("¿Deseas salir de TimeWEBMobile?")
@@ -266,6 +454,13 @@ public class MainActivity extends AppCompatActivity {
         builderDialogExit.show();
     }
 
+    @Override
+    protected void onPause() {
+        super.onPause();
+        if(biometricPrompt != null)
+        biometricPrompt.cancelAuthentication();
+    }
+
     //Inhabilitar botones del main
     public void setBtns(boolean clickBottom){
         if(clickBottom){
@@ -286,6 +481,8 @@ public class MainActivity extends AppCompatActivity {
             getWindow().setStatusBarColor(getResources().getColor(R.color.colorNotificationToolbarMain));
         }
     }
+
+
 
 
 }
