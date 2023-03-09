@@ -1,5 +1,6 @@
 package com.dan.timewebclone.activitys;
 
+import static android.Manifest.permission.POST_NOTIFICATIONS;
 import static android.content.ContentValues.TAG;
 import static androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_STRONG;
 import static androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_WEAK;
@@ -108,6 +109,7 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         setStatusBarColor();
         reviewUpdate();
+        //askNotificationPermission();
         btnGoToRegister = findViewById(R.id.btnGoToRegister);
         btnGoToLogin = findViewById(R.id.btnGoToLogin);
         animation = findViewById(R.id.animationMain);
@@ -159,11 +161,8 @@ public class MainActivity extends AppCompatActivity {
             public void onAuthenticationError(int errorCode,
                                               @NonNull CharSequence errString) {
                 super.onAuthenticationError(errorCode, errString);
-
                 biometric = false;
                 moveFragment(loginFragment);
-                loginFragment.setTextEmail(dbEmployees.getEmployee(mAuth.getId()).getEmail());
-            //Toast.makeText(getApplicationContext(), "Authentication error: " + errString, Toast.LENGTH_SHORT).show();
             }
 
             @Override
@@ -211,11 +210,8 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onAuthenticationFailed() {
                 super.onAuthenticationFailed();
-                //if(!loginFragment.isHidden()){
+                    biometric = false;
                     moveFragment(loginFragment);
-                    loginFragment.setTextEmail(dbEmployees.getEmployee(mAuth.getId()).getEmail());
-                //}
-                //Toast.makeText(getApplicationContext(), "Authentication failed", Toast.LENGTH_SHORT).show();
             }
         });
 
@@ -387,6 +383,31 @@ public class MainActivity extends AppCompatActivity {
             }
         }
     }
+
+    public void askNotificationPermission() {
+        // This is only necessary for API level >= 33 (TIRAMISU)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(this, POST_NOTIFICATIONS) !=
+                    PackageManager.PERMISSION_GRANTED) {
+                if (shouldShowRequestPermissionRationale(Manifest.permission.POST_NOTIFICATIONS)) {
+                    requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS);
+                } else {
+                    requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS);
+                }
+                //shouldShowRequestPermissionRationale(android.Manifest.permission.POST_NOTIFICATIONS);
+                //requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS);
+            }
+        }
+    }
+
+    private final ActivityResultLauncher<String> requestPermissionLauncher =
+            registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {
+                if (isGranted) {
+                    Toast.makeText(this, "Permiso otorgado para enviar notificaciones", Toast.LENGTH_SHORT).show();
+                } else {
+                    Toast.makeText(this, "No cuentas con permiso para enviar notificaciones", Toast.LENGTH_SHORT).show();
+                }
+            });
 
     public static void updateNotify(String title, String body, String url, String image, String idUserN){
         titleNotify = title;

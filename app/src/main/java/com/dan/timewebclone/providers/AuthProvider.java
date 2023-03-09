@@ -48,7 +48,7 @@ public class AuthProvider {
     //Saber si existe una sesion
     public boolean existSesion(){
         boolean exist = false;
-        if(mAuth.getCurrentUser()!=null){
+        if(mAuth.getCurrentUser() != null){
             exist = true;
         }
         return  exist;

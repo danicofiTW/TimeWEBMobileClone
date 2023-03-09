@@ -33,6 +33,7 @@ import android.provider.Settings;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.AnalogClock;
 import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
@@ -84,6 +85,7 @@ import com.google.android.gms.maps.model.SquareCap;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
+import com.itbehrend.analogclockview.AnalogClockView;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -115,13 +117,14 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
 
     public FloatingActionsMenu floatingActionsMenu;
     private FloatingActionButton sendStartWork, sendStartEating, sendFinishEating, sendFinishWork;
+    private AnalogClockView clockView;
 
     private GoogleMap map;
     private GoogleApiProvider googleApiProvider;
     private View mView, viewMoveLocation, viewViewRout;
     private TextView textViewGoodTime, textViewTime, textViewName, textViewState;
     private SupportMapFragment mapFragment;
-    public FrameLayout frameLayoutLoading, frameLayoutMoveLocation, frameLayoutGoToGoogleMaps, frameLayoutViewRout;
+    public FrameLayout frameLayoutLoading, frameLayoutMoveLocation, frameLayoutGoToGoogleMaps, frameLayoutViewRout, frameLayoutTakePhoto;
     private Toast mToast = null;
     int numberChecksSendLate = 0;
 
@@ -149,7 +152,6 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
     private DbEmployees dbEmployees;
     public Employee employee;
     private Calendar calendar;
-    private String timezoneID;
     private SimpleDateFormat sdf1;
 
     private boolean updateGeocerca = false;
@@ -312,6 +314,8 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         frameLayoutViewRout = mView.findViewById(R.id.frameLayoutViewRout);
         imageViewRout = mView.findViewById(R.id.imageViewRout);
         viewViewRout = mView.findViewById(R.id.viewRout);
+        clockView = mView.findViewById(R.id.clockView);
+        frameLayoutTakePhoto = mView.findViewById(R.id.frameLayoutTakePhoto);
 
         geofencingClient = LocationServices.getGeofencingClient(myContext);
         dbEmployees = new DbEmployees(myContext);
@@ -320,7 +324,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
             employee = dbEmployees.getEmployee(authProvider.getId());
         }
         textViewState.setText("!Conectate para enviar¡");
-        sdf1 = new SimpleDateFormat("HH:mm:ss");
+        sdf1 = new SimpleDateFormat("HH:mm");
 
         buttonConnect.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -652,11 +656,15 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         if (takePhoto) {
             imageViewPhotoMap.setVisibility(View.VISIBLE);
             circleImageViewMap.setClickable(true);
+            frameLayoutTakePhoto.setVisibility(View.VISIBLE);
+            clockView.setVisibility(View.GONE);
             setImageDefault();
         } else {
             imageViewPhotoMap.setVisibility(View.GONE);
             circleImageViewMap.setClickable(false);
             circleImageViewMap.setImageResource(R.drawable.ic_time_orange);
+            frameLayoutTakePhoto.setVisibility(View.GONE);
+            clockView.setVisibility(View.VISIBLE);
         }
     }
 
@@ -742,7 +750,8 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
 
     public void setImageDefault() {
         if (employee.isStateCamera()) {
-            circleImageViewMap.setImageResource(R.drawable.icon_image);
+            if(myContext.imagenBitmap == null)
+                circleImageViewMap.setImageResource(R.drawable.icon_image);
         }
     }
 
@@ -854,6 +863,38 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         check.setCheckLong(location.getLongitude());
         check.setStatusSend(0);
 
+        setImageMessage(check);
+
+        if(myContext.idGeocerca != null && !myContext.idGeocerca.equals("")){
+            check.setIdGeocerca(myContext.idGeocerca);
+            String geoName = dbGeocercas.getGeocerca(myContext.idGeocerca).getGeoNombre();
+            if(geoName != null && !geoName.equals("")){
+                check.setNameGeocerca(geoName);
+            }
+        }
+
+        myContext.numberChecksSendLate++;
+        seendMessageToFirebase(check);
+
+        long id = dbChecks.insertCheck(check);
+        myContext.image = null;
+        if (id > 0) {
+            myContext.updateViewLateCheck();
+            myContext.imagenBitmap = null;
+            setImageDefault();
+            if (!Utils.isOnlineNet(myContext)) {
+                //loadin(false);
+                withoutInternet = false;
+                myContext.constraintLayoutProgress.setVisibility(View.GONE);
+                enviarToast(false, "");
+            }
+        } else {
+            myContext.constraintLayoutProgress.setVisibility(View.GONE);
+            Toast.makeText(myContext, "Error al registrar", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void setImageMessage(Check check) {
         if (myContext.imagetoBase64 != null) {
             if (myContext.imagetoBase64 != "") {
                 check.setImage(myContext.imagetoBase64);
@@ -865,23 +906,12 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
             if (myContext.image90 != "") {
                 check.setImage90(myContext.image90);
                 myContext.image90 = "";
+                myContext.imagenBitmap = null;
             }
         }
+    }
 
-        if (myContext.fotoUri != null) {
-            check.setUrlImage(myContext.fotoUri.toString());
-            myContext.fotoUri = null;
-        }
-        if(myContext.idGeocerca != null && !myContext.idGeocerca.equals("")){
-            check.setIdGeocerca(myContext.idGeocerca);
-            String geoName = dbGeocercas.getGeocerca(myContext.idGeocerca).getGeoNombre();
-            if(geoName != null && !geoName.equals("")){
-                check.setNameGeocerca(geoName);
-            }
-        }
-
-        myContext.numberChecksSendLate++;
-
+    private void seendMessageToFirebase (Check check){
         checksProvider.createCheck(check).addOnSuccessListener(new OnSuccessListener<Void>() {
             @Override
             public void onSuccess(Void aVoid) {
@@ -923,23 +953,6 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                 }
             }
         });
-        long id = dbChecks.insertCheck(check);
-        myContext.image = null;
-        if (id > 0) {
-            myContext.updateViewLateCheck();
-            setImageDefault();
-
-            if (!Utils.isOnlineNet(myContext)) {
-                //loadin(false);
-                withoutInternet = false;
-                myContext.constraintLayoutProgress.setVisibility(View.GONE);
-                enviarToast(false, "");
-            }
-        } else {
-            myContext.constraintLayoutProgress.setVisibility(View.GONE);
-            //loadin(false);
-            Toast.makeText(myContext, "Error al registrar", Toast.LENGTH_SHORT).show();
-        }
     }
 
     private String getNumByDecimal(float valor){
@@ -1149,12 +1162,11 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
 
     @Override
     public void onResume() {
-        timezoneID = TimeZone.getDefault().getID();
         employee = dbEmployees.getEmployee(authProvider.getId());
         updateGeocerca = false;
         //if(myContext.geoRadio == 0){
         reviewGeocerca();
-        if(employee!=null){
+        if(employee != null){
             setGreeting();
             reviewTakePhoto();
             biometria = employee.isStateBiometrics();
@@ -1191,8 +1203,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
 
     public void setGreeting(){
         textViewName.setText(employee.getName());
-        timezoneID = TimeZone.getDefault().getID();
-        calendar = Calendar.getInstance(TimeZone.getTimeZone(timezoneID), Locale.getDefault());
+        calendar = Calendar.getInstance(TimeZone.getTimeZone(TimeZone.getDefault().getID()), Locale.getDefault());
         Date date = calendar.getTime();
         updateInfo(date);
     }
@@ -1255,45 +1266,6 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         }
     }
 
-    public void getTimeToLocate(){
-        if (ContextCompat.checkSelfPermission(myContext, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-            if(fusedLocation!=null){
-                fusedLocation.getLastLocation().addOnSuccessListener(new OnSuccessListener<Location>() {
-                    @Override
-                    public void onSuccess(Location location) {
-                        long l = location.getTime();
-                        if(l != 0){
-                            SharedPreferences sharedPref = myContext.getSharedPreferences("TIME", Context.MODE_PRIVATE);
-                            SharedPreferences.Editor editor = sharedPref.edit();
-                            editor.putLong("timeReal", l);
-                            editor.apply();
-                            editor.commit();
-                        }
-                    }
-                });
-            }
-        }
-    }
-
-    /*public void checkTime() {
-        if(!Utils.isTimeAutomaticEnabled(myContext)){
-            myContext.showGoToChangeTimeAutomatic();
-        } else {
-            SharedPreferences sharedPref = myContext.getSharedPreferences("TIME", Context.MODE_PRIVATE);
-            timeReal = sharedPref.getLong("timeReal", 0);
-            if(timeReal < Utils.getTime().getTime()){
-                if(Utils.isOnlineNet(myContext)){
-                    getTimeToLocate();
-                }
-            } else {
-                if(Utils.isOnlineNet(myContext)){
-                    myContext.showGoToChangeTimeAutomatic();
-                } else {
-                    myContext.showGoToConectInternet();
-                }
-            }
-        }
-    }*/
 
     private void generateToken(){
         if(employeeProvider != null){

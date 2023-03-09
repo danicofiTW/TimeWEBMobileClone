@@ -247,8 +247,10 @@ public class HistoryChecksSendOkFragment extends Fragment  {
     }
 
     public void notifyChangeAdapter() {
-        checksDbAdapter.updateChecks(dbChecks.getChecksSendSucces(authProvider.getId()));
-        mReciclerView.scrollToPosition(0);
+        if( authProvider != null && authProvider.getId() != null){
+            checksDbAdapter.updateChecks(dbChecks.getChecksSendSucces(authProvider.getId()));
+            mReciclerView.scrollToPosition(0);
+        }
     }
 
     public void getChecksById() {

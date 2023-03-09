@@ -545,7 +545,8 @@ public class MapHuaweiFragment extends Fragment implements com.huawei.hms.maps.O
 
     public void setImageDefault() {
         if (employee.isStateCamera()) {
-            circleImageViewMap.setImageResource(R.drawable.icon_image);
+            if(myContext.imagenBitmap == null)
+                circleImageViewMap.setImageResource(R.drawable.icon_image);
         }
     }
 
@@ -631,6 +632,7 @@ public class MapHuaweiFragment extends Fragment implements com.huawei.hms.maps.O
         check.setCheckLat(location.getLatitude());
         check.setCheckLong(location.getLongitude());
         check.setStatusSend(0);
+
         if (myContext.imagetoBase64 != null) {
             if (myContext.imagetoBase64 != "") {
                 check.setImage(myContext.imagetoBase64);
@@ -645,10 +647,6 @@ public class MapHuaweiFragment extends Fragment implements com.huawei.hms.maps.O
             }
         }
 
-        if (myContext.fotoUri != null) {
-            check.setUrlImage(myContext.fotoUri.toString());
-            myContext.fotoUri = null;
-        }
         if(myContext.idGeocerca != null && !myContext.idGeocerca.equals("")){
             check.setIdGeocerca(myContext.idGeocerca);
             String geoName = dbGeocercas.getGeocerca(myContext.idGeocerca).getGeoNombre();
@@ -704,8 +702,8 @@ public class MapHuaweiFragment extends Fragment implements com.huawei.hms.maps.O
         myContext.image = null;
         if (id > 0) {
             myContext.updateViewLateCheck();
+            myContext.imagenBitmap = null;
             setImageDefault();
-
             if (!Utils.isOnlineNet(myContext)) {
                 //loadin(false);
                 withoutInternet = false;

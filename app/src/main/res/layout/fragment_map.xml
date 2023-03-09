@@ -150,6 +150,7 @@
             </io.github.florent37.shapeofview.shapes.BubbleView>
 
             <FrameLayout
+                android:id="@+id/frameLayoutTakePhoto"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:padding="6dp"
@@ -169,6 +170,20 @@
 
             </FrameLayout>
 
+            <com.itbehrend.analogclockview.AnalogClockView
+                android:id="@+id/clockView"
+                android:layout_width="145dp"
+                android:layout_height="145dp"
+                app:showSecondPointer="true"
+                app:showNumbers="true"
+                app:secondColor="@color/colorOrange"
+                app:minuteColor="@color/colorHomeTw2"
+                app:hourColor="@color/colorHomeTw2"
+                app:borderColor="@color/colorHomeTw2"
+                android:layout_gravity="center|top"
+                android:visibility="gone"
+                />
+
             <com.google.android.material.floatingactionbutton.FloatingActionButton
                 android:id="@+id/mapSelectImage"
                 android:layout_width="wrap_content"
@@ -178,6 +193,8 @@
                 android:layout_gravity="center|top"
                 android:layout_marginTop="75dp"
                 android:layout_marginLeft="60dp"/>
+
+
 
         </FrameLayout>
 

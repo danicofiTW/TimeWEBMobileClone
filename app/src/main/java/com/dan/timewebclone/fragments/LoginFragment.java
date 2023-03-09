@@ -209,14 +209,15 @@ public class LoginFragment extends Fragment {
                         Toast.makeText(myContext, "La contraseña o el email son incorrectos", Toast.LENGTH_SHORT).show();
                     }
                 }
-            }).addOnFailureListener(new OnFailureListener() {
+            });
+                    /*.addOnFailureListener(new OnFailureListener() {
                 @Override
                 public void onFailure(@NonNull Exception e) {
                     if(mDialog.isShowing())
                         mDialog.dismiss();
                     Toast.makeText(myContext, "Error al registrar el usuario: "+e.getMessage(), Toast.LENGTH_SHORT).show();
                 }
-            });
+            });*/
         } else {
             mDialog.dismiss();
             Toast.makeText(myContext, "No cuentas con internet", Toast.LENGTH_SHORT).show();

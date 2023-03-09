@@ -143,7 +143,7 @@ public class HistoryChecksLateSendFragment extends Fragment {
 
     public void notifyChangeAdapter() {
        // checksDbAdapter.notifyDataSetChanged();
-        if( authProvider != null){
+        if( authProvider != null && authProvider.getId() != null){
             checksDbAdapterLateSend.updateChecks(dbChecks.getChecksNotSendSucces(authProvider.getId()));
             mReciclerView.scrollToPosition(0);
         }

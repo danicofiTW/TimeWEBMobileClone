@@ -1,5 +1,7 @@
 package com.dan.timewebclone.activitys;
 
+import static android.Manifest.permission.POST_NOTIFICATIONS;
+
 import android.Manifest;
 import android.app.Activity;
 import android.app.ProgressDialog;
@@ -9,6 +11,7 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Matrix;
 import android.media.ExifInterface;
 import android.net.Uri;
@@ -88,6 +91,7 @@ import com.google.firebase.firestore.QuerySnapshot;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -96,6 +100,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.TimeZone;
 
 import id.zelory.compressor.Compressor;
@@ -138,11 +143,11 @@ public class HomeTW extends AppCompatActivity{
     private String currentPhotoPath;
     private Uri photoURI;
     public File mImageFile;
-    public String imageFileStr;
+    //public String imageFileStr;
     public byte[] image;
     public Date time1;
     public Bitmap imagenBitmap;
-    public Uri fotoUri;
+    //public Uri fotoUri;
     public String imagetoBase64 = "";
     public String image90 = "";
     public boolean revieUpdateRegisters;
@@ -174,9 +179,6 @@ public class HomeTW extends AppCompatActivity{
     private static final int REQUEST_PERMISSION_CAMERA = 100;
     private static final int TAKE_PICTURE = 101;
     private static final int REQUEST_PERMISSION_WRITE_STORAGE = 200;
-
-    private long longD;
-    private long difference;
 
     AsyncTask<Void, Void, Long> runningTask;
 
@@ -266,7 +268,6 @@ public class HomeTW extends AppCompatActivity{
         listenerChangeViewPager();
         mViewPager.addOnPageChangeListener(pageChangeListener);
 
-
         //Menu del toolbar
         toolbar.setOnMenuItemClickListener(new Toolbar.OnMenuItemClickListener() {
             @Override
@@ -306,20 +307,20 @@ public class HomeTW extends AppCompatActivity{
                     case 0:
                         setupTabIcon(true);
                         viewSearchView(false);
-                        if(isMapHuawei){
+                        /*if(isMapHuawei){
                             mapHuaweiFragment.removeSecondProces(false);
                         } else {
                             mapFragment.removeSecondProces(false);
-                        }
+                        }*/
                         break;
                     case 1:
                         setupTabIcon(false);
                         viewSearchView(true);
-                        if(isMapHuawei){
+                        /*if(isMapHuawei){
                             mapHuaweiFragment.removeSecondProces(true);
                         } else {
                             mapFragment.removeSecondProces(true);
-                        }
+                        }*/
                         break;
                     default:
                         break;
@@ -675,7 +676,54 @@ public class HomeTW extends AppCompatActivity{
            }
     }
 
-    ActivityResultLauncher<Intent> someActivityResultLauncher = registerForActivityResult(
+    ActivityResultLauncher<Uri> someActivityResultLauncher = registerForActivityResult(new ActivityResultContracts.TakePicture(),
+        result -> {
+            try {
+
+                BitmapFactory.Options options = new BitmapFactory.Options();
+                options.inJustDecodeBounds = false;
+                InputStream imageStream = getContentResolver().openInputStream(photoURI);
+                imagenBitmap = BitmapFactory.decodeStream(imageStream, null, options);
+                imageStream.close();
+                //Bitmap photo = MediaStore.Images.Media.getBitmap(getContentResolver(), photoURI);
+                if(imagenBitmap != null){
+                    Bitmap mB = reviewOrientationImage(imagenBitmap);
+                    if(mB != null){
+                        imagenBitmap = mB;
+                    }
+                    if(mImageFile != null)
+
+                    try {
+                        imagenBitmap = new Compressor(HomeTW.this).setQuality(80).compressToBitmap(mImageFile);
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+
+                    ByteArrayOutputStream stream = new ByteArrayOutputStream();
+                    imagenBitmap.compress(Bitmap.CompressFormat.JPEG, 80, stream);
+                    byte[] image1 = stream.toByteArray();
+                    image90 = Base64.encodeToString(image1, Base64.DEFAULT);
+
+                    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                    Bitmap compressImage = createImageScaleBitmap(imagenBitmap);
+                    compressImage.compress(Bitmap.CompressFormat.JPEG, 80, baos);
+                    image = baos.toByteArray();
+                    imagetoBase64 = Base64.encodeToString(image, Base64.DEFAULT);
+
+                    if(isMapHuawei){
+                        Glide.with(HomeTW.this).load(image1).into(mapHuaweiFragment.circleImageViewMap);
+                    } else {
+                        Glide.with(HomeTW.this).load(image1).into(mapFragment.circleImageViewMap);
+                    }
+                }
+                //circleImageViewMap.setImageBitmap(imagenBitmap);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+    );
+
+    /*ActivityResultLauncher<Intent> someActivityResultLauncher = registerForActivityResult(
             new ActivityResultContracts.StartActivityForResult(), new ActivityResultCallback<ActivityResult>() {
                 @Override
                 public void onActivityResult(ActivityResult result) {
@@ -720,79 +768,21 @@ public class HomeTW extends AppCompatActivity{
 
                     }
                 }
-            });
+            });*/
 
     //Tomar la foto
     public void takePhoto() {
-        Intent takePictureIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-        // Ensure that there's a camera activity to handle the intent
-        if (takePictureIntent.resolveActivity(getPackageManager()) != null) {
-            // Create the File where the photo should go
-            File photoFile = null;
-            try {
-                photoFile = createImageFile();
-            } catch (IOException ex) {
-
-            }
-            // Continue only if the File was successfully created
-            if (photoFile != null) {
-                mImageFile = photoFile;
-                photoURI = FileProvider.getUriForFile(this,
-                        "com.dan.timewebclone.fileprovider",
-                        photoFile);
-                takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT, photoURI);
-                someActivityResultLauncher.launch(takePictureIntent);
+        File photoFile = new File(getFilesDir(), "my_images");
+        // Continue only if the File was successfully created
+        if (photoFile != null) {
+            mImageFile = photoFile;
+            photoURI = FileProvider.getUriForFile(Objects.requireNonNull(this),
+                    "com.dan.timewebclone.fileprovider",
+                    photoFile);
+            if(photoURI != null){
+                someActivityResultLauncher.launch(photoURI);
             }
         }
-
-
-
-        /*Intent takePictureIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-        takePictureIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION|Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
-        if(takePictureIntent.resolveActivity(getPackageManager()) != null){
-            OutputStream outputStream = null;
-            mImageFile = null;
-            fotoUri = null;
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                ContentResolver resolver = getContentResolver();
-                ContentValues values = new ContentValues();
-                imageFileStr = System.currentTimeMillis() + "image";
-                values.put(MediaStore.Images.Media.DISPLAY_NAME, imageFileStr);
-                values.put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg");
-                values.put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/TimeWeb");
-                values.put(MediaStore.Images.Media.IS_PENDING, 1);
-
-                Uri collection = MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY);
-                fotoUri = resolver.insert(collection, values);
-
-               /* List<ResolveInfo> resolvedIntentActivities = getPackageManager().queryIntentActivities(takePictureIntent, PackageManager.MATCH_DEFAULT_ONLY);
-                for (ResolveInfo resolvedIntentInfo : resolvedIntentActivities) {
-                    String packageName = resolvedIntentInfo.activityInfo.packageName;
-                    grantUriPermission(packageName, FileProvider.getUriForFile(HomeTW.this, BuildConfig.APPLICATION_ID + ".fileprovider", new File(fotoUri.getPath())), Intent.FLAG_GRANT_WRITE_URI_PERMISSION | Intent.FLAG_GRANT_READ_URI_PERMISSION);
-                }*/
-
-                /*try {
-                    outputStream = resolver.openOutputStream(fotoUri);
-                } catch (FileNotFoundException e) {
-                    e.printStackTrace();
-                }
-                values.clear();
-                values.put(MediaStore.Images.Media.IS_PENDING, 0);
-                resolver.update(fotoUri, values, null, null);
-
-                takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT, fotoUri);
-                startActivityForResult(takePictureIntent, TAKE_PICTURE);
-            } else {
-                imageFileStr = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES).toString();
-                String filename = System.currentTimeMillis() + ".jpg";
-                mImageFile = new File(imageFileStr, filename);
-                if (mImageFile != null) {
-                    fotoUri =  Uri.fromFile(mImageFile);
-                    takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT, fotoUri);
-                    startActivityForResult(takePictureIntent, TAKE_PICTURE);
-                }
-            }
-        }*/
     }
 
     private File createImageFile() throws IOException {
@@ -810,40 +800,6 @@ public class HomeTW extends AppCompatActivity{
         currentPhotoPath = image.getAbsolutePath();
         return image;
     }
-
-    //Resultado de la camara
-    //@Override
-    //public void onActivityResult(int requestCode, int resultCode, Intent data) {
-      //  super.onActivityResult(requestCode, resultCode, data);
-        /*if (resultCode == Activity.RESULT_OK && requestCode == TAKE_PICTURE) {
-            if(fotoUri!=null){
-                imagenBitmap = null;
-
-                try {
-                    imagenBitmap = MediaStore.Images.Media.getBitmap(getContentResolver(), fotoUri);
-
-                    ByteArrayOutputStream baos = new ByteArrayOutputStream();
-                    //Bitmap imageScaled =
-                    Bitmap mB = reviewOrientationImage(imagenBitmap);
-                    Bitmap compressImage = null;
-                    if(mB!=null){
-                        compressImage = createImageScaleBitmap(mB);
-                    } else {
-                        compressImage = createImageScaleBitmap(imagenBitmap);
-                    }
-                    compressImage.compress(Bitmap.CompressFormat.JPEG, 90, baos);
-                    image = baos.toByteArray();
-                    imagetoBase64 = Base64.encodeToString(image, Base64.DEFAULT);
-                    Glide.with(HomeTW.this).load(fotoUri).dontAnimate().into(circleImageViewMap);
-
-                    //MapFragment.circleImageViewMap.setImageBitmap(mB);
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            }
-            //saveImageDirectori();
-        }*/
-    //}
 
     //Revisar la orientacion de la foto
     private Bitmap reviewOrientationImage(Bitmap compressImage) {
@@ -1059,32 +1015,19 @@ public class HomeTW extends AppCompatActivity{
                                     }
 
                                     } else {
-                                   /* if (linearLayoutLoadingHome.getVisibility() == View.VISIBLE) {
-                                        linearLayoutLoadingHome.setVisibility(View.GONE);
-                                    } else {*/
                                         if (pdRevieData.isShowing()) {
                                             pdRevieData.dismiss();
                                         }
-                                    //}
                                 }
                             } else {
-                                /*if (linearLayoutLoadingHome.getVisibility() == View.VISIBLE) {
-                                    linearLayoutLoadingHome.setVisibility(View.GONE);
-                                } else {*/
-                                    if (pdRevieData.isShowing()) {
-                                        pdRevieData.dismiss();
-                                    }
-                                //}
+                                if (pdRevieData.isShowing()) {
+                                    pdRevieData.dismiss();
+                                }
                             }
                         }
                     });
                 }
             });
-            /*if (!Utils.isOnlineNet(this)) {
-                if (linearLayoutLoadingHome.getVisibility() == View.VISIBLE) {
-                    linearLayoutLoadingHome.setVisibility(View.GONE);
-                }
-            }*/
     }
 
     public void reviewChecksOlderThan31Days(QuerySnapshot result) {
@@ -1109,18 +1052,11 @@ public class HomeTW extends AppCompatActivity{
         if(numberDelete!=0) {
             checksProvider.deleteChecksForId(idDeleteChecks);
             dbChecks.delete(idDeleteChecks);
-           /* if(linearLayoutLoadingHome.getVisibility() == View.GONE) {
-                linearLayoutLoadingHome.setVisibility(View.GONE);
-            }*/
             if(numberDelete==1){
                 Toast.makeText(HomeTW.this, "Se elimino un registro enviado hace más de 31 días", Toast.LENGTH_SHORT).show();
             } else {
                 Toast.makeText(HomeTW.this, "Se eliminaron " + numberDelete + " registros enviados hace más de 31 días", Toast.LENGTH_SHORT).show();
             }
-        } else {
-            /*if(linearLayoutLoadingHome.getVisibility() == View.VISIBLE) {
-                linearLayoutLoadingHome.setVisibility(View.GONE);
-            }*/
         }
     }
 
@@ -1314,13 +1250,18 @@ public class HomeTW extends AppCompatActivity{
         super.onPause();
         if (runningTask != null)
             runningTask.cancel(true);
-        }
+    }
 
     @Override
     protected void onResume(){
+        super.onResume();
         setCrashlytics();
         checkTime();
-        super.onResume();
+        if(employee != null){
+            if(authHome.getId() == null){
+                authHome.loginEmail(employee.getEmail(), employee.getPassword());
+            }
+        }
     }
 
     public void checkTime() {
@@ -1433,28 +1374,23 @@ public class HomeTW extends AppCompatActivity{
     private final ActivityResultLauncher<String> requestPermissionLauncher =
             registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {
                 if (isGranted) {
-                    Toast.makeText(this, "Permiso otorgado para enviar notificaciones", Toast.LENGTH_SHORT).show();
-                    // FCM SDK (and your app) can post notifications.
+
+                    //Toast.makeText(this, "Permiso otorgado para enviar notificaciones", Toast.LENGTH_SHORT).show();
                 } else {
-                    Toast.makeText(this, "No cuentas con permiso para enviar notificaciones", Toast.LENGTH_SHORT).show();
-                    // TODO: Inform user that that your app will not show notifications.
+                    //Toast.makeText(this, "No cuentas con permiso para enviar notificaciones", Toast.LENGTH_SHORT).show();
                 }
             });
 
     public void askNotificationPermission(String body, String idCheck) {
         // This is only necessary for API level >= 33 (TIRAMISU)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) ==
+            if (ContextCompat.checkSelfPermission(this, POST_NOTIFICATIONS) ==
                     PackageManager.PERMISSION_GRANTED) {
                 sendNotification(body,idCheck);
                 // FCM SDK (and your app) can post notifications.
-            }
-            /*else if (shouldShowRequestPermissionRationale(Manifest.permission.POST_NOTIFICATIONS)) {
-                requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS);
-            } */
-            else {
-                // Directly ask for the permission
-                requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS);
+            } else {
+                shouldShowRequestPermissionRationale(POST_NOTIFICATIONS);
+                requestPermissionLauncher.launch(POST_NOTIFICATIONS);
             }
         } else {
             sendNotification(body,idCheck);
